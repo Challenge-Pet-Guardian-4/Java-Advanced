@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: petguardian-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: petguardian
+      POSTGRES_USER: petguardian
+      POSTGRES_PASSWORD: petguardian
+    volumes:
+      - petguardian_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U petguardian -d petguardian"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  petguardian_data:
