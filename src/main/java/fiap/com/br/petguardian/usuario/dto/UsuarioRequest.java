@@ -42,6 +42,7 @@ public record UsuarioRequest(
         EnderecoRequest endereco
 ) {
     public Usuario toEntity(Telefone telefone, String email, String senhaCodificada) {
+        UsuarioRole.valueOf(role.trim().toUpperCase());
         return Usuario.builder()
                 .nome(nome)
                 .email(email.trim().toLowerCase())

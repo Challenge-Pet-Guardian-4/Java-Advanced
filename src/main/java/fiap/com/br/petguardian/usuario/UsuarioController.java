@@ -12,7 +12,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -70,14 +73,16 @@ public class UsuarioController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar usuário")
-    public UsuarioResponse update(@PathVariable Long id, @Valid @RequestBody UsuarioRequest usuarioRequest) {
+    @PreAuthorize("hasRole('ADMIN') or #id == #jwt.claims['id']")
+    public UsuarioResponse update(@PathVariable Long id, @Valid @RequestBody UsuarioRequest usuarioRequest, @AuthenticationPrincipal Jwt jwt) {
         return UsuarioResponse.fromEntity(usuarioService.update(id, usuarioRequest));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar usuário")
-    public void delete(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or #id == #jwt.claims['id']")
+    public void delete(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
         usuarioService.delete(id);
     }
 }
