@@ -41,3 +41,4 @@ out/
 # Environment & Secrets
 .env
 /src/main/resources/keys/
+/src/main/resources/keys/
