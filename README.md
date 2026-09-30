@@ -177,6 +177,12 @@ As migrações estão localizadas em `src/main/resources/db/migration/`:
     - `1 - PENDENTE`
     - `2 - CONCLUIDO`
     - `3 - EXPIRADO`
+- **`V3__carga_inicial_admin_e_indices.sql`**:
+  - Carga de dados geográficos e de contato base (Estado, Cidade, Bairro, Endereço e Telefone).
+  - Provisionamento seguro dos usuários padrão de teste com senhas criptografadas via **BCrypt**:
+    - `enzo.admin@petguardian.com` (Perfil `ADMIN`)
+    - `carolina.cuidadora@petguardian.com` (Perfil `PREMIUM`)
+  - Criação de índices de performance para consultas e joins frequentes (`idx_tarefa_usuario_status`, `idx_tarefa_pet_prazo`, `idx_usuario_pet_pet`, `idx_historico_pet_data`, `idx_pet_nome`).
 
 Configurações ativas no `application.properties`:
 ```properties
@@ -377,9 +383,9 @@ spring.flyway.locations=classpath:db/migration
 
 ### Configuração de Ambientes (`.env`)
 
-A aplicação possui suporte a **dois ambientes transparentes**. O arquivo `application.properties` já possui as credenciais do **PostgreSQL no Railway configuradas como fallback padrão**, permitindo rodar o projeto imediatamente sem nenhuma dependência de container local.
+Seguindo as melhores práticas de segurança do **OWASP**, a aplicação **não embute credenciais de produção no código-fonte**. As credenciais de banco de dados são injetadas estritamente via variáveis de ambiente (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`), configuradas no arquivo `.env` na raiz do projeto.
 
-Caso queira customizar, copie o `.env.example` para `.env` na raiz do projeto:
+Copie o `.env.example` para `.env` na raiz do projeto:
 
 ```bash
 cp .env.example .env
@@ -389,8 +395,8 @@ cp .env.example .env
 
 ### Passos de Execução
 
-#### Opção 1: Executar Direto com Banco na Nuvem (Railway - Padrão)
-Não requer Docker nem configuração de variáveis. O Flyway executará as migrações automaticamente:
+#### Opção 1: Executar com Banco na Nuvem (Railway)
+Com as variáveis de conexão com o PostgreSQL no Railway configuradas no `.env` (ou exportadas na sessão), o Flyway executará as migrações automaticamente (`V1`, `V2` e `V3`):
 
 ```bash
 # No Linux / macOS:
