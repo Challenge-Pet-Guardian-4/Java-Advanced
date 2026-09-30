@@ -41,14 +41,9 @@ public class Usuario {
     @JoinColumn(name = "telefone_id_telefone", nullable = false)
     private Telefone telefone;
 
-    @ManyToMany
-    @JoinTable(
-        name = "usuario_endereco",
-        joinColumns = @JoinColumn(name = "usuario_id_usuario"),
-        inverseJoinColumns = @JoinColumn(name = "endereco_id_endereco")
-    )
-    @Builder.Default
-    private Set<Endereco> enderecos = new HashSet<>();
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "endereco_id_endereco", nullable = false)
+    private Endereco endereco;
 
     @OneToMany(mappedBy = "usuario")
     @Builder.Default

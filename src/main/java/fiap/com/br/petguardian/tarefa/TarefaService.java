@@ -6,10 +6,10 @@ import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.tarefa.status.StatusService;
-import fiap.com.br.petguardian.tarefa.dto.TarefaConclusaoRequest;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
 import fiap.com.br.petguardian.validation.TarefaValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -27,6 +27,12 @@ public class TarefaService {
     private final PetRepository petRepository;
     private final StatusService statusService;
     private final TarefaValidator tarefaValidator;
+    private final UsuarioPetService usuarioPetService;
+
+    public boolean isCuidadorDaTarefa(Long tarefaId, String email) {
+        Tarefa tarefa = findTarefaById(tarefaId);
+        return usuarioPetService.isCuidadorDoPet(tarefa.getPet().getId(), email);
+    }
 
     public Page<Tarefa> findAll(Pageable pageable) {
         expirarTarefasPendentesAtrasadas();
@@ -39,6 +45,16 @@ public class TarefaService {
             return tarefaRepository.findAllDoCuidador(usuarioId, pageable);
         }
         return tarefaRepository.findAllDoCuidadorByStatus(usuarioId, EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
+    }
+
+    public Page<Tarefa> findAllByAuthUser(String authEmail, String statusFiltro, Pageable pageable) {
+        Usuario usuario = findUsuarioByEmail(authEmail);
+        return findAllByUsuario(usuario.getId(), statusFiltro, pageable);
+    }
+
+    public Integer calcularPontosTotaisAuthUser(String authEmail) {
+        Usuario usuario = findUsuarioByEmail(authEmail);
+        return calcularPontosTotaisUsuario(usuario.getId());
     }
 
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {
@@ -59,9 +75,9 @@ public class TarefaService {
     }
 
     @Transactional
-    public Tarefa create(TarefaRequest request) {
+    public Tarefa create(TarefaRequest request, String authEmail) {
         Pet pet = findPetById(request.petId());
-        Usuario usuario = findUsuarioById(request.usuarioId());
+        Usuario usuario = findUsuarioByEmail(authEmail);
         tarefaValidator.validarCuidadorDoPet(usuario.getId(), pet.getId());
 
         Tarefa tarefa = request.toEntity(usuario, pet, LocalDateTime.now());
@@ -70,10 +86,10 @@ public class TarefaService {
     }
 
     @Transactional
-    public Tarefa update(Long id, TarefaRequest request) {
+    public Tarefa update(Long id, TarefaRequest request, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
         Pet pet = findPetById(request.petId());
-        Usuario usuario = findUsuarioById(request.usuarioId());
+        Usuario usuario = findUsuarioByEmail(authEmail);
         tarefaValidator.validarCuidadorDoPet(usuario.getId(), pet.getId());
         EnumStatus status = EnumStatus.valueOf(request.status().trim().toUpperCase());
 
@@ -89,14 +105,38 @@ public class TarefaService {
     }
 
     @Transactional
-    public Tarefa concluir(Long id, TarefaConclusaoRequest request) {
+    public Tarefa concluir(Long id, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
         tarefaValidator.validarPendenteParaConclusao(tarefa);
 
-        Usuario usuario = findUsuarioById(request.concluinteId());
+        Usuario usuario = findUsuarioByEmail(authEmail);
         tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
 
         aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
+        return tarefaRepository.save(tarefa);
+    }
+
+    @Transactional
+    public Tarefa concluir(Long id, Long usuarioId) {
+        Tarefa tarefa = findTarefaById(id);
+        tarefaValidator.validarPendenteParaConclusao(tarefa);
+
+        Usuario usuario = findUsuarioById(usuarioId);
+        tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
+
+        aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
+        return tarefaRepository.save(tarefa);
+    }
+
+    @Transactional
+    public Tarefa desmarcar(Long id, String authEmail) {
+        Tarefa tarefa = findTarefaById(id);
+        Usuario usuario = findUsuarioByEmail(authEmail);
+        tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
+        tarefaValidator.validarConcluidaParaDesmarcar(tarefa);
+
+        tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
+        tarefa.setConclusao(null);
         return tarefaRepository.save(tarefa);
     }
 
@@ -136,6 +176,11 @@ public class TarefaService {
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+    }
+
+    private Usuario findUsuarioByEmail(String email) {
+        return usuarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
     }
 
     private void expirarTarefasPendentesAtrasadas() {

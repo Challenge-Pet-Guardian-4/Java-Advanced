@@ -1,6 +1,5 @@
 package fiap.com.br.petguardian.tarefa;
 
-import fiap.com.br.petguardian.tarefa.dto.TarefaConclusaoRequest;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +11,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -24,25 +25,34 @@ public class TarefaController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todas as tarefas com paginação e ordenação")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<TarefaResponse> findAll(@PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
         return tarefaService.findAll(pageable)
             .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/by-usuario")
+    @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar tarefas por usuarioId com filtro opcional de status e paginação")
-    public Page<TarefaResponse> findAllByUsuario(
-            @RequestParam Long usuarioId,
+    @Operation(summary = "Listar tarefas do cuidador autenticado com filtro opcional de status e paginação")
+    public Page<TarefaResponse> findMyTarefas(
             @RequestParam(defaultValue = "ALL") String status,
-            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
-        return tarefaService.findAllByUsuario(usuarioId, status, pageable)
+            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable,
+            Authentication authentication) {
+        return tarefaService.findAllByAuthUser(authentication.getName(), status, pageable)
             .map(TarefaResponse::fromEntity);
+    }
+
+    @GetMapping("/me/pontos")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador autenticado")
+    public Integer calcularMeusPontosTotais(Authentication authentication) {
+        return tarefaService.calcularPontosTotaisAuthUser(authentication.getName());
     }
 
     @GetMapping("/by-pet/{petId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todas as tarefas de um pet específico com paginação")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
     public Page<TarefaResponse> findAllByPet(
             @PathVariable Long petId,
             @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -53,55 +63,47 @@ public class TarefaController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar tarefa por ID")
+    @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
     public TarefaResponse findById(@PathVariable Long id) {
         return TarefaResponse.fromEntity(tarefaService.findById(id));
-    }
-
-    @GetMapping("/by-usuario/{usuarioId}/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar tarefa por usuario e ID")
-    public TarefaResponse findByUsuarioIdAndTarefaId(@PathVariable Long usuarioId, @PathVariable Long id) {
-        return TarefaResponse.fromEntity(tarefaService.findByUsuarioIdAndTarefaId(usuarioId, id));
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar tarefa")
-    public TarefaResponse create(@Valid @RequestBody TarefaRequest tarefaRequest) {
-        return TarefaResponse.fromEntity(tarefaService.create(tarefaRequest));
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#tarefaRequest.petId(), authentication.name)")
+    public TarefaResponse create(@Valid @RequestBody TarefaRequest tarefaRequest, Authentication authentication) {
+        return TarefaResponse.fromEntity(tarefaService.create(tarefaRequest, authentication.getName()));
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar tarefa")
-    public TarefaResponse update(@PathVariable Long id, @Valid @RequestBody TarefaRequest tarefaRequest) {
-        return TarefaResponse.fromEntity(tarefaService.update(id, tarefaRequest));
+    @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
+    public TarefaResponse update(@PathVariable Long id, @Valid @RequestBody TarefaRequest tarefaRequest, Authentication authentication) {
+        return TarefaResponse.fromEntity(tarefaService.update(id, tarefaRequest, authentication.getName()));
     }
 
     @PatchMapping("/{id}/concluir")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Concluir tarefa")
-    public TarefaResponse concluir(@PathVariable Long id, @Valid @RequestBody TarefaConclusaoRequest tarefaConclusaoRequest) {
-        return TarefaResponse.fromEntity(tarefaService.concluir(id, tarefaConclusaoRequest));
+    @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
+    public TarefaResponse concluir(@PathVariable Long id, Authentication authentication) {
+        return TarefaResponse.fromEntity(tarefaService.concluir(id, authentication.getName()));
     }
 
     @PatchMapping("/{id}/desmarcar")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Desmarcar tarefa concluída retornando ao status PENDENTE")
-    public TarefaResponse desmarcar(@PathVariable Long id, @RequestParam Long usuarioId) {
-        return TarefaResponse.fromEntity(tarefaService.desmarcar(id, usuarioId));
-    }
-
-    @GetMapping("/by-usuario/pontos")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Consultar pontos totais acumulados por um cuidador")
-    public Integer calcularPontosTotaisUsuario(@RequestParam Long usuarioId) {
-        return tarefaService.calcularPontosTotaisUsuario(usuarioId);
+    @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
+    public TarefaResponse desmarcar(@PathVariable Long id, Authentication authentication) {
+        return TarefaResponse.fromEntity(tarefaService.desmarcar(id, authentication.getName()));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar tarefa")
+    @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
     public void delete(@PathVariable Long id) {
         tarefaService.delete(id);
     }

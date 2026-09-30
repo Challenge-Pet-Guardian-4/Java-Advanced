@@ -1,5 +1,6 @@
 package fiap.com.br.petguardian.pet.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetPorte;
 import fiap.com.br.petguardian.pet.raca.Raca;
@@ -10,6 +11,7 @@ import jakarta.validation.constraints.PastOrPresent;
 
 import java.time.LocalDate;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record PetRequest(
         @NotBlank
         String nome,
@@ -29,10 +31,7 @@ public record PetRequest(
         Character sexo,
 
         @NotNull
-        Boolean castrado,
-
-        @NotNull
-        Long usuarioId
+        Boolean castrado
 ) {
     public Pet toEntity(Raca racaObj) {
         return Pet.builder()

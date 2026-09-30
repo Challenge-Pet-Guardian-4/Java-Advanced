@@ -17,6 +17,12 @@ public interface UsuarioPetRepository extends JpaRepository<UsuarioPet, UsuarioP
     @Query("select case when count(up) > 0 then true else false end from UsuarioPet up where up.usuario.id = :usuarioId and up.pet.id = :petId and up.responsavelPrincipal = true")
     boolean isResponsavelPrincipal(@Param("usuarioId") Long usuarioId, @Param("petId") Long petId);
 
+    @Query("select case when count(up) > 0 then true else false end from UsuarioPet up where lower(up.usuario.email) = lower(:email) and up.pet.id = :petId and up.responsavelPrincipal = true")
+    boolean isResponsavelPrincipalPorEmail(@Param("email") String email, @Param("petId") Long petId);
+
+    @Query("select case when count(up) > 0 then true else false end from UsuarioPet up where lower(up.usuario.email) = lower(:email) and up.pet.id = :petId")
+    boolean existsByUsuarioEmailAndPetId(@Param("email") String email, @Param("petId") Long petId);
+
     @Query("select up from UsuarioPet up join fetch up.usuario u join fetch up.pet p where up.usuario.id = :usuarioId and up.pet.id = :petId")
     Optional<UsuarioPet> findByUsuarioIdAndPetId(@Param("usuarioId") Long usuarioId, @Param("petId") Long petId);
 

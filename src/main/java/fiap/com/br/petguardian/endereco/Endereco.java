@@ -35,7 +35,7 @@ public class Endereco {
     @JoinColumn(name = "bairro_id_bairro")
     private Bairro bairro;
 
-    @ManyToMany(mappedBy = "enderecos")
+    @OneToMany(mappedBy = "endereco")
     @JsonIgnore
     @Builder.Default
     private Set<Usuario> usuarios = new HashSet<>();

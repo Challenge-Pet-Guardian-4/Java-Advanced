@@ -49,9 +49,6 @@ class PetServiceTest {
     private UsuarioPetService usuarioPetService;
 
     @Mock
-    private UsuarioPetValidator usuarioPetValidator;
-
-    @Mock
     private RacaRepository racaRepository;
 
     @Mock
@@ -196,6 +193,23 @@ class PetServiceTest {
         when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
 
         Page<Pet> resultado = petService.findByUsuario(1L, pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals("Thor", resultado.getContent().get(0).getNome());
+    }
+}
+    @Test
+    @DisplayName("Deve listar pets do usuario autenticado")
+    void deveListarPetsPorUsuarioAutenticado() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
+
+        Page<Pet> resultado = petService.findByAuthUser("enzo@fiap.com.br", pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());

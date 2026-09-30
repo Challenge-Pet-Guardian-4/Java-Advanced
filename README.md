@@ -194,10 +194,10 @@ spring.flyway.locations=classpath:db/migration
 > O sistema implementa múltiplos fluxos de ponta a ponta com regras de negócio corporativas complexas:
 
 ### 1. Fluxo de Gamificação e Ciclo de Vida da Rotina
-1. **Criação de Tarefa:** O tutor cria uma rotina (`/tarefas`) vinculando pet e responsável. O sistema valida se o usuário pertence à rede de cuidado do animal (`UsuarioPetValidator`) e inicializa com status `PENDENTE`.
+1. **Criação de Tarefa:** O tutor cria uma rotina (`/tarefas`) vinculando pet e responsável. O sistema valida se o usuário pertence à rede de cuidado do animal (`TarefaValidator`) e inicializa com status `PENDENTE`.
 2. **Auto-Expiração Inteligente:** Ao listar tarefas, o método `expirarTarefasPendentesAtrasadas()` avalia o `prazo` contra o relógio do servidor (`LocalDateTime.now()`) e transiciona tarefas atrasadas para `EXPIRADO` de forma automática.
-3. **Conclusão e Gamificação:** O cuidador conclui a tarefa via `PATCH /tarefas/{id}/concluir`. O sistema credita imediatamente os pontos ao cuidador (`calcularPontosTotaisUsuario`) e soma ao score de bem-estar do pet.
-4. **Desmarcação Resiliente:** Se houver necessidade de cancelamento ou correção operacional, o endpoint `PATCH /tarefas/{id}/desmarcar?usuarioId=` valida a titularidade do cuidador, remove os pontos acumulados e retorna a tarefa para `PENDENTE`.
+3. **Conclusão e Gamificação:** O cuidador conclui a tarefa via `PATCH /tarefas/{id}/concluir` autenticado via JWT. O sistema credita imediatamente os pontos ao cuidador (`calcularPontosTotaisUsuario`) e soma ao score de bem-estar do pet.
+4. **Desmarcação Resiliente:** Se houver necessidade de cancelamento ou correção operacional, o endpoint `PATCH /tarefas/{id}/desmarcar` (autenticado via JWT) valida a titularidade do cuidador no Care Circle, remove os pontos acumulados e retorna a tarefa para `PENDENTE`.
 
 ### 2. Fluxo de Governança Familiar Pet-Centric (Care Circle)
 1. **Titularidade Automática no Nascimento do Pet:** Ao cadastrar um pet (`POST /pets`), o tutor criador é registrado imediatamente na tabela `usuario_pet` com a flag `responsavel_principal = true`.

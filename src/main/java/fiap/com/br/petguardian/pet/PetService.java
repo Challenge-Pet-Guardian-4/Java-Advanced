@@ -13,7 +13,6 @@ import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
-import fiap.com.br.petguardian.validation.UsuarioPetValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -27,7 +26,6 @@ public class PetService {
     private final PetRepository petRepository;
     private final UsuarioRepository usuarioRepository;
     private final UsuarioPetService usuarioPetService;
-    private final UsuarioPetValidator usuarioPetValidator;
     private final RacaRepository racaRepository;
     private final TarefaRepository tarefaRepository;
     private final AulaRepository aulaRepository;
@@ -49,9 +47,17 @@ public class PetService {
         return findPetById(id);
     }
 
+    public boolean isResponsavelPrincipal(Long petId, String email) {
+        return usuarioPetService.isResponsavelPrincipal(petId, email);
+    }
+
+    public boolean isCuidadorDoPet(Long petId, String email) {
+        return usuarioPetService.isCuidadorDoPet(petId, email);
+    }
+
     @Transactional
-    public Pet create(PetRequest petRequest) {
-        Usuario usuario = findUsuarioById(petRequest.usuarioId());
+    public Pet create(PetRequest petRequest, String authEmail) {
+        Usuario usuario = findUsuarioByEmail(authEmail);
         Raca raca = findOrCreateRaca(petRequest.raca());
         Pet petSalvo = petRepository.save(petRequest.toEntity(raca));
 
@@ -62,18 +68,14 @@ public class PetService {
     @Transactional
     public Pet update(Long id, PetRequest petRequest) {
         Pet pet = findPetById(id);
-        findUsuarioById(petRequest.usuarioId());
-        usuarioPetValidator.validarResponsavelPrincipal(petRequest.usuarioId(), id);
-
         Raca raca = findOrCreateRaca(petRequest.raca());
         aplicarEm(pet, petRequest, raca);
         return petRepository.save(pet);
     }
 
     @Transactional
-    public void delete(Long id, Long usuarioId) {
+    public void delete(Long id) {
         findPetById(id);
-        usuarioPetValidator.validarResponsavelPrincipal(usuarioId, id);
         petRepository.deleteById(id);
     }
 
@@ -104,6 +106,11 @@ public class PetService {
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+    }
+
+    private Usuario findUsuarioByEmail(String email) {
+        return usuarioRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
     }
 
     private Raca findOrCreateRaca(String nomeRaca) {

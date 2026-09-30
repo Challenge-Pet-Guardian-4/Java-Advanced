@@ -1,11 +1,12 @@
 package fiap.com.br.petguardian.usuario.dto;
 
+import fiap.com.br.petguardian.endereco.Endereco;
 import fiap.com.br.petguardian.endereco.dto.EnderecoRequest;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRole;
-import fiap.com.br.petguardian.validation.AllowedRolesValidation;
 import fiap.com.br.petguardian.validation.DddValidation;
+import fiap.com.br.petguardian.validation.EnumValidation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -34,20 +35,21 @@ public record UsuarioRequest(
         String numeroTelefone,
 
         @NotBlank
-        @AllowedRolesValidation(allowed = {UsuarioRole.COMUM, UsuarioRole.PREMIUM})
+        @EnumValidation(enumClass = UsuarioRole.class)
         String role,
 
         @NotNull
         @Valid
         EnderecoRequest endereco
 ) {
-    public Usuario toEntity(Telefone telefone, String email, String senhaCodificada) {
+    public Usuario toEntity(Telefone telefone, Endereco endereco, String senhaCodificada) {
         return Usuario.builder()
                 .nome(nome)
                 .email(email.trim().toLowerCase())
                 .senha(senhaCodificada)
                 .role(UsuarioRole.valueOf(role.trim().toUpperCase()))
                 .telefone(telefone)
+                .endereco(endereco)
                 .build();
     }
 

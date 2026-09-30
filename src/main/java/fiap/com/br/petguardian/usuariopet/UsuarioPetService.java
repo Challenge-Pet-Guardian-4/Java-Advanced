@@ -39,6 +39,16 @@ public class UsuarioPetService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public boolean isResponsavelPrincipal(Long petId, String email) {
+        return usuarioPetRepository.isResponsavelPrincipalPorEmail(email.trim(), petId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isCuidadorDoPet(Long petId, String email) {
+        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId);
+    }
+
     @Transactional
     public UsuarioPet vincularPrimeiroResponsavelPrincipal(Usuario usuario, Pet pet) {
         UsuarioPet vinculo = new UsuarioPet(new UsuarioPetId(usuario.getId(), pet.getId()), usuario, pet, true);
@@ -73,6 +83,12 @@ public class UsuarioPetService {
         usuarioPetRepository.limparResponsavelPrincipalPorPet(petId);
         novoResponsavel.promoverResponsavelPrincipal();
         usuarioPetRepository.save(novoResponsavel);
+    }
+
+    @Transactional
+    public void desvincularCuidador(Long petId, Long usuarioId, String solicitanteEmail) {
+        Usuario solicitante = findUsuarioByEmail(solicitanteEmail);
+        desvincularCuidador(petId, usuarioId, solicitante.getId());
     }
 
     @Transactional

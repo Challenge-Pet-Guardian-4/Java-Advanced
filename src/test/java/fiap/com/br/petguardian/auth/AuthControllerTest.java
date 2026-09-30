@@ -1,6 +1,10 @@
 package fiap.com.br.petguardian.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import fiap.com.br.petguardian.endereco.Endereco;
+import fiap.com.br.petguardian.endereco.bairro.Bairro;
+import fiap.com.br.petguardian.endereco.cidade.Cidade;
+import fiap.com.br.petguardian.endereco.estado.Estado;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRole;
@@ -17,8 +21,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.util.HashSet;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -50,6 +52,9 @@ class AuthControllerTest {
     @DisplayName("Deve autenticar com sucesso e retornar token e perfil do usuario")
     void deveAutenticarComSucesso() throws Exception {
         var request = new AuthController.LoginRequest("enzo@fiap.com.br", "123456");
+        Estado estado = Estado.builder().id(1L).nome("SP").build();
+        Cidade cidade = Cidade.builder().id(1L).nome("São Paulo").estado(estado).build();
+        Bairro bairro = Bairro.builder().id(1L).nome("Bela Vista").cidade(cidade).build();
 
         Usuario usuario = Usuario.builder()
                 .id(1L)
@@ -58,7 +63,7 @@ class AuthControllerTest {
                 .senha("hash")
                 .role(UsuarioRole.PREMIUM)
                 .telefone(Telefone.builder().ddd("11").numero("987654321").build())
-                .enderecos(new HashSet<>())
+                .endereco(Endereco.builder().id(1L).cep("01310100").numero("100").rua("Paulista").bairro(bairro).build())
                 .build();
 
         var auth = new UsernamePasswordAuthenticationToken("enzo@fiap.com.br", "123456");

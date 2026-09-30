@@ -1,7 +1,9 @@
 package fiap.com.br.petguardian.usuario;
 
+import fiap.com.br.petguardian.endereco.Endereco;
 import fiap.com.br.petguardian.endereco.EnderecoService;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.telefone.TelefoneRepository;
 import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,21 +38,20 @@ public class UsuarioService {
     }
 
     @Transactional
-    public Usuario create(UsuarioRequest usuarioRequest) {
-        Usuario usuario = usuarioRequest.toEntity(
-                telefoneRepository.save(usuarioRequest.toTelefone()),
-                usuarioRequest.email(),
-                passwordEncoder.encode(usuarioRequest.senha())
-        );
-        usuario.getEnderecos().add(enderecoService.findOrCreateByCepAndNumero(usuarioRequest.endereco()));
-        return usuarioRepository.save(usuario);
+    public Usuario create(UsuarioRequest request) {
+        if (UsuarioRole.ADMIN.name().equalsIgnoreCase(request.role().trim())) {
+            throw new IllegalArgumentException("Cadastro público não permite perfil de administrador.");
+        }
+        Telefone telefone = telefoneRepository.save(request.toTelefone());
+        Endereco endereco = enderecoService.findOrCreateByCepAndNumero(request.endereco());
+        return usuarioRepository.save(request.toEntity(telefone, endereco, passwordEncoder.encode(request.senha())));
     }
 
     @Transactional
     public Usuario update(Long id, UsuarioRequest request) {
         Usuario usuario = findUsuarioById(id);
         aplicarEm(usuario, request, passwordEncoder.encode(request.senha()));
-        usuario.getEnderecos().add(enderecoService.findOrCreateByCepAndNumero(request.endereco()));
+        usuario.setEndereco(enderecoService.findOrCreateByCepAndNumero(request.endereco()));
         return usuarioRepository.save(usuario);
     }
 
@@ -68,9 +69,7 @@ public class UsuarioService {
     }
 
     public boolean isOwner(Long id, String email) {
-        return usuarioRepository.findByEmailIgnoreCase(email)
-                .map(u -> u.getId().equals(id))
-                .orElse(false);
+        return usuarioRepository.existsByIdAndEmailIgnoreCase(id, email.trim());
     }
 
     public RedeCuidadoResponse getRedeCuidado(Long usuarioId) {
@@ -91,9 +90,7 @@ public class UsuarioService {
         usuario.setNome(request.nome());
         usuario.setEmail(request.email().trim().toLowerCase());
         usuario.setSenha(senhaCodificada);
-        if (usuario.getTelefone() != null) {
-            usuario.getTelefone().setDdd(request.ddd().trim());
-            usuario.getTelefone().setNumero(request.numeroTelefone().trim());
-        }
+        usuario.getTelefone().setDdd(request.ddd().trim());
+        usuario.getTelefone().setNumero(request.numeroTelefone().trim());
     }
 }

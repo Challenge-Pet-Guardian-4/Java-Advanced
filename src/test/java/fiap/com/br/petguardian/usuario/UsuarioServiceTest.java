@@ -93,7 +93,7 @@ class UsuarioServiceTest {
 
         Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
         Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("987654321").build();
-        Usuario usuarioSalvo = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").role(UsuarioRole.PREMIUM).enderecos(new HashSet<>()).build();
+        Usuario usuarioSalvo = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").role(UsuarioRole.PREMIUM).endereco(endereco).build();
 
         when(enderecoService.findOrCreateByCepAndNumero(enderecoReq)).thenReturn(endereco);
         when(telefoneRepository.save(any(Telefone.class))).thenReturn(telefone);
@@ -133,8 +133,7 @@ class UsuarioServiceTest {
     @Test
     @DisplayName("isOwner deve retornar true quando email pertence ao usuario com o id informado")
     void deveRetornarTrueQuandoEmailEhDono() {
-        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.existsByIdAndEmailIgnoreCase(1L, "enzo@fiap.com.br")).thenReturn(true);
 
         assertTrue(usuarioService.isOwner(1L, "enzo@fiap.com.br"));
     }
@@ -142,18 +141,19 @@ class UsuarioServiceTest {
     @Test
     @DisplayName("isOwner deve retornar false quando email nao pertence ao usuario com o id informado")
     void deveRetornarFalseQuandoEmailNaoEhDono() {
-        Usuario outro = Usuario.builder().id(2L).email("outro@fiap.com.br").build();
-        when(usuarioRepository.findByEmailIgnoreCase("outro@fiap.com.br")).thenReturn(Optional.of(outro));
+        when(usuarioRepository.existsByIdAndEmailIgnoreCase(1L, "outro@fiap.com.br")).thenReturn(false);
 
         assertFalse(usuarioService.isOwner(1L, "outro@fiap.com.br"));
     }
 
     @Test
-    @DisplayName("isOwner deve retornar false quando email nao existe")
-    void deveRetornarFalseQuandoEmailInexistente() {
-        when(usuarioRepository.findByEmailIgnoreCase("naoexiste@fiap.com.br")).thenReturn(Optional.empty());
+    @DisplayName("Deve lancar excecao ao tentar criar usuario com role ADMIN")
+    void deveLancarExcecaoAoCriarUsuarioAdmin() {
+        var enderecoReq = new EnderecoRequest("01310100", "100");
+        var request = new UsuarioRequest("Admin", "admin@fiap.com.br", "123456", "11", "987654321", "ADMIN", enderecoReq);
 
-        assertFalse(usuarioService.isOwner(1L, "naoexiste@fiap.com.br"));
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> usuarioService.create(request));
+        assertEquals("Cadastro público não permite perfil de administrador.", ex.getMessage());
     }
 
     @Test
@@ -172,12 +172,12 @@ class UsuarioServiceTest {
     @Test
     @DisplayName("Deve atualizar usuario sem alterar o campo role")
     void deveAtualizarUsuarioSemAlterarRole() {
-        var enderecoReq = new fiap.com.br.petguardian.endereco.dto.EnderecoRequest("01310100", "100");
+        var enderecoReq = new EnderecoRequest("01310100", "100");
         var request = new UsuarioRequest("Novo Nome", "novo@fiap.com.br", "novaSenha", "11", "912345678", "COMUM", enderecoReq);
 
         Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
         Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("912345678").build();
-        Usuario usuarioExistente = Usuario.builder().id(1L).nome("Enzo").role(UsuarioRole.ADMIN).telefone(telefone).enderecos(new HashSet<>()).build();
+        Usuario usuarioExistente = Usuario.builder().id(1L).nome("Enzo").role(UsuarioRole.ADMIN).telefone(telefone).endereco(endereco).build();
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioExistente));
         when(passwordEncoder.encode("novaSenha")).thenReturn("hashedNova");

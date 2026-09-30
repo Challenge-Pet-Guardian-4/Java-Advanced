@@ -137,8 +137,8 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | `GET` | `/tarefas/by-usuario/pontos` | `@RequestParam Long usuarioId` | `Integer` | Consulta total de pontos acumulados pelo cuidador. |
 | `POST` | `/tarefas` | `TarefaRequest` (`usuarioId` NOT NULL) | `TarefaResponse` (201 Created) | Cria nova tarefa vinculada obrigatoriamente a um cuidador do pet com status `PENDENTE`. |
 | `PUT` | `/tarefas/{id}` | `TarefaRequest` | `TarefaResponse` (200 OK) | Atualiza os dados e status da tarefa. |
-| `PATCH`| `/tarefas/{id}/concluir` | `TarefaConclusaoRequest` (`concluinteId`) | `TarefaResponse` (200 OK) | Marca tarefa como `CONCLUIDO`, vincula executor e data de conclusão via `aplicarConclusao()` no Service. |
-| `PATCH`| `/tarefas/{id}/desmarcar` | `@PathVariable Long id`, `@RequestParam Long usuarioId` | `TarefaResponse` (200 OK) | Desmarca tarefa previamente concluída retornando-a ao status `PENDENTE` e limpando a conclusão. |
+| `PATCH`| `/tarefas/{id}/concluir` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Marca tarefa como `CONCLUIDO`, vincula executor autenticado e data de conclusão via `aplicarConclusao()` no Service. |
+| `PATCH`| `/tarefas/{id}/desmarcar` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Desmarca tarefa previamente concluída retornando-a ao status `PENDENTE` e limpando a conclusão. |
 | `DELETE`| `/tarefas/{id}` | `@PathVariable Long id` | 204 No Content | Deleta uma tarefa. |
 
 ---
@@ -212,11 +212,10 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 - `@DddValidation` / `@DddValidator`: Valida DDD válido no Brasil.
 - `@CepValidation` / `@CepValidator`: Valida formato numérico de 8 dígitos de CEP.
 - `@EnumValidation` / `@EnumValidator`: Valida enums dinâmicos (`PetPorte`, `EnumStatus`, `UsuarioRole`).
-- `@DiferentesUsuariosValidation` / `@DiferentesUsuariosValidator`: Garante `responsavelAtualId != novoResponsavelId`.
 
 ### B. Validação de Regras de Negócio (Domain / Service Components)
-- **`TarefaValidator`**: Valida se o criador/executor é cuidador do pet e se a tarefa está apta para conclusão/desmarcação.
-- **`UsuarioPetValidator`**: Valida titularidade única de responsável principal, vínculo prévio e desvinculação no Care Circle.
+- **`TarefaValidator`**: Valida se o atribuído/executor é cuidador do pet e se a tarefa está apta para conclusão/desmarcação.
+- **`UsuarioPetService`**: Valida regras de titularidade única de responsável principal, vínculo prévio e permissões de desvinculação no Care Circle.
 
 ### C. Tratamento Global de Erros (`GlobalExceptionHandler`)
 - `400 Bad Request`: `MethodArgumentNotValidException`, `IllegalArgumentException`, `HttpMessageNotReadableException`, `DataIntegrityViolationException`.

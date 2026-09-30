@@ -8,6 +8,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -31,6 +33,7 @@ public class UsuarioPetController {
     @PostMapping("/cuidadores")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Convidar um novo co-cuidador para o pet (por ID ou e-mail)")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#petId, authentication.name)")
     public CoCuidadorResponse convidarCuidador(
             @PathVariable Long petId,
             @Valid @RequestBody CoCuidadorRequest request
@@ -41,17 +44,19 @@ public class UsuarioPetController {
     @DeleteMapping("/cuidadores/{usuarioId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Desvincular um co-cuidador do pet")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
     public void desvincularCuidador(
             @PathVariable Long petId,
             @PathVariable Long usuarioId,
-            @RequestParam Long solicitanteId
+            Authentication authentication
     ) {
-        usuarioPetService.desvincularCuidador(petId, usuarioId, solicitanteId);
+        usuarioPetService.desvincularCuidador(petId, usuarioId, authentication.getName());
     }
 
     @PatchMapping("/responsavel-principal")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Transferir a titularidade de responsavel principal para outro co-cuidador")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#petId, authentication.name)")
     public void transferirResponsavelPrincipal(
             @PathVariable Long petId,
             @Valid @RequestBody TransferirResponsabilidadeRequest request

@@ -144,14 +144,8 @@ CREATE TABLE usuario
     senha                VARCHAR(60)                             NOT NULL,
     role                 VARCHAR(10)                             NOT NULL,
     telefone_id_telefone BIGINT                                  NOT NULL,
+    endereco_id_endereco BIGINT                                  NOT NULL,
     CONSTRAINT pk_usuario PRIMARY KEY (id_usuario)
-);
-
-CREATE TABLE usuario_endereco
-(
-    endereco_id_endereco BIGINT NOT NULL,
-    usuario_id_usuario   BIGINT NOT NULL,
-    CONSTRAINT pk_usuario_endereco PRIMARY KEY (endereco_id_endereco, usuario_id_usuario)
 );
 
 CREATE TABLE usuario_pet
@@ -207,6 +201,9 @@ ALTER TABLE trilha
 ALTER TABLE usuario
     ADD CONSTRAINT FK_USUARIO_ON_TELEFONE_ID_TELEFONE FOREIGN KEY (telefone_id_telefone) REFERENCES telefone (id_telefone);
 
+ALTER TABLE usuario
+    ADD CONSTRAINT FK_USUARIO_ON_ENDERECO_ID_ENDERECO FOREIGN KEY (endereco_id_endereco) REFERENCES endereco (id_endereco);
+
 ALTER TABLE usuario_pet
     ADD CONSTRAINT FK_USUARIO_PET_ON_PET_ID_PET FOREIGN KEY (pet_id_pet) REFERENCES pet (id_pet);
 
@@ -215,9 +212,3 @@ ALTER TABLE usuario_pet
 
 ALTER TABLE revchanges
     ADD CONSTRAINT fk_revchanges_on_default_tracking_modified_entities_changelog FOREIGN KEY (rev) REFERENCES revinfo (rev);
-
-ALTER TABLE usuario_endereco
-    ADD CONSTRAINT fk_usuend_on_endereco FOREIGN KEY (endereco_id_endereco) REFERENCES endereco (id_endereco);
-
-ALTER TABLE usuario_endereco
-    ADD CONSTRAINT fk_usuend_on_usuario FOREIGN KEY (usuario_id_usuario) REFERENCES usuario (id_usuario);
