@@ -69,15 +69,17 @@ public class UsuarioPetService {
         Pet pet = findPetById(petId);
         Usuario convidado = findUsuarioByEmail(request.email());
 
-        usuarioPetValidator.validarResponsavelPrincipal(request.responsavelPrincipalId(), petId);
         usuarioPetValidator.validarUsuarioNaoVinculado(convidado.getId(), petId);
 
         return CoCuidadorResponse.fromEntity(usuarioPetRepository.save(request.toEntity(convidado, pet)));
     }
 
     @Transactional
-    public void transferirResponsabilidadePrincipal(Long petId, TransferirResponsabilidadeRequest request) {
-        usuarioPetValidator.validarResponsavelPrincipal(request.responsavelAtualId(), petId);
+    public void transferirResponsabilidadePrincipal(Long petId, TransferirResponsabilidadeRequest request, String authEmail) {
+        Usuario solicitante = findUsuarioByEmail(authEmail);
+        if (solicitante.getId().equals(request.novoResponsavelId())) {
+            throw new IllegalArgumentException("O novo responsavel nao pode ser o mesmo que o responsavel atual.");
+        }
 
         UsuarioPet novoResponsavel = findVinculo(request.novoResponsavelId(), petId);
         usuarioPetRepository.limparResponsavelPrincipalPorPet(petId);

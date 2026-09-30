@@ -31,22 +31,24 @@ public class TarefaController {
             .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/me")
+    @GetMapping("/by-usuario")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar tarefas do cuidador autenticado com filtro opcional de status e paginação")
-    public Page<TarefaResponse> findMyTarefas(
+    @Operation(summary = "Listar tarefas do cuidador com filtro opcional de status e paginação")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#usuarioId, authentication.name)")
+    public Page<TarefaResponse> findByUsuario(
+            @RequestParam Long usuarioId,
             @RequestParam(defaultValue = "ALL") String status,
-            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable,
-            Authentication authentication) {
-        return tarefaService.findAllByAuthUser(authentication.getName(), status, pageable)
+            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
+        return tarefaService.findAllByUsuario(usuarioId, status, pageable)
             .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/me/pontos")
+    @GetMapping("/by-usuario/pontos")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador autenticado")
-    public Integer calcularMeusPontosTotais(Authentication authentication) {
-        return tarefaService.calcularPontosTotaisAuthUser(authentication.getName());
+    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#usuarioId, authentication.name)")
+    public Integer calcularPontosTotaisUsuario(@RequestParam Long usuarioId) {
+        return tarefaService.calcularPontosTotaisUsuario(usuarioId);
     }
 
     @GetMapping("/by-pet/{petId}")

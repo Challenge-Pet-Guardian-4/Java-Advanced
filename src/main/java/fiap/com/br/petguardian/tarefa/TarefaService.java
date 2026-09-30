@@ -47,16 +47,6 @@ public class TarefaService {
         return tarefaRepository.findAllDoCuidadorByStatus(usuarioId, EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
     }
 
-    public Page<Tarefa> findAllByAuthUser(String authEmail, String statusFiltro, Pageable pageable) {
-        Usuario usuario = findUsuarioByEmail(authEmail);
-        return findAllByUsuario(usuario.getId(), statusFiltro, pageable);
-    }
-
-    public Integer calcularPontosTotaisAuthUser(String authEmail) {
-        Usuario usuario = findUsuarioByEmail(authEmail);
-        return calcularPontosTotaisUsuario(usuario.getId());
-    }
-
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {
         expirarTarefasPendentesAtrasadas();
         findPetById(petId);

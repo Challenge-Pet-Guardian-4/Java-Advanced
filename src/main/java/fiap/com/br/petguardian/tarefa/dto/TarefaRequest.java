@@ -1,6 +1,5 @@
 package fiap.com.br.petguardian.tarefa.dto;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.Tarefa;
@@ -13,7 +12,6 @@ import jakarta.validation.constraints.Positive;
 
 import java.time.LocalDateTime;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public record TarefaRequest(
         @NotBlank
         String titulo,
@@ -28,9 +26,6 @@ public record TarefaRequest(
         @NotNull(message = "O prazo da tarefa é obrigatório.")
         @Future(message = "O prazo da tarefa deve ser uma data e hora futura.")
         LocalDateTime prazo,
-
-        @NotNull
-        Long usuarioId,
 
         @NotNull
         Long petId,

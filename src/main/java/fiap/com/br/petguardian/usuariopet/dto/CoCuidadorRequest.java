@@ -6,12 +6,8 @@ import fiap.com.br.petguardian.usuariopet.UsuarioPet;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetId;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record CoCuidadorRequest(
-        @NotNull
-        Long responsavelPrincipalId,
-
         @NotBlank
         @Email
         String email

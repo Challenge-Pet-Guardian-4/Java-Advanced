@@ -60,7 +60,7 @@ class UsuarioPetServiceTest {
                 .responsavelPrincipal(false)
                 .build();
 
-        var request = new CoCuidadorRequest(1L, "familiar@fiap.com.br");
+        var request = new CoCuidadorRequest("familiar@fiap.com.br");
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
         when(usuarioRepository.findByEmailIgnoreCase("familiar@fiap.com.br")).thenReturn(Optional.of(convidado));
@@ -72,7 +72,6 @@ class UsuarioPetServiceTest {
         assertEquals(2L, response.usuarioId());
         assertEquals("Familiar", response.nome());
         assertFalse(response.responsavelPrincipal());
-        verify(usuarioPetValidator).validarResponsavelPrincipal(1L, 10L);
         verify(usuarioPetValidator).validarUsuarioNaoVinculado(2L, 10L);
     }
 
@@ -94,18 +93,19 @@ class UsuarioPetServiceTest {
     @Test
     @DisplayName("Deve transferir titularidade de responsavel principal")
     void deveTransferirResponsabilidadePrincipal() {
+        Usuario solicitante = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pet pet = Pet.builder().id(10L).build();
         Usuario novoResp = Usuario.builder().id(2L).build();
         UsuarioPet vinculoNovoResp = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(novoResp).pet(pet).responsavelPrincipal(false).build();
 
-        var request = new TransferirResponsabilidadeRequest(1L, 2L);
+        var request = new TransferirResponsabilidadeRequest(2L);
 
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(solicitante));
         when(usuarioPetRepository.findByUsuarioIdAndPetId(2L, 10L)).thenReturn(Optional.of(vinculoNovoResp));
         when(usuarioPetRepository.save(vinculoNovoResp)).thenReturn(vinculoNovoResp);
 
-        usuarioPetService.transferirResponsabilidadePrincipal(10L, request);
+        usuarioPetService.transferirResponsabilidadePrincipal(10L, request, "enzo@fiap.com.br");
 
-        verify(usuarioPetValidator).validarResponsavelPrincipal(1L, 10L);
         verify(usuarioPetRepository).limparResponsavelPrincipalPorPet(10L);
         assertTrue(vinculoNovoResp.isResponsavelPrincipal());
         verify(usuarioPetRepository).save(vinculoNovoResp);

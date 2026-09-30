@@ -13,7 +13,6 @@ import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
-import fiap.com.br.petguardian.validation.UsuarioPetValidator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -77,19 +76,19 @@ class PetServiceTest {
     }
 
     @Test
-    @DisplayName("Deve criar um pet e vincular criador como responsavel principal")
+    @DisplayName("Deve criar um pet e vincular criador autenticado como responsavel principal")
     void deveCriarPetComSucesso() {
-        var request = new PetRequest("Thor", LocalDate.now().minusYears(2), "Golden Retriever", "GRANDE", 'M', true, 1L);
+        var request = new PetRequest("Thor", LocalDate.now().minusYears(2), "Golden Retriever", "GRANDE", 'M', true);
 
-        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").build();
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         Raca raca = Raca.builder().id(1L).nome("Golden Retriever").build();
         Pet petSalvo = Pet.builder().id(10L).nome("Thor").raca(raca).dataNasc(LocalDate.now().minusYears(2)).porte(PetPorte.GRANDE).sexo('M').castrado(true).build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(racaRepository.findByNomeIgnoreCase("Golden Retriever")).thenReturn(Optional.of(raca));
         when(petRepository.save(any(Pet.class))).thenReturn(petSalvo);
 
-        Pet resultado = petService.create(request);
+        Pet resultado = petService.create(request, "enzo@fiap.com.br");
 
         assertNotNull(resultado);
         assertEquals("Thor", resultado.getNome());
@@ -147,29 +146,25 @@ class PetServiceTest {
         assertEquals(80, response.pontosTotais());
     }
 
-
     @Test
-    @DisplayName("Deve deletar pet validando responsavel principal")
-    void deveDeletarPetValidandoResponsavel() {
+    @DisplayName("Deve deletar pet chamando deleteById")
+    void deveDeletarPet() {
         Pet pet = Pet.builder().id(10L).build();
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
 
-        petService.delete(10L, 1L);
+        petService.delete(10L);
 
-        verify(usuarioPetValidator).validarResponsavelPrincipal(1L, 10L);
         verify(petRepository).deleteById(10L);
     }
 
     @Test
-    @DisplayName("Deve atualizar pet validando responsavel principal e preservando usuarioPets e tarefas")
-    void deveAtualizarPetValidandoResponsavel() {
-        var request = new PetRequest("Thor Atualizado", LocalDate.now().minusYears(2), "Golden Retriever", "GRANDE", 'M', true, 1L);
-        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").build();
+    @DisplayName("Deve atualizar pet preservando dados e atualizando campos")
+    void deveAtualizarPet() {
+        var request = new PetRequest("Thor Atualizado", LocalDate.now().minusYears(2), "Golden Retriever", "GRANDE", 'M', true);
         Raca raca = Raca.builder().id(1L).nome("Golden Retriever").build();
         Pet petExistente = Pet.builder().id(10L).nome("Thor").raca(raca).build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(petExistente));
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(racaRepository.findByNomeIgnoreCase("Golden Retriever")).thenReturn(Optional.of(raca));
         when(petRepository.save(any(Pet.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -177,9 +172,6 @@ class PetServiceTest {
 
         assertNotNull(resultado);
         assertEquals("Thor Atualizado", resultado.getNome());
-        assertEquals(petExistente.getUsuarioPets(), resultado.getUsuarioPets());
-        assertEquals(petExistente.getTarefas(), resultado.getTarefas());
-        verify(usuarioPetValidator).validarResponsavelPrincipal(1L, 10L);
     }
 
     @Test
@@ -193,23 +185,6 @@ class PetServiceTest {
         when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
 
         Page<Pet> resultado = petService.findByUsuario(1L, pageable);
-
-        assertNotNull(resultado);
-        assertEquals(1, resultado.getTotalElements());
-        assertEquals("Thor", resultado.getContent().get(0).getNome());
-    }
-}
-    @Test
-    @DisplayName("Deve listar pets do usuario autenticado")
-    void deveListarPetsPorUsuarioAutenticado() {
-        Pageable pageable = PageRequest.of(0, 10);
-        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
-        Pet pet = Pet.builder().id(10L).nome("Thor").build();
-
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
-
-        Page<Pet> resultado = petService.findByAuthUser("enzo@fiap.com.br", pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());

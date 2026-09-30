@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -25,7 +26,8 @@ public class HistoricoController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todos os registros de histórico com paginação e ordenação")
+    @Operation(summary = "Listar todos os registros de histórico com paginação e ordenação (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<HistoricoResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "dataHist", direction = Sort.Direction.DESC) Pageable pageable
     ) {
@@ -36,6 +38,7 @@ public class HistoricoController {
     @GetMapping("/pet/{petId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar historico de eventos/saude de um pet ordenado por data mais recente")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
     public List<HistoricoResponse> findByPetId(@PathVariable Long petId) {
         return historicoService.findAllByPetId(petId)
                 .stream()
@@ -46,6 +49,7 @@ public class HistoricoController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar registro de historico por ID")
+    @PreAuthorize("hasRole('ADMIN') or @historicoService.isCuidadorDoHistorico(#id, authentication.name)")
     public HistoricoResponse findById(@PathVariable Long id) {
         return HistoricoResponse.fromEntity(historicoService.findById(id));
     }
@@ -53,6 +57,7 @@ public class HistoricoController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar novo registro de historico para um pet")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#request.petId(), authentication.name)")
     public HistoricoResponse create(@Valid @RequestBody HistoricoRequest request) {
         return HistoricoResponse.fromEntity(historicoService.create(request));
     }
@@ -60,6 +65,7 @@ public class HistoricoController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar registro de historico por ID")
+    @PreAuthorize("hasRole('ADMIN') or (@historicoService.isCuidadorDoHistorico(#id, authentication.name) and @petService.isCuidadorDoPet(#request.petId(), authentication.name))")
     public HistoricoResponse update(@PathVariable Long id, @Valid @RequestBody HistoricoRequest request) {
         return HistoricoResponse.fromEntity(historicoService.update(id, request));
     }
@@ -67,6 +73,7 @@ public class HistoricoController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar registro de historico por ID")
+    @PreAuthorize("hasRole('ADMIN') or @historicoService.isCuidadorDoHistorico(#id, authentication.name)")
     public void delete(@PathVariable Long id) {
         historicoService.delete(id);
     }

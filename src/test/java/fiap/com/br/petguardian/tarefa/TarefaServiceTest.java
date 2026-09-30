@@ -2,7 +2,6 @@ package fiap.com.br.petguardian.tarefa;
 
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
-import fiap.com.br.petguardian.tarefa.dto.TarefaConclusaoRequest;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.status.Status;
@@ -72,12 +71,12 @@ class TarefaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve criar nova tarefa vinculada a um cuidador do pet com status PENDENTE")
+    @DisplayName("Deve criar nova tarefa vinculada ao cuidador autenticado com status PENDENTE")
     void deveCriarTarefa() {
-        var request = new TarefaRequest("Remédio", 15, "Dar antibiótico", LocalDateTime.now().plusDays(1), 1L, 10L, "PENDENTE", null);
+        var request = new TarefaRequest("Remédio", 15, "Dar antibiótico", LocalDateTime.now().plusDays(1), 10L, "PENDENTE", null);
 
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
-        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").build();
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
         Tarefa tarefaSalva = Tarefa.builder()
                 .id(100L)
@@ -92,11 +91,11 @@ class TarefaServiceTest {
                 .build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
 
-        Tarefa resultado = tarefaService.create(request);
+        Tarefa resultado = tarefaService.create(request, "enzo@fiap.com.br");
 
         assertNotNull(resultado);
         assertEquals("Remédio", resultado.getTitulo());
@@ -108,7 +107,7 @@ class TarefaServiceTest {
     @Test
     @DisplayName("Deve concluir tarefa somando pontos e registrando concluinte e data")
     void deveConcluirTarefa() {
-        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Pet pet = Pet.builder().id(10L).build();
         Usuario criador = Usuario.builder().id(1L).nome("Enzo").build();
         Usuario concluinte = Usuario.builder().id(2L).nome("CoCuidador").build();
 
@@ -132,8 +131,7 @@ class TarefaServiceTest {
         when(statusService.findStatus(EnumStatus.CONCLUIDO)).thenReturn(statusConcluido);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        var conclusaoReq = new TarefaConclusaoRequest(2L);
-        Tarefa resultado = tarefaService.concluir(100L, conclusaoReq);
+        Tarefa resultado = tarefaService.concluir(100L, 2L);
 
         assertNotNull(resultado);
         assertEquals(EnumStatus.CONCLUIDO, resultado.getStatus().getNomeStatus());

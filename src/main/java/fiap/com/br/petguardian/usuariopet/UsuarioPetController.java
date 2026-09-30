@@ -26,6 +26,7 @@ public class UsuarioPetController {
     @GetMapping("/cuidadores")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todos os cuidadores vinculados a um pet")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
     public List<CoCuidadorResponse> listarCuidadores(@PathVariable Long petId) {
         return usuarioPetService.listarCuidadoresDoPet(petId);
     }
@@ -59,8 +60,9 @@ public class UsuarioPetController {
     @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#petId, authentication.name)")
     public void transferirResponsavelPrincipal(
             @PathVariable Long petId,
-            @Valid @RequestBody TransferirResponsabilidadeRequest request
+            @Valid @RequestBody TransferirResponsabilidadeRequest request,
+            Authentication authentication
     ) {
-        usuarioPetService.transferirResponsabilidadePrincipal(petId, request);
+        usuarioPetService.transferirResponsabilidadePrincipal(petId, request, authentication.getName());
     }
 }

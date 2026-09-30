@@ -3,6 +3,7 @@ package fiap.com.br.petguardian.pet.historico;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.pet.historico.dto.HistoricoRequest;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +17,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,6 +30,9 @@ class HistoricoServiceTest {
 
     @Mock
     private PetRepository petRepository;
+
+    @Mock
+    private UsuarioPetService usuarioPetService;
 
     @InjectMocks
     private HistoricoService historicoService;
@@ -73,5 +78,17 @@ class HistoricoServiceTest {
         historicoService.delete(1L);
 
         verify(historicoRepository).deleteById(1L);
+    }
+
+    @Test
+    @DisplayName("Deve verificar se usuário é cuidador do histórico")
+    void deveVerificarCuidadorDoHistorico() {
+        Pet pet = Pet.builder().id(10L).build();
+        Historico hist = Historico.builder().id(1L).pet(pet).build();
+
+        when(historicoRepository.findById(1L)).thenReturn(Optional.of(hist));
+        when(usuarioPetService.isCuidadorDoPet(10L, "enzo@fiap.com.br")).thenReturn(true);
+
+        assertTrue(historicoService.isCuidadorDoHistorico(1L, "enzo@fiap.com.br"));
     }
 }

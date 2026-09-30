@@ -48,11 +48,10 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .headers(headers -> headers.frameOptions(FrameOptionsConfig::sameOrigin))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/login", "/usuarios").permitAll()
                         .requestMatchers(HttpMethod.GET, "/trilhas", "/trilhas/**", "/modulos", "/modulos/**", "/aulas", "/aulas/**").hasAnyRole("PREMIUM", "ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/aulas/*/concluir", "/aulas/*/desmarcar").hasAnyRole("PREMIUM", "ADMIN")
-                        .requestMatchers("/trilhas", "/trilhas/**", "/modulos", "/modulos/**", "/aulas", "/aulas/**").hasRole("ADMIN")
+                        .requestMatchers("/trilhas", "/trilhas/**", "/modulos", "/modulos/**", "/aulas", "/aulas/**", "/enderecos", "/enderecos/**").hasRole("ADMIN")
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-resources/**", "/webjars/**", "/actuator/health", "/actuator/info", "/error").permitAll()
                         .anyRequest().authenticated()
                 )

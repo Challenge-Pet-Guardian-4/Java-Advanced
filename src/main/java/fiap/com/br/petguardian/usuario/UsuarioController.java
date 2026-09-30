@@ -25,7 +25,8 @@ public class UsuarioController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todos os usuários com paginação e ordenação")
+    @Operation(summary = "Listar todos os usuários com paginação e ordenação (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<UsuarioResponse> findAll(@PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return usuarioService.findAll(pageable)
                 .map(UsuarioResponse::fromEntity);
@@ -33,7 +34,8 @@ public class UsuarioController {
 
     @GetMapping("/by-nome")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar usuários por nome com paginação e ordenação")
+    @Operation(summary = "Buscar usuários por nome com paginação e ordenação (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<UsuarioResponse> findByNome(@RequestParam String nome, @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return usuarioService.findByNome(nome, pageable)
                 .map(UsuarioResponse::fromEntity);
@@ -41,7 +43,8 @@ public class UsuarioController {
 
     @GetMapping("/by-email")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar usuário por e-mail")
+    @Operation(summary = "Buscar usuário por e-mail (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse findByEmail(@RequestParam String email) {
         return UsuarioResponse.fromEntity(usuarioService.findUsuarioByEmail(email));
     }
@@ -49,15 +52,17 @@ public class UsuarioController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar usuário por ID")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public UsuarioResponse findById(@PathVariable Long id) {
         return UsuarioResponse.fromEntity(usuarioService.findById(id));
     }
 
     @GetMapping("/{id}/rede-cuidado")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Visualizar rede de cuidado do usuário (pets, co-cuidadores e tarefas agrupadas)")
+    @Operation(summary = "Visualizar rede de cuidado do usuário por ID")
     @Tag(name = "Care Circle", description = "Gestão colaborativa de tutores e co-cuidadores do pet")
     @Tag(name = "Usuário", description = "Gerenciamento de usuários")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public RedeCuidadoResponse getRedeCuidado(@PathVariable Long id) {
         return usuarioService.getRedeCuidado(id);
     }
