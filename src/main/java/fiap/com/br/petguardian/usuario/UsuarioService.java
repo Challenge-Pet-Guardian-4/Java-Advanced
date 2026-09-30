@@ -10,7 +10,6 @@ import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,10 +47,10 @@ public class UsuarioService {
     }
 
     @Transactional
-    public Usuario update(Long id, UsuarioRequest usuarioRequest) {
+    public Usuario update(Long id, UsuarioRequest request) {
         Usuario usuario = findUsuarioById(id);
-        aplicarEm(usuario, usuarioRequest, passwordEncoder.encode(usuarioRequest.senha()));
-        usuario.getEnderecos().add(enderecoService.findOrCreateByCepAndNumero(usuarioRequest.endereco()));
+        aplicarEm(usuario, request, passwordEncoder.encode(request.senha()));
+        usuario.getEnderecos().add(enderecoService.findOrCreateByCepAndNumero(request.endereco()));
         return usuarioRepository.save(usuario);
     }
 
@@ -59,6 +58,19 @@ public class UsuarioService {
     public void delete(Long id) {
         findUsuarioById(id);
         usuarioRepository.deleteById(id);
+    }
+
+    @Transactional
+    public Usuario updateRole(Long id, String role) {
+        Usuario usuario = findUsuarioById(id);
+        usuario.setRole(UsuarioRole.valueOf(role.trim().toUpperCase()));
+        return usuarioRepository.save(usuario);
+    }
+
+    public boolean isOwner(Long id, String email) {
+        return usuarioRepository.findByEmailIgnoreCase(email)
+                .map(u -> u.getId().equals(id))
+                .orElse(false);
     }
 
     public RedeCuidadoResponse getRedeCuidado(Long usuarioId) {
@@ -79,7 +91,6 @@ public class UsuarioService {
         usuario.setNome(request.nome());
         usuario.setEmail(request.email().trim().toLowerCase());
         usuario.setSenha(senhaCodificada);
-        usuario.setRole(UsuarioRole.valueOf(request.role().trim().toUpperCase()));
         if (usuario.getTelefone() != null) {
             usuario.getTelefone().setDdd(request.ddd().trim());
             usuario.getTelefone().setNumero(request.numeroTelefone().trim());

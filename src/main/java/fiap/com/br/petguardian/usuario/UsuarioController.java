@@ -1,6 +1,7 @@
 package fiap.com.br.petguardian.usuario;
 
 import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
+import fiap.com.br.petguardian.usuario.dto.RoleUpdateRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,9 +14,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.oauth2.jwt.Jwt;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -73,16 +72,24 @@ public class UsuarioController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar usuário")
-    @PreAuthorize("hasRole('ADMIN') or #id == #jwt.claims['id']")
-    public UsuarioResponse update(@PathVariable Long id, @Valid @RequestBody UsuarioRequest usuarioRequest, @AuthenticationPrincipal Jwt jwt) {
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    public UsuarioResponse update(@PathVariable Long id, @Valid @RequestBody UsuarioRequest usuarioRequest) {
         return UsuarioResponse.fromEntity(usuarioService.update(id, usuarioRequest));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar usuário")
-    @PreAuthorize("hasRole('ADMIN') or #id == #jwt.claims['id']")
-    public void delete(@PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    public void delete(@PathVariable Long id) {
         usuarioService.delete(id);
+    }
+
+    @PatchMapping("/{id}/role")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Alterar role do usuário (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public UsuarioResponse updateRole(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest request) {
+        return UsuarioResponse.fromEntity(usuarioService.updateRole(id, request.role()));
     }
 }

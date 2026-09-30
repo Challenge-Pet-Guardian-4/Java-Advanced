@@ -29,7 +29,6 @@ public class TokenService {
                 .issuedAt(now)
                 .expiresAt(now.plus(1, ChronoUnit.HOURS))
                 .subject(user.getEmail())
-                .claim("id", user.getId())
                 .claim("role", user.getRole().name())
                 .build();
 

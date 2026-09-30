@@ -129,4 +129,64 @@ class UsuarioServiceTest {
         assertNotNull(resultado);
         assertEquals("Enzo", resultado.nomeUsuario());
     }
+
+    @Test
+    @DisplayName("isOwner deve retornar true quando email pertence ao usuario com o id informado")
+    void deveRetornarTrueQuandoEmailEhDono() {
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+
+        assertTrue(usuarioService.isOwner(1L, "enzo@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("isOwner deve retornar false quando email nao pertence ao usuario com o id informado")
+    void deveRetornarFalseQuandoEmailNaoEhDono() {
+        Usuario outro = Usuario.builder().id(2L).email("outro@fiap.com.br").build();
+        when(usuarioRepository.findByEmailIgnoreCase("outro@fiap.com.br")).thenReturn(Optional.of(outro));
+
+        assertFalse(usuarioService.isOwner(1L, "outro@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("isOwner deve retornar false quando email nao existe")
+    void deveRetornarFalseQuandoEmailInexistente() {
+        when(usuarioRepository.findByEmailIgnoreCase("naoexiste@fiap.com.br")).thenReturn(Optional.empty());
+
+        assertFalse(usuarioService.isOwner(1L, "naoexiste@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve atualizar role do usuario quando chamado por ADMIN")
+    void deveAtualizarRoleDoUsuario() {
+        Usuario usuario = Usuario.builder().id(1L).role(UsuarioRole.COMUM).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Usuario resultado = usuarioService.updateRole(1L, "PREMIUM");
+
+        assertEquals(UsuarioRole.PREMIUM, resultado.getRole());
+        verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    @DisplayName("Deve atualizar usuario sem alterar o campo role")
+    void deveAtualizarUsuarioSemAlterarRole() {
+        var enderecoReq = new fiap.com.br.petguardian.endereco.dto.EnderecoRequest("01310100", "100");
+        var request = new UsuarioRequest("Novo Nome", "novo@fiap.com.br", "novaSenha", "11", "912345678", "COMUM", enderecoReq);
+
+        Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
+        Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("912345678").build();
+        Usuario usuarioExistente = Usuario.builder().id(1L).nome("Enzo").role(UsuarioRole.ADMIN).telefone(telefone).enderecos(new HashSet<>()).build();
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuarioExistente));
+        when(passwordEncoder.encode("novaSenha")).thenReturn("hashedNova");
+        when(enderecoService.findOrCreateByCepAndNumero(enderecoReq)).thenReturn(endereco);
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Usuario resultado = usuarioService.update(1L, request);
+
+        assertEquals(UsuarioRole.ADMIN, resultado.getRole());
+        assertEquals("Novo Nome", resultado.getNome());
+    }
 }

@@ -4,8 +4,8 @@ import fiap.com.br.petguardian.endereco.dto.EnderecoRequest;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRole;
+import fiap.com.br.petguardian.validation.AllowedRolesValidation;
 import fiap.com.br.petguardian.validation.DddValidation;
-import fiap.com.br.petguardian.validation.EnumValidation;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -34,7 +34,7 @@ public record UsuarioRequest(
         String numeroTelefone,
 
         @NotBlank
-        @EnumValidation(enumClass = UsuarioRole.class)
+        @AllowedRolesValidation(allowed = {UsuarioRole.COMUM, UsuarioRole.PREMIUM})
         String role,
 
         @NotNull
@@ -42,7 +42,6 @@ public record UsuarioRequest(
         EnderecoRequest endereco
 ) {
     public Usuario toEntity(Telefone telefone, String email, String senhaCodificada) {
-        UsuarioRole.valueOf(role.trim().toUpperCase());
         return Usuario.builder()
                 .nome(nome)
                 .email(email.trim().toLowerCase())
