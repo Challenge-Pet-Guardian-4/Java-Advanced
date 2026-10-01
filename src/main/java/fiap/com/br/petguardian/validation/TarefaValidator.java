@@ -12,8 +12,8 @@ public class TarefaValidator {
 
     private final UsuarioPetRepository usuarioPetRepository;
 
-    public void validarCuidadorDoPet(Long usuarioId, Long petId) {
-        if (!usuarioPetRepository.existsByUsuarioIdAndPetId(usuarioId, petId)) {
+    public void validarCuidadorDoPet(String email, Long petId) {
+        if (!usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId)) {
             throw new IllegalArgumentException("Usuario informado nao esta vinculado ao pet da tarefa.");
         }
     }

@@ -18,9 +18,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findById(Long id);
 
     @EntityGraph(attributePaths = {"telefone", "endereco"})
-    Page<Usuario> findByNomeContainingIgnoreCase(String nome, Pageable pageable);
-
-    @EntityGraph(attributePaths = {"telefone", "endereco"})
     Optional<Usuario> findByEmailIgnoreCase(String email);
 
     boolean existsByIdAndEmailIgnoreCase(Long id, String email);

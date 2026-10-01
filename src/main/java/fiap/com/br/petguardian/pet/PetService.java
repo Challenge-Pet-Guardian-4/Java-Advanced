@@ -39,8 +39,8 @@ public class PetService {
         return petRepository.findByUsuarioId(usuarioId, pageable);
     }
 
-    public Page<Pet> findByNome(String nome, Pageable pageable) {
-        return petRepository.findByNomeContainingIgnoreCase(nome, pageable);
+    public Page<Pet> findByEmail(String email, Pageable pageable) {
+        return petRepository.findByUsuarioEmail(email.trim(), pageable);
     }
 
     public Pet findById(Long id) {

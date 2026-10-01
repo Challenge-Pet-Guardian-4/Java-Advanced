@@ -26,35 +26,19 @@ class UsuarioPetValidatorTest {
     private UsuarioPetValidator validator;
 
     @Test
-    @DisplayName("Deve permitir se for o responsavel principal")
-    void devePermitirResponsavelPrincipal() {
-        when(usuarioPetRepository.isResponsavelPrincipal(1L, 10L)).thenReturn(true);
-
-        assertDoesNotThrow(() -> validator.validarResponsavelPrincipal(1L, 10L));
-    }
-
-    @Test
-    @DisplayName("Deve lançar exceção se não for o responsável principal")
-    void deveRejeitarNaoResponsavelPrincipal() {
-        when(usuarioPetRepository.isResponsavelPrincipal(1L, 10L)).thenReturn(false);
-
-        assertThrows(IllegalArgumentException.class, () -> validator.validarResponsavelPrincipal(1L, 10L));
-    }
-
-    @Test
     @DisplayName("Deve permitir convite se o usuário ainda não for vinculado")
     void devePermitirUsuarioNaoVinculado() {
-        when(usuarioPetRepository.existsByUsuarioIdAndPetId(2L, 10L)).thenReturn(false);
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("convidado@teste.com", 10L)).thenReturn(false);
 
-        assertDoesNotThrow(() -> validator.validarUsuarioNaoVinculado(2L, 10L));
+        assertDoesNotThrow(() -> validator.validarUsuarioNaoVinculadoPorEmail("convidado@teste.com", 10L));
     }
 
     @Test
     @DisplayName("Deve lançar exceção ao convidar usuário já vinculado")
     void deveRejeitarUsuarioJaVinculado() {
-        when(usuarioPetRepository.existsByUsuarioIdAndPetId(2L, 10L)).thenReturn(true);
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("convidado@teste.com", 10L)).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> validator.validarUsuarioNaoVinculado(2L, 10L));
+        assertThrows(IllegalArgumentException.class, () -> validator.validarUsuarioNaoVinculadoPorEmail("convidado@teste.com", 10L));
     }
 
     @Test
@@ -62,25 +46,25 @@ class UsuarioPetValidatorTest {
     void deveRejeitarDesvinculacaoResponsavelPrincipal() {
         UsuarioPet vinculoPrincipal = UsuarioPet.builder()
                 .id(new UsuarioPetId(1L, 10L))
-                .usuario(Usuario.builder().id(1L).build())
+                .usuario(Usuario.builder().id(1L).email("principal@teste.com").build())
                 .pet(Pet.builder().id(10L).build())
                 .responsavelPrincipal(true)
                 .build();
 
-        assertThrows(IllegalArgumentException.class, () -> validator.validarPermissaoDesvinculacao(vinculoPrincipal, 1L));
+        assertThrows(IllegalArgumentException.class, () -> validator.validarPermissaoDesvinculacao(vinculoPrincipal, "principal@teste.com"));
     }
 
     @Test
-    @DisplayName("Deve permitir desvinculação se o solicitante for o próprio usuário")
+    @DisplayName("Deve permitir desvinculação se o solicitante for o próprio cuidador")
     void devePermitirProprioUsuarioDesvincular() {
         UsuarioPet vinculoCoCuidador = UsuarioPet.builder()
                 .id(new UsuarioPetId(2L, 10L))
-                .usuario(Usuario.builder().id(2L).build())
+                .usuario(Usuario.builder().id(2L).email("cuidador@teste.com").build())
                 .pet(Pet.builder().id(10L).build())
                 .responsavelPrincipal(false)
                 .build();
 
-        assertDoesNotThrow(() -> validator.validarPermissaoDesvinculacao(vinculoCoCuidador, 2L));
+        assertDoesNotThrow(() -> validator.validarPermissaoDesvinculacao(vinculoCoCuidador, "cuidador@teste.com"));
     }
 
     @Test
@@ -88,13 +72,28 @@ class UsuarioPetValidatorTest {
     void devePermitirResponsavelDesvincularCoCuidador() {
         UsuarioPet vinculoCoCuidador = UsuarioPet.builder()
                 .id(new UsuarioPetId(2L, 10L))
-                .usuario(Usuario.builder().id(2L).build())
+                .usuario(Usuario.builder().id(2L).email("cuidador@teste.com").build())
                 .pet(Pet.builder().id(10L).build())
                 .responsavelPrincipal(false)
                 .build();
 
-        when(usuarioPetRepository.isResponsavelPrincipal(1L, 10L)).thenReturn(true);
+        when(usuarioPetRepository.isResponsavelPrincipalPorEmail("principal@teste.com", 10L)).thenReturn(true);
 
-        assertDoesNotThrow(() -> validator.validarPermissaoDesvinculacao(vinculoCoCuidador, 1L));
+        assertDoesNotThrow(() -> validator.validarPermissaoDesvinculacao(vinculoCoCuidador, "principal@teste.com"));
+    }
+
+    @Test
+    @DisplayName("Deve rejeitar desvinculação se o solicitante não for o cuidador nem o responsável")
+    void deveRejeitarDesvinculacaoPorTerceiroNaoResponsavel() {
+        UsuarioPet vinculoCoCuidador = UsuarioPet.builder()
+                .id(new UsuarioPetId(2L, 10L))
+                .usuario(Usuario.builder().id(2L).email("cuidador@teste.com").build())
+                .pet(Pet.builder().id(10L).build())
+                .responsavelPrincipal(false)
+                .build();
+
+        when(usuarioPetRepository.isResponsavelPrincipalPorEmail("terceiro@teste.com", 10L)).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> validator.validarPermissaoDesvinculacao(vinculoCoCuidador, "terceiro@teste.com"));
     }
 }

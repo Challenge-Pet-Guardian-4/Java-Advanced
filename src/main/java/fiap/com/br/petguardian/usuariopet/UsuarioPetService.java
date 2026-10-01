@@ -56,77 +56,61 @@ public class UsuarioPetService {
     }
 
     @Transactional
-    public UsuarioPet vincularResponsavelPrincipal(Usuario usuario, Pet pet) {
-        usuarioPetRepository.limparResponsavelPrincipalPorPet(pet.getId());
-        UsuarioPet vinculo = usuarioPetRepository.findByUsuarioIdAndPetId(usuario.getId(), pet.getId())
-                .orElseGet(() -> new UsuarioPet(new UsuarioPetId(usuario.getId(), pet.getId()), usuario, pet, true));
-        vinculo.promoverResponsavelPrincipal();
-        return usuarioPetRepository.save(vinculo);
-    }
-
-    @Transactional
     public CoCuidadorResponse convidarCoCuidador(Long petId, CoCuidadorRequest request) {
         Pet pet = findPetById(petId);
+        usuarioPetValidator.validarUsuarioNaoVinculadoPorEmail(request.email(), petId);
         Usuario convidado = findUsuarioByEmail(request.email());
-
-        usuarioPetValidator.validarUsuarioNaoVinculado(convidado.getId(), petId);
 
         return CoCuidadorResponse.fromEntity(usuarioPetRepository.save(request.toEntity(convidado, pet)));
     }
 
     @Transactional
     public void transferirResponsabilidadePrincipal(Long petId, TransferirResponsabilidadeRequest request, String authEmail) {
-        Usuario solicitante = findUsuarioByEmail(authEmail);
-        if (solicitante.getId().equals(request.novoResponsavelId())) {
+        if (authEmail.trim().equalsIgnoreCase(request.novoResponsavelEmail().trim())) {
             throw new IllegalArgumentException("O novo responsavel nao pode ser o mesmo que o responsavel atual.");
         }
 
-        UsuarioPet novoResponsavel = findVinculo(request.novoResponsavelId(), petId);
+        UsuarioPet novoResponsavel = findVinculoPorEmail(request.novoResponsavelEmail(), petId);
         usuarioPetRepository.limparResponsavelPrincipalPorPet(petId);
         novoResponsavel.promoverResponsavelPrincipal();
         usuarioPetRepository.save(novoResponsavel);
     }
 
     @Transactional
-    public void desvincularCuidador(Long petId, Long usuarioId, String solicitanteEmail) {
-        Usuario solicitante = findUsuarioByEmail(solicitanteEmail);
-        desvincularCuidador(petId, usuarioId, solicitante.getId());
-    }
-
-    @Transactional
-    public void desvincularCuidador(Long petId, Long usuarioId, Long solicitanteId) {
-        UsuarioPet vinculo = findVinculo(usuarioId, petId);
-        usuarioPetValidator.validarPermissaoDesvinculacao(vinculo, solicitanteId);
+    public void desvincularCuidador(Long petId, String cuidadorEmail, String solicitanteEmail) {
+        UsuarioPet vinculo = findVinculoPorEmail(cuidadorEmail, petId);
+        usuarioPetValidator.validarPermissaoDesvinculacao(vinculo, solicitanteEmail);
         usuarioPetRepository.delete(vinculo);
     }
 
     @Transactional(readOnly = true)
-    public RedeCuidadoResponse montarRedeCuidado(Long usuarioId) {
-        Usuario usuario = findUsuarioById(usuarioId);
-        List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioId(usuarioId);
+    public RedeCuidadoResponse montarRedeCuidado(String email) {
+        Usuario usuario = findUsuarioByEmail(email);
+        List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmail(email.trim());
 
         if (vinculos.isEmpty()) {
             return redeCuidadoMapper.toEmptyResponse(usuario);
         }
 
         List<Long> petIds = vinculos.stream().map(up -> up.getPet().getId()).toList();
-        List<Long> petsOndeUsuarioEPrincipal = vinculos.stream()
-                .filter(UsuarioPet::isResponsavelPrincipal)
-                .map(up -> up.getPet().getId())
-                .toList();
 
         var pets = redeCuidadoMapper.toPetResumoList(vinculos, carregarMapaTarefasPorPet(petIds));
         var cuidadores = redeCuidadoMapper.toCuidadorResumoList(
                 usuarioPetRepository.findAllByPetIdIn(petIds),
-                usuarioId,
-                petsOndeUsuarioEPrincipal
+                usuario.getEmail()
         );
 
         int pendentes = tarefaRepository.countByPetIdInAndStatusAndPrazoFuturo(petIds, EnumStatus.PENDENTE, LocalDateTime.now());
         int concluidas = tarefaRepository.countByPetIdInAndStatus(petIds, EnumStatus.CONCLUIDO);
-        int pontos = tarefaRepository.calcularPontosTotaisUsuario(usuarioId, EnumStatus.CONCLUIDO);
+        int pontos = tarefaRepository.calcularPontosTotaisEmail(email.trim(), EnumStatus.CONCLUIDO);
 
-        return new RedeCuidadoResponse(usuario.getId(), usuario.getNome(), pets, cuidadores, pendentes, concluidas, pontos);
+        return new RedeCuidadoResponse(usuario.getEmail(), usuario.getNome(), pets, cuidadores, pendentes, concluidas, pontos);
+    }
+
+    @Transactional(readOnly = true)
+    public RedeCuidadoResponse montarRedeCuidado(Long usuarioId) {
+        Usuario usuario = findUsuarioById(usuarioId);
+        return montarRedeCuidado(usuario.getEmail());
     }
 
     private Map<Long, List<Long>> carregarMapaTarefasPorPet(List<Long> petIds) {
@@ -151,8 +135,8 @@ public class UsuarioPetService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
     }
 
-    private UsuarioPet findVinculo(Long usuarioId, Long petId) {
-        return usuarioPetRepository.findByUsuarioIdAndPetId(usuarioId, petId)
+    private UsuarioPet findVinculoPorEmail(String email, Long petId) {
+        return usuarioPetRepository.findByUsuarioEmailAndPetId(email.trim(), petId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vinculo nao encontrado entre o usuario e o pet informados."));
     }
 }

@@ -8,7 +8,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
@@ -16,7 +15,7 @@ public class RedeCuidadoMapper {
 
     public RedeCuidadoResponse toEmptyResponse(Usuario usuario) {
         return new RedeCuidadoResponse(
-                usuario.getId(),
+                usuario.getEmail(),
                 usuario.getNome(),
                 List.of(),
                 List.of(),
@@ -47,10 +46,10 @@ public class RedeCuidadoMapper {
 
     public List<CuidadorResumo> toCuidadorResumoList(
             List<UsuarioPet> todosVinculosDosPets,
-            Long usuarioLogadoId
+            String usuarioLogadoEmail
     ) {
         Map<Usuario, List<UsuarioPet>> vinculosPorCuidador = todosVinculosDosPets.stream()
-                .filter(vinculo -> !Objects.equals(vinculo.getUsuario().getId(), usuarioLogadoId))
+                .filter(vinculo -> !vinculo.getUsuario().getEmail().equalsIgnoreCase(usuarioLogadoEmail))
                 .collect(Collectors.groupingBy(UsuarioPet::getUsuario));
 
         return vinculosPorCuidador.entrySet().stream()
@@ -74,7 +73,6 @@ public class RedeCuidadoMapper {
                     List<String> petNomes = vinculosDoCuidador.stream().map(v -> v.getPet().getNome()).toList();
 
                     return new CuidadorResumo(
-                            cuidador.getId(),
                             cuidador.getNome(),
                             cuidador.getEmail(),
                             responsavelPrincipal,
@@ -85,13 +83,5 @@ public class RedeCuidadoMapper {
                     );
                 })
                 .toList();
-    }
-
-    public List<CuidadorResumo> toCuidadorResumoList(
-            List<UsuarioPet> todosVinculosDosPets,
-            Long usuarioLogadoId,
-            List<Long> petsOndeUsuarioEPrincipal
-    ) {
-        return toCuidadorResumoList(todosVinculosDosPets, usuarioLogadoId);
     }
 }

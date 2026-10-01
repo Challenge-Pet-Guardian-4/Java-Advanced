@@ -4,6 +4,7 @@ import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuario.dto.RoleUpdateRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioResponse;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,6 +24,36 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Usuário", description = "Gerenciamento de usuários")
 public class UsuarioController {
     private final UsuarioService usuarioService;
+    private final UsuarioPetService usuarioPetService;
+
+    @GetMapping("/me")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Buscar perfil do usuário autenticado")
+    public UsuarioResponse getMe(Authentication authentication) {
+        return UsuarioResponse.fromEntity(usuarioService.findByEmail(authentication.getName()));
+    }
+
+    @PutMapping("/me")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Atualizar perfil do usuário autenticado")
+    public UsuarioResponse updateMe(Authentication authentication, @Valid @RequestBody UsuarioRequest usuarioRequest) {
+        return UsuarioResponse.fromEntity(usuarioService.update(authentication.getName(), usuarioRequest));
+    }
+
+    @GetMapping("/me/rede-cuidado")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Visualizar rede de cuidado do usuário autenticado")
+    @Tag(name = "Care Circle", description = "Gestão colaborativa de tutores e co-cuidadores do pet")
+    public RedeCuidadoResponse getMyRedeCuidado(Authentication authentication) {
+        return usuarioPetService.montarRedeCuidado(authentication.getName());
+    }
+
+    @PatchMapping("/me/upgrade-premium")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Realizar upgrade do perfil do usuário autenticado para PREMIUM")
+    public UsuarioResponse upgradeMyPremium(Authentication authentication) {
+        return UsuarioResponse.fromEntity(usuarioService.upgradePremium(authentication.getName()));
+    }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
@@ -32,21 +64,12 @@ public class UsuarioController {
                 .map(UsuarioResponse::fromEntity);
     }
 
-    @GetMapping("/by-nome")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar usuários por nome com paginação e ordenação (somente ADMIN)")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Page<UsuarioResponse> findByNome(@RequestParam String nome, @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
-        return usuarioService.findByNome(nome, pageable)
-                .map(UsuarioResponse::fromEntity);
-    }
-
     @GetMapping("/by-email")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar usuário por e-mail (somente ADMIN)")
     @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse findByEmail(@RequestParam String email) {
-        return UsuarioResponse.fromEntity(usuarioService.findUsuarioByEmail(email));
+        return UsuarioResponse.fromEntity(usuarioService.findByEmail(email));
     }
 
     @GetMapping("/{id}")
@@ -59,12 +82,12 @@ public class UsuarioController {
 
     @GetMapping("/{id}/rede-cuidado")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Visualizar rede de cuidado do usuário por ID")
+    @Operation(summary = "Visualizar rede de cuidado do usuário por ID (somente ADMIN)")
     @Tag(name = "Care Circle", description = "Gestão colaborativa de tutores e co-cuidadores do pet")
     @Tag(name = "Usuário", description = "Gerenciamento de usuários")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN')")
     public RedeCuidadoResponse getRedeCuidado(@PathVariable Long id) {
-        return usuarioService.getRedeCuidado(id);
+        return usuarioPetService.montarRedeCuidado(id);
     }
 
     @PostMapping

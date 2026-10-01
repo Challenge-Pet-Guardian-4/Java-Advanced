@@ -1,9 +1,11 @@
 package fiap.com.br.petguardian.usuariopet.dto;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 public record TransferirResponsabilidadeRequest(
-        @NotNull
-        Long novoResponsavelId
+        @NotBlank
+        @Email
+        String novoResponsavelEmail
 ) {}
 

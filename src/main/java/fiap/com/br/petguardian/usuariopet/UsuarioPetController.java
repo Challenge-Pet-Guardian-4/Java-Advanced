@@ -6,6 +6,8 @@ import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,16 +44,16 @@ public class UsuarioPetController {
         return usuarioPetService.convidarCoCuidador(petId, request);
     }
 
-    @DeleteMapping("/cuidadores/{usuarioId}")
+    @DeleteMapping("/cuidadores")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Desvincular um co-cuidador do pet")
+    @Operation(summary = "Desvincular um co-cuidador do pet por e-mail")
     @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
     public void desvincularCuidador(
             @PathVariable Long petId,
-            @PathVariable Long usuarioId,
+            @RequestParam @NotBlank @Email String email,
             Authentication authentication
     ) {
-        usuarioPetService.desvincularCuidador(petId, usuarioId, authentication.getName());
+        usuarioPetService.desvincularCuidador(petId, email, authentication.getName());
     }
 
     @PatchMapping("/responsavel-principal")

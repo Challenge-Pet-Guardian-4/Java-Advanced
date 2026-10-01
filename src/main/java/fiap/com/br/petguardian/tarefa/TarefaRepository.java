@@ -25,13 +25,6 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @EntityGraph(attributePaths = {"status", "pet"})
     Optional<Tarefa> findById(Long id);
 
-    @Query("select t from Tarefa t " +
-            "join fetch t.status " +
-            "join fetch t.pet p " +
-            "join p.usuarioPets up " +
-            "where t.id = :id and up.usuario.id = :usuarioId")
-    Optional<Tarefa> findByIdAndUsuarioId(@Param("id") Long id, @Param("usuarioId") Long usuarioId);
-
     @Query(value = "select t from Tarefa t " +
             "join fetch t.status s " +
             "join fetch t.pet p " +
@@ -62,6 +55,35 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
             Pageable pageable);
 
     @Query(value = "select t from Tarefa t " +
+            "join fetch t.status s " +
+            "join fetch t.pet p " +
+            "join p.usuarioPets up " +
+            "where lower(up.usuario.email) = lower(:email) " +
+            "and s.nomeStatus = :status",
+           countQuery = "select count(t) from Tarefa t " +
+            "join t.pet p " +
+            "join p.usuarioPets up " +
+            "where lower(up.usuario.email) = lower(:email) " +
+            "and t.status.nomeStatus = :status")
+    Page<Tarefa> findAllDoCuidadorByEmailAndStatus(
+            @Param("email") String email,
+            @Param("status") EnumStatus status,
+            Pageable pageable);
+
+    @Query(value = "select t from Tarefa t " +
+            "join fetch t.status " +
+            "join fetch t.pet p " +
+            "join p.usuarioPets up " +
+            "where lower(up.usuario.email) = lower(:email)",
+           countQuery = "select count(t) from Tarefa t " +
+            "join t.pet p " +
+            "join p.usuarioPets up " +
+            "where lower(up.usuario.email) = lower(:email)")
+    Page<Tarefa> findAllDoCuidadorByEmail(
+            @Param("email") String email,
+            Pageable pageable);
+
+    @Query(value = "select t from Tarefa t " +
             "join fetch t.status " +
             "join fetch t.pet " +
             "where t.pet.id = :petId",
@@ -76,6 +98,13 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
             "and t.status.nomeStatus = :status")
     Integer calcularPontosTotaisUsuario(
             @Param("usuarioId") Long usuarioId,
+            @Param("status") EnumStatus status);
+
+    @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t " +
+            "where lower(t.usuario.email) = lower(:email) " +
+            "and t.status.nomeStatus = :status")
+    Integer calcularPontosTotaisEmail(
+            @Param("email") String email,
             @Param("status") EnumStatus status);
 
     @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t " +

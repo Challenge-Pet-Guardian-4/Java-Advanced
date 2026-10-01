@@ -22,6 +22,24 @@ import org.springframework.web.bind.annotation.*;
 public class TarefaController {
     private final TarefaService tarefaService;
 
+    @GetMapping("/me")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Listar tarefas do cuidador autenticado com filtro opcional de status e paginação")
+    public Page<TarefaResponse> findMyTarefas(
+            Authentication authentication,
+            @RequestParam(defaultValue = "ALL") String status,
+            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
+        return tarefaService.findAllByEmail(authentication.getName(), status, pageable)
+            .map(TarefaResponse::fromEntity);
+    }
+
+    @GetMapping("/me/pontos")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador autenticado")
+    public Integer calcularMyPontosTotais(Authentication authentication) {
+        return tarefaService.calcularPontosTotaisEmail(authentication.getName());
+    }
+
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todas as tarefas com paginação e ordenação")
@@ -33,8 +51,8 @@ public class TarefaController {
 
     @GetMapping("/by-usuario")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar tarefas do cuidador com filtro opcional de status e paginação")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#usuarioId, authentication.name)")
+    @Operation(summary = "Listar tarefas do cuidador com filtro opcional de status e paginação (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<TarefaResponse> findByUsuario(
             @RequestParam Long usuarioId,
             @RequestParam(defaultValue = "ALL") String status,
@@ -45,8 +63,8 @@ public class TarefaController {
 
     @GetMapping("/by-usuario/pontos")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#usuarioId, authentication.name)")
+    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Integer calcularPontosTotaisUsuario(@RequestParam Long usuarioId) {
         return tarefaService.calcularPontosTotaisUsuario(usuarioId);
     }

@@ -47,7 +47,7 @@ public class AuthController {
         );
 
         String token = tokenService.generateToken(auth.getName());
-        Usuario usuario = usuarioService.findUsuarioByEmail(request.email());
+        Usuario usuario = usuarioService.findByEmail(request.email());
 
         return new LoginResponse(token, UsuarioResponse.fromEntity(usuario));
     }

@@ -13,7 +13,8 @@ public record TarefaResponse(
         LocalDateTime prazo,
         LocalDateTime conclusao,
         String status,
-        Long usuarioId,
+        String usuarioEmail,
+        String usuarioNome,
         Long petId
 ) {
     public static TarefaResponse fromEntity(Tarefa tarefa) {
@@ -26,7 +27,8 @@ public record TarefaResponse(
                 tarefa.getPrazo(),
                 tarefa.getConclusao(),
                 tarefa.getStatus().getNomeStatus().name(),
-                tarefa.getUsuario().getId(),
+                tarefa.getUsuario() != null ? tarefa.getUsuario().getEmail() : null,
+                tarefa.getUsuario() != null ? tarefa.getUsuario().getNome() : null,
                 tarefa.getPet().getId()
         );
     }

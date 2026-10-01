@@ -25,6 +25,17 @@ public class PetController {
 
     private final PetService petService;
 
+    @GetMapping("/me")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Listar pets associados ao usuário autenticado (como tutor principal ou co-cuidador)")
+    public Page<PetResponse> findMyPets(
+            Authentication authentication,
+            @PageableDefault(size = 20, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return petService.findByEmail(authentication.getName(), pageable)
+                .map(PetResponse::fromEntity);
+    }
+
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar pets com paginação e ordenação (somente ADMIN)")
@@ -38,22 +49,13 @@ public class PetController {
 
     @GetMapping("/by-usuario")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar pets associados a um usuário logado (como tutor principal ou co-cuidador)")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#usuarioId, authentication.name)")
+    @Operation(summary = "Buscar pets associados a um usuário logado (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<PetResponse> findByUsuario(
             @RequestParam Long usuarioId,
             @PageableDefault(size = 20, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return petService.findByUsuario(usuarioId, pageable)
-                .map(PetResponse::fromEntity);
-    }
-
-    @GetMapping("/by-nome")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar pets por nome com paginação e ordenação (somente ADMIN)")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Page<PetResponse> findByNome(@RequestParam String nome, @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
-        return petService.findByNome(nome, pageable)
                 .map(PetResponse::fromEntity);
     }
 

@@ -27,17 +27,17 @@ class TarefaValidatorTest {
     @Test
     @DisplayName("Deve permitir se o usuario for cuidador do pet")
     void devePermitirUsuarioVinculado() {
-        when(usuarioPetRepository.existsByUsuarioIdAndPetId(1L, 10L)).thenReturn(true);
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("cuidador@teste.com", 10L)).thenReturn(true);
 
-        assertDoesNotThrow(() -> validator.validarCuidadorDoPet(1L, 10L));
+        assertDoesNotThrow(() -> validator.validarCuidadorDoPet("cuidador@teste.com", 10L));
     }
 
     @Test
     @DisplayName("Deve lançar exceção se o usuário não for cuidador do pet")
     void deveLancarExcecaoUsuarioNaoVinculado() {
-        when(usuarioPetRepository.existsByUsuarioIdAndPetId(1L, 10L)).thenReturn(false);
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("cuidador@teste.com", 10L)).thenReturn(false);
 
-        assertThrows(IllegalArgumentException.class, () -> validator.validarCuidadorDoPet(1L, 10L));
+        assertThrows(IllegalArgumentException.class, () -> validator.validarCuidadorDoPet("cuidador@teste.com", 10L));
     }
 
     @Test

@@ -3,7 +3,7 @@ package fiap.com.br.petguardian.usuario.dto;
 import java.util.List;
 
 public record RedeCuidadoResponse(
-        Long usuarioId,
+        String emailUsuario,
         String nomeUsuario,
         List<PetResumo> pets,
         List<CuidadorResumo> coCuidadores,
@@ -20,7 +20,6 @@ public record RedeCuidadoResponse(
     ) {}
 
     public record CuidadorResumo(
-            Long id,
             String nome,
             String email,
             boolean responsavelPrincipal,
@@ -29,8 +28,8 @@ public record RedeCuidadoResponse(
             List<String> petsPrincipalNomes,
             List<String> petsAjudaNomes
     ) {
-        public CuidadorResumo(Long id, String nome, String email, boolean responsavelPrincipal, List<Long> petIds, List<String> petNomes) {
-            this(id, nome, email, responsavelPrincipal, petIds, petNomes, List.of(), List.of());
+        public CuidadorResumo(String nome, String email, boolean responsavelPrincipal, List<Long> petIds, List<String> petNomes) {
+            this(nome, email, responsavelPrincipal, petIds, petNomes, List.of(), List.of());
         }
     }
 }

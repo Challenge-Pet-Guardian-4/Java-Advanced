@@ -47,6 +47,19 @@ public class TarefaService {
         return tarefaRepository.findAllDoCuidadorByStatus(usuarioId, EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
     }
 
+    public Page<Tarefa> findAllByEmail(String email, String statusFiltro, Pageable pageable) {
+        expirarTarefasPendentesAtrasadas();
+        if ("ALL".equalsIgnoreCase(statusFiltro)) {
+            return tarefaRepository.findAllDoCuidadorByEmail(email.trim(), pageable);
+        }
+        return tarefaRepository.findAllDoCuidadorByEmailAndStatus(email.trim(), EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Integer calcularPontosTotaisEmail(String email) {
+        return tarefaRepository.calcularPontosTotaisEmail(email.trim(), EnumStatus.CONCLUIDO);
+    }
+
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {
         expirarTarefasPendentesAtrasadas();
         findPetById(petId);
@@ -58,17 +71,11 @@ public class TarefaService {
         return findTarefaById(id);
     }
 
-    public Tarefa findByUsuarioIdAndTarefaId(Long usuarioId, Long tarefaId) {
-        expirarTarefasPendentesAtrasadas();
-        return tarefaRepository.findByIdAndUsuarioId(tarefaId, usuarioId)
-                .orElseThrow(() -> new ResourceNotFoundException("Tarefa com id " + tarefaId + " nao encontrada para o usuario informado."));
-    }
-
     @Transactional
     public Tarefa create(TarefaRequest request, String authEmail) {
         Pet pet = findPetById(request.petId());
+        tarefaValidator.validarCuidadorDoPet(authEmail, pet.getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
-        tarefaValidator.validarCuidadorDoPet(usuario.getId(), pet.getId());
 
         Tarefa tarefa = request.toEntity(usuario, pet, LocalDateTime.now());
         tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
@@ -79,8 +86,8 @@ public class TarefaService {
     public Tarefa update(Long id, TarefaRequest request, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
         Pet pet = findPetById(request.petId());
+        tarefaValidator.validarCuidadorDoPet(authEmail, pet.getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
-        tarefaValidator.validarCuidadorDoPet(usuario.getId(), pet.getId());
         EnumStatus status = EnumStatus.valueOf(request.status().trim().toUpperCase());
 
         LocalDateTime conclusao = definirConclusao(tarefa, status, request.conclusao(), LocalDateTime.now());
@@ -98,21 +105,8 @@ public class TarefaService {
     public Tarefa concluir(Long id, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
         tarefaValidator.validarPendenteParaConclusao(tarefa);
-
+        tarefaValidator.validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
-        tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
-
-        aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
-        return tarefaRepository.save(tarefa);
-    }
-
-    @Transactional
-    public Tarefa concluir(Long id, Long usuarioId) {
-        Tarefa tarefa = findTarefaById(id);
-        tarefaValidator.validarPendenteParaConclusao(tarefa);
-
-        Usuario usuario = findUsuarioById(usuarioId);
-        tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
 
         aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
         return tarefaRepository.save(tarefa);
@@ -121,20 +115,7 @@ public class TarefaService {
     @Transactional
     public Tarefa desmarcar(Long id, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
-        Usuario usuario = findUsuarioByEmail(authEmail);
-        tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
-        tarefaValidator.validarConcluidaParaDesmarcar(tarefa);
-
-        tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
-        tarefa.setConclusao(null);
-        return tarefaRepository.save(tarefa);
-    }
-
-    @Transactional
-    public Tarefa desmarcar(Long id, Long usuarioId) {
-        Tarefa tarefa = findTarefaById(id);
-        Usuario usuario = findUsuarioById(usuarioId);
-        tarefaValidator.validarCuidadorDoPet(usuario.getId(), tarefa.getPet().getId());
+        tarefaValidator.validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
         tarefaValidator.validarConcluidaParaDesmarcar(tarefa);
 
         tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));

@@ -6,9 +6,7 @@ import fiap.com.br.petguardian.endereco.dto.EnderecoRequest;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.telefone.TelefoneRepository;
-import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
-import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,9 +38,6 @@ class UsuarioServiceTest {
 
     @Mock
     private TelefoneRepository telefoneRepository;
-
-    @Mock
-    private UsuarioPetService usuarioPetService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -118,15 +113,15 @@ class UsuarioServiceTest {
     }
 
     @Test
-    @DisplayName("Deve retornar rede de cuidado do usuario")
-    void deveRetornarRedeDeCuidado() {
-        var redeResponse = new RedeCuidadoResponse(1L, "Enzo", List.of(), List.of(), 0, 0, 0);
-        when(usuarioPetService.montarRedeCuidado(1L)).thenReturn(redeResponse);
+    @DisplayName("Deve buscar usuario por email com sucesso")
+    void deveBuscarUsuarioPorEmail() {
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
 
-        RedeCuidadoResponse resultado = usuarioService.getRedeCuidado(1L);
+        Usuario resultado = usuarioService.findByEmail("enzo@fiap.com.br");
 
         assertNotNull(resultado);
-        assertEquals("Enzo", resultado.nomeUsuario());
+        assertEquals("enzo@fiap.com.br", resultado.getEmail());
     }
 
     @Test

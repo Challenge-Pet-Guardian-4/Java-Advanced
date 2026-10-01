@@ -5,6 +5,7 @@ import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
 import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
@@ -69,39 +70,37 @@ class UsuarioPetServiceTest {
         CoCuidadorResponse response = usuarioPetService.convidarCoCuidador(10L, request);
 
         assertNotNull(response);
-        assertEquals(2L, response.usuarioId());
         assertEquals("Familiar", response.nome());
+        assertEquals("familiar@fiap.com.br", response.email());
         assertFalse(response.responsavelPrincipal());
-        verify(usuarioPetValidator).validarUsuarioNaoVinculado(2L, 10L);
+        verify(usuarioPetValidator).validarUsuarioNaoVinculadoPorEmail("familiar@fiap.com.br", 10L);
     }
 
     @Test
-    @DisplayName("Deve desvincular co-cuidador com sucesso")
+    @DisplayName("Deve desvincular co-cuidador com sucesso via email")
     void deveDesvincularCuidador() {
         Pet pet = Pet.builder().id(10L).build();
-        Usuario usuario = Usuario.builder().id(2L).build();
-        UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(usuario).pet(pet).responsavelPrincipal(false).build();
+        Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
+        UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
 
-        when(usuarioPetRepository.findByUsuarioIdAndPetId(2L, 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
 
-        usuarioPetService.desvincularCuidador(10L, 2L, 1L);
+        usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "enzo@fiap.com.br");
 
-        verify(usuarioPetValidator).validarPermissaoDesvinculacao(vinculo, 1L);
+        verify(usuarioPetValidator).validarPermissaoDesvinculacao(vinculo, "enzo@fiap.com.br");
         verify(usuarioPetRepository).delete(vinculo);
     }
 
     @Test
     @DisplayName("Deve transferir titularidade de responsavel principal")
     void deveTransferirResponsabilidadePrincipal() {
-        Usuario solicitante = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pet pet = Pet.builder().id(10L).build();
-        Usuario novoResp = Usuario.builder().id(2L).build();
+        Usuario novoResp = Usuario.builder().id(2L).email("novo@fiap.com.br").build();
         UsuarioPet vinculoNovoResp = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(novoResp).pet(pet).responsavelPrincipal(false).build();
 
-        var request = new TransferirResponsabilidadeRequest(2L);
+        var request = new TransferirResponsabilidadeRequest("novo@fiap.com.br");
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(solicitante));
-        when(usuarioPetRepository.findByUsuarioIdAndPetId(2L, 10L)).thenReturn(Optional.of(vinculoNovoResp));
+        when(usuarioPetRepository.findByUsuarioEmailAndPetId("novo@fiap.com.br", 10L)).thenReturn(Optional.of(vinculoNovoResp));
         when(usuarioPetRepository.save(vinculoNovoResp)).thenReturn(vinculoNovoResp);
 
         usuarioPetService.transferirResponsabilidadePrincipal(10L, request, "enzo@fiap.com.br");
@@ -127,5 +126,39 @@ class UsuarioPetServiceTest {
         assertEquals(1, cuidadores.size());
         assertEquals("Enzo", cuidadores.get(0).nome());
         assertTrue(cuidadores.get(0).responsavelPrincipal());
+    }
+
+    @Test
+    @DisplayName("Deve montar rede de cuidado vazia quando usuario nao possui vinculos")
+    void deveMontarRedeDeCuidadoVazia() {
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0);
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioPetRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of());
+        when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
+
+        RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado(1L);
+
+        assertNotNull(resultado);
+        assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
+        assertEquals("Enzo", resultado.nomeUsuario());
+    }
+
+    @Test
+    @DisplayName("Deve montar rede de cuidado a partir do email do usuario")
+    void deveMontarRedeDeCuidadoPorEmail() {
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0);
+
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioPetRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of());
+        when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
+
+        RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
     }
 }

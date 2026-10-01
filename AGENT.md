@@ -91,24 +91,28 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 ### 👤 Usuários (`/usuarios`)
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/usuarios/me` | Nenhum (via JWT) | `UsuarioResponse` | Busca o perfil do usuário logado diretamente via token JWT. |
+| `PUT` | `/usuarios/me` | `UsuarioRequest` | `UsuarioResponse` (200 OK) | Atualiza dados cadastrais do próprio usuário logado. |
+| `GET` | `/usuarios/me/rede-cuidado` | Nenhum (via JWT) | `RedeCuidadoResponse` | Retorna o Care Circle consolidado do usuário logado (pets, co-cuidadores e tarefas). |
+| `PATCH`| `/usuarios/me/upgrade-premium` | Nenhum (via JWT) | `UsuarioResponse` (200 OK) | Realiza o upgrade do perfil do usuário logado de `COMUM` para `PREMIUM`. |
 | `GET` | `/usuarios` | `Pageable` (`page`, `size`, `sort`) | `Page<UsuarioResponse>` | Lista usuários paginados (ordenados por nome, somente ADMIN). |
-| `GET` | `/usuarios/by-nome` | `@RequestParam String nome`, `Pageable` | `Page<UsuarioResponse>` | Busca usuários por trecho do nome (somente ADMIN). |
 | `GET` | `/usuarios/by-email` | `@RequestParam String email` | `UsuarioResponse` | Busca usuário por e-mail exato (somente ADMIN). |
 | `GET` | `/usuarios/{id}` | `@PathVariable Long id` | `UsuarioResponse` | Busca usuário por ID (ADMIN ou o próprio dono). |
-| `GET` | `/usuarios/{id}/rede-cuidado` | `@PathVariable Long id` | `RedeCuidadoResponse` | Retorna o Care Circle consolidado (pets, co-cuidadores e tarefas). |
+| `GET` | `/usuarios/{id}/rede-cuidado` | `@PathVariable Long id` | `RedeCuidadoResponse` | Retorna o Care Circle consolidado por ID (somente ADMIN). |
 | `POST` | `/usuarios` | `UsuarioRequest` | `UsuarioResponse` (201 Created) | Cadastra um novo usuário (perfil sempre `COMUM`; campos obrigatórios: `nome`, `email`, `senha`, `ddd`, `numeroTelefone` e `endereco`). |
-| `PUT` | `/usuarios/{id}` | `UsuarioRequest` | `UsuarioResponse` (200 OK) | Atualiza dados cadastrais do usuário (requer todos os campos obrigatórios do `UsuarioRequest`; a `role` não é alterada). |
+| `PUT` | `/usuarios/{id}` | `UsuarioRequest` | `UsuarioResponse` (200 OK) | Atualiza dados cadastrais do usuário por ID. |
 | `DELETE`| `/usuarios/{id}` | `@PathVariable Long id` | 204 No Content | Remove o usuário do sistema (ADMIN ou o próprio dono). |
 | `PATCH`| `/usuarios/{id}/role` | `RoleUpdateRequest` (`role`) | `UsuarioResponse` (200 OK) | Altera a role do usuário para qualquer perfil (`COMUM`, `PREMIUM`, `ADMIN`). Exclusivo para administradores (`ROLE_ADMIN`). |
-| `PATCH`| `/usuarios/{id}/upgrade-premium` | `@PathVariable Long id` | `UsuarioResponse` (200 OK) | Realiza o upgrade do perfil de `COMUM` para `PREMIUM` (simulação de adesão ao plano). Exige ser `ROLE_ADMIN` ou o próprio dono da conta via JWT. |
+| `PATCH`| `/usuarios/{id}/upgrade-premium` | `@PathVariable Long id` | `UsuarioResponse` (200 OK) | Realiza o upgrade do perfil de `COMUM` para `PREMIUM` por ID. |
 
 ---
 
 ### 🐶 Pets (`/pets`)
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/pets` | `Pageable` (`page`, `size`, `sort`) | `Page<PetResponse>` | Lista pets com paginação (otimizado com `raca`). |
-| `GET` | `/pets/by-nome` | `@RequestParam String nome`, `Pageable` | `Page<PetResponse>` | Busca pets por nome. |
+| `GET` | `/pets/me` | Nenhum (via JWT), `Pageable` | `Page<PetResponse>` | Lista pets associados ao usuário logado (tutor principal ou co-cuidador, otimizado por email via JOIN). |
+| `GET` | `/pets` | `Pageable` (`page`, `size`, `sort`) | `Page<PetResponse>` | Lista pets com paginação (somente ADMIN). |
+| `GET` | `/pets/by-usuario` | `@RequestParam Long usuarioId`, `Pageable` | `Page<PetResponse>` | Busca pets associados a um ID de usuário (somente ADMIN). |
 | `GET` | `/pets/{id}` | `@PathVariable Long id` | `PetResponse` | Busca pet por ID. |
 | `GET` | `/pets/{id}/historico` | `@PathVariable Long id` | `PetHistoryResponse` | Histórico consolidado de tarefas concluídas do pet. |
 | `GET` | `/pets/{id}/pontos` | `@PathVariable Long id` | `PetPontuacaoResponse` | Retorna a soma de pontos do pet (Tarefas + Aulas). |
@@ -121,26 +125,27 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 ### 🤝 Care Circle - Rede de Cuidado (`/pets/{petId}`)
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/pets/{petId}/cuidadores` | `@PathVariable Long petId` | `List<CoCuidadorResponse>` | Lista todos os cuidadores vinculados ao pet. |
+| `GET` | `/pets/{petId}/cuidadores` | `@PathVariable Long petId` | `List<CoCuidadorResponse>` | Lista todos os cuidadores vinculados ao pet (`nome`, `email`, `petId`, `nomePet`, `responsavelPrincipal`). |
 | `POST` | `/pets/{petId}/cuidadores` | `CoCuidadorRequest` (`email`) | `CoCuidadorResponse` (201 Created) | Convida um co-cuidador por e-mail (autorizado pelo responsável autenticado no JWT). |
-| `DELETE`| `/pets/{petId}/cuidadores/{usuarioId}` | `petId`, `usuarioId` | 204 No Content | Desvincula um co-cuidador (o próprio usuário ou o responsável principal via JWT). |
-| `PATCH`| `/pets/{petId}/responsavel-principal` | `TransferirResponsabilidadeRequest` | 204 No Content | Transfere a titularidade de responsável principal para outro co-cuidador via JWT. |
+| `DELETE`| `/pets/{petId}/cuidadores` | `@RequestParam String email` | 204 No Content | Desvincula um co-cuidador pelo seu e-mail (o próprio cuidador ou o tutor principal). |
+| `PATCH`| `/pets/{petId}/responsavel-principal` | `TransferirResponsabilidadeRequest` (`novoResponsavelEmail`) | 204 No Content | Transfere a titularidade de responsável principal para outro co-cuidador via e-mail. |
 
 ---
 
 ### 📋 Tarefas da Rotina (`/tarefas`)
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/tarefas` | `Pageable` | `Page<TarefaResponse>` | Lista todas as tarefas (com auto-expiração de prazos). |
-| `GET` | `/tarefas/by-usuario` | `@RequestParam Long usuarioId`, `@RequestParam(defaultValue = "ALL") String status`, `Pageable` | `Page<TarefaResponse>` | Lista tarefas do cuidador com filtro opcional de status (`ALL`, `PENDENTE`, `CONCLUIDO`, etc.). |
+| `GET` | `/tarefas/me` | `@RequestParam(defaultValue = "ALL") String status`, `Pageable` | `Page<TarefaResponse>` | Lista tarefas do cuidador logado diretamente via token JWT (otimizado via JOIN direto por email). |
+| `GET` | `/tarefas/me/pontos` | Nenhum (via JWT) | `Integer` | Consulta total de pontos acumulados pelo cuidador logado via JWT. |
+| `GET` | `/tarefas` | `Pageable` | `Page<TarefaResponse>` | Lista todas as tarefas (somente ADMIN). |
+| `GET` | `/tarefas/by-usuario` | `@RequestParam Long usuarioId`, `@RequestParam(defaultValue = "ALL") String status`, `Pageable` | `Page<TarefaResponse>` | Lista tarefas de um cuidador por ID (somente ADMIN). |
+| `GET` | `/tarefas/by-usuario/pontos` | `@RequestParam Long usuarioId` | `Integer` | Consulta pontos totais do cuidador por ID (somente ADMIN). |
 | `GET` | `/tarefas/by-pet/{petId}` | `@PathVariable Long petId`, `Pageable` | `Page<TarefaResponse>` | Lista todas as tarefas vinculadas a um pet específico. |
 | `GET` | `/tarefas/{id}` | `@PathVariable Long id` | `TarefaResponse` | Busca tarefa por ID. |
-| `GET` | `/tarefas/by-usuario/{usuarioId}/{id}` | `usuarioId`, `id` | `TarefaResponse` | Busca tarefa específica pertencente ao cuidador. |
-| `GET` | `/tarefas/by-usuario/pontos` | `@RequestParam Long usuarioId` | `Integer` | Consulta total de pontos acumulados pelo cuidador. |
-| `POST` | `/tarefas` | `TarefaRequest` (`usuarioId` NOT NULL) | `TarefaResponse` (201 Created) | Cria nova tarefa vinculada obrigatoriamente a um cuidador do pet com status `PENDENTE`. |
+| `POST` | `/tarefas` | `TarefaRequest` | `TarefaResponse` (201 Created) | Cria nova tarefa vinculada ao cuidador autenticado com status `PENDENTE`. |
 | `PUT` | `/tarefas/{id}` | `TarefaRequest` | `TarefaResponse` (200 OK) | Atualiza os dados e status da tarefa. |
-| `PATCH`| `/tarefas/{id}/concluir` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Marca tarefa como `CONCLUIDO`, vincula executor autenticado e data de conclusão via `aplicarConclusao()` no Service. |
-| `PATCH`| `/tarefas/{id}/desmarcar` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Desmarca tarefa previamente concluída retornando-a ao status `PENDENTE` e limpando a conclusão. |
+| `PATCH`| `/tarefas/{id}/concluir` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Marca tarefa como `CONCLUIDO`, vincula executor autenticado e data de conclusão. |
+| `PATCH`| `/tarefas/{id}/desmarcar` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Desmarca tarefa previamente concluída retornando-a ao status `PENDENTE`. |
 | `DELETE`| `/tarefas/{id}` | `@PathVariable Long id` | 204 No Content | Deleta uma tarefa. |
 
 ---

@@ -100,7 +100,7 @@ class TarefaServiceTest {
         assertNotNull(resultado);
         assertEquals("Remédio", resultado.getTitulo());
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
-        verify(tarefaValidator).validarCuidadorDoPet(1L, 10L);
+        verify(tarefaValidator).validarCuidadorDoPet("enzo@fiap.com.br", 10L);
         verify(tarefaRepository).save(any(Tarefa.class));
     }
 
@@ -108,8 +108,8 @@ class TarefaServiceTest {
     @DisplayName("Deve concluir tarefa somando pontos e registrando concluinte e data")
     void deveConcluirTarefa() {
         Pet pet = Pet.builder().id(10L).build();
-        Usuario criador = Usuario.builder().id(1L).nome("Enzo").build();
-        Usuario concluinte = Usuario.builder().id(2L).nome("CoCuidador").build();
+        Usuario criador = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+        Usuario concluinte = Usuario.builder().id(2L).nome("CoCuidador").email("concluinte@fiap.com.br").build();
 
         Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
         Status statusConcluido = Status.builder().id(2L).nomeStatus(EnumStatus.CONCLUIDO).build();
@@ -127,24 +127,24 @@ class TarefaServiceTest {
                 .build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(concluinte));
+        when(usuarioRepository.findByEmailIgnoreCase("concluinte@fiap.com.br")).thenReturn(Optional.of(concluinte));
         when(statusService.findStatus(EnumStatus.CONCLUIDO)).thenReturn(statusConcluido);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Tarefa resultado = tarefaService.concluir(100L, 2L);
+        Tarefa resultado = tarefaService.concluir(100L, "concluinte@fiap.com.br");
 
         assertNotNull(resultado);
         assertEquals(EnumStatus.CONCLUIDO, resultado.getStatus().getNomeStatus());
         assertEquals(2L, resultado.getUsuario().getId());
         assertNotNull(resultado.getConclusao());
         verify(tarefaValidator).validarPendenteParaConclusao(tarefa);
-        verify(tarefaValidator).validarCuidadorDoPet(2L, 10L);
+        verify(tarefaValidator).validarCuidadorDoPet("concluinte@fiap.com.br", 10L);
     }
 
     @Test
     @DisplayName("Deve desmarcar tarefa concluida voltando para PENDENTE e limpando conclusao")
     void deveDesmarcarTarefa() {
-        Usuario cuidador = Usuario.builder().id(2L).build();
+        Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
         Pet pet = Pet.builder().id(10L).build();
         Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
         Status statusConcluido = Status.builder().id(2L).nomeStatus(EnumStatus.CONCLUIDO).build();
@@ -162,15 +162,14 @@ class TarefaServiceTest {
 
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(cuidador));
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Tarefa resultado = tarefaService.desmarcar(100L, 2L);
+        Tarefa resultado = tarefaService.desmarcar(100L, "cuidador@fiap.com.br");
 
         assertNotNull(resultado);
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
         assertNull(resultado.getConclusao());
-        verify(tarefaValidator).validarCuidadorDoPet(2L, 10L);
+        verify(tarefaValidator).validarCuidadorDoPet("cuidador@fiap.com.br", 10L);
         verify(tarefaValidator).validarConcluidaParaDesmarcar(tarefa);
     }
 
@@ -198,19 +197,29 @@ class TarefaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve listar tarefas do cuidador por status")
-    void deveListarTarefasPorStatus() {
+    @DisplayName("Deve listar tarefas do cuidador por email e status")
+    void deveListarTarefasPorEmail() {
         Pageable pageable = PageRequest.of(0, 10);
         Status pendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
         Status expirado = Status.builder().id(3L).nomeStatus(EnumStatus.EXPIRADO).build();
 
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(pendente);
         when(statusService.findStatus(EnumStatus.EXPIRADO)).thenReturn(expirado);
-        when(tarefaRepository.findAllDoCuidadorByStatus(1L, EnumStatus.PENDENTE, pageable)).thenReturn(new PageImpl<>(List.of()));
+        when(tarefaRepository.findAllDoCuidadorByEmailAndStatus("enzo@fiap.com.br", EnumStatus.PENDENTE, pageable)).thenReturn(new PageImpl<>(List.of()));
 
-        Page<Tarefa> resultado = tarefaService.findAllByUsuario(1L, "PENDENTE", pageable);
+        Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "PENDENTE", pageable);
 
         assertNotNull(resultado);
-        verify(tarefaRepository).findAllDoCuidadorByStatus(1L, EnumStatus.PENDENTE, pageable);
+        verify(tarefaRepository).findAllDoCuidadorByEmailAndStatus("enzo@fiap.com.br", EnumStatus.PENDENTE, pageable);
+    }
+
+    @Test
+    @DisplayName("Deve consultar pontos totais acumulados pelo email do usuario")
+    void deveConsultarPontosPorEmail() {
+        when(tarefaRepository.calcularPontosTotaisEmail("enzo@fiap.com.br", EnumStatus.CONCLUIDO)).thenReturn(150);
+
+        Integer pontos = tarefaService.calcularPontosTotaisEmail("enzo@fiap.com.br");
+
+        assertEquals(150, pontos);
     }
 }

@@ -190,4 +190,19 @@ class PetServiceTest {
         assertEquals(1, resultado.getTotalElements());
         assertEquals("Thor", resultado.getContent().get(0).getNome());
     }
+
+    @Test
+    @DisplayName("Deve listar pets associados a um email de usuario")
+    void deveListarPetsPorEmail() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+
+        when(petRepository.findByUsuarioEmail("enzo@fiap.com.br", pageable)).thenReturn(new PageImpl<>(List.of(pet)));
+
+        Page<Pet> resultado = petService.findByEmail("enzo@fiap.com.br", pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals("Thor", resultado.getContent().get(0).getNome());
+    }
 }

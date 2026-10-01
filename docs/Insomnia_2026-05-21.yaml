@@ -249,37 +249,6 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/usuarios/by-nome"
-        name: Buscar Usuario por Nome
-        meta:
-          id: req_usr_by_nome
-          created: 1779315088402
-          modified: 1779315088402
-          isPrivate: false
-          description: "Busca usuarios por trecho do nome"
-          sortKey: 202
-        method: GET
-        headers:
-          - name: Authorization
-            value: Bearer {{ _.token }}
-        authentication:
-          type: bearer
-          token: "{{ _.token }}"
-        parameters:
-          - name: nome
-            value: Carlos
-          - name: page
-            value: "0"
-          - name: size
-            value: "10"
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
       - url: "{{ _.base_url }}/usuarios/by-email"
         name: Buscar Usuario por E-mail
         meta:
@@ -460,37 +429,6 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/pets/by-nome"
-        name: Buscar Pets por Nome
-        meta:
-          id: req_pets_by_nome
-          created: 1779315088502
-          modified: 1779315088502
-          isPrivate: false
-          description: "Busca pets por trecho do nome"
-          sortKey: 302
-        method: GET
-        headers:
-          - name: Authorization
-            value: Bearer {{ _.token }}
-        authentication:
-          type: bearer
-          token: "{{ _.token }}"
-        parameters:
-          - name: nome
-            value: Pipoca
-          - name: page
-            value: "0"
-          - name: size
-            value: "10"
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
       - url: "{{ _.base_url }}/pets/1"
         name: Buscar Pet por ID
         meta:
@@ -590,8 +528,7 @@ collection:
               "raca": "Golden Retriever",
               "porte": "MEDIO",
               "sexo": "M",
-              "castrado": true,
-              "usuarioId": 1
+              "castrado": true
             }
         settings:
           renderRequestBody: true
@@ -628,8 +565,7 @@ collection:
               "raca": "Golden Retriever",
               "porte": "GRANDE",
               "sexo": "M",
-              "castrado": true,
-              "usuarioId": 1
+              "castrado": true
             }
         settings:
           renderRequestBody: true
@@ -992,7 +928,6 @@ collection:
               "pontosTarefa": 20,
               "descricao": "Caminhada de 40 minutos",
               "prazo": "2026-12-31T18:00:00",
-              "usuarioId": 1,
               "petId": 1,
               "status": "PENDENTE"
             }
@@ -1030,7 +965,6 @@ collection:
               "pontosTarefa": 25,
               "descricao": "Caminhada de 50 minutos",
               "prazo": "2026-12-31T19:00:00",
-              "usuarioId": 1,
               "petId": 1,
               "status": "PENDENTE"
             }

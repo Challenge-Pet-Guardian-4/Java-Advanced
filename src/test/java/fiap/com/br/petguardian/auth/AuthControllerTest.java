@@ -70,7 +70,7 @@ class AuthControllerTest {
 
         when(authenticationManager.authenticate(any())).thenReturn(auth);
         when(tokenService.generateToken("enzo@fiap.com.br")).thenReturn("fake-jwt-token");
-        when(usuarioService.findUsuarioByEmail("enzo@fiap.com.br")).thenReturn(usuario);
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
 
         mockMvc.perform(post("/login")
                         .contentType(MediaType.APPLICATION_JSON)

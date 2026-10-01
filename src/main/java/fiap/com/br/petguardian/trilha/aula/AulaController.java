@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class AulaController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todas as aulas com paginação e ordenação")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public Page<AulaResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
@@ -36,6 +38,7 @@ public class AulaController {
     @GetMapping("/modulo/{moduloId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar aulas associadas a um modulo")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<AulaResponse> findByModuloId(@PathVariable Long moduloId) {
         return aulaService.findAllByModuloId(moduloId)
                 .stream()
@@ -46,6 +49,7 @@ public class AulaController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar aula por ID")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public AulaResponse findById(@PathVariable Long id) {
         return AulaResponse.fromEntity(aulaService.findById(id));
     }
@@ -53,6 +57,7 @@ public class AulaController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar nova aula para um modulo")
+    @PreAuthorize("hasRole('ADMIN')")
     public AulaResponse create(@Valid @RequestBody AulaRequest request) {
         return AulaResponse.fromEntity(aulaService.create(request));
     }
@@ -60,6 +65,7 @@ public class AulaController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar aula")
+    @PreAuthorize("hasRole('ADMIN')")
     public AulaResponse update(@PathVariable Long id, @Valid @RequestBody AulaRequest request) {
         return AulaResponse.fromEntity(aulaService.update(id, request));
     }
@@ -67,6 +73,7 @@ public class AulaController {
     @PatchMapping("/{id}/concluir")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Concluir aula")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public AulaResponse concluir(@PathVariable Long id) {
         return AulaResponse.fromEntity(aulaService.concluir(id));
     }
@@ -74,6 +81,7 @@ public class AulaController {
     @PatchMapping("/{id}/desmarcar")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Desmarcar aula concluida retornando ao estado nao concluido")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public AulaResponse desmarcar(@PathVariable Long id) {
         return AulaResponse.fromEntity(aulaService.desmarcar(id));
     }
@@ -81,6 +89,7 @@ public class AulaController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar aula")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         aulaService.delete(id);
     }

@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +27,7 @@ public class ModuloController {
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todos os módulos com paginação e ordenação")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public Page<ModuloResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
@@ -36,6 +38,7 @@ public class ModuloController {
     @GetMapping("/trilha/{trilhaId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar modulos associados a uma trilha")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<ModuloResponse> findByTrilhaId(@PathVariable Long trilhaId) {
         return moduloService.findAllByTrilhaId(trilhaId)
                 .stream()
@@ -46,6 +49,7 @@ public class ModuloController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar modulo por ID")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public ModuloResponse findById(@PathVariable Long id) {
         return ModuloResponse.fromEntity(moduloService.findById(id));
     }
@@ -53,6 +57,7 @@ public class ModuloController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar novo modulo para uma trilha")
+    @PreAuthorize("hasRole('ADMIN')")
     public ModuloResponse create(@Valid @RequestBody ModuloRequest request) {
         return ModuloResponse.fromEntity(moduloService.create(request));
     }
@@ -60,6 +65,7 @@ public class ModuloController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar modulo")
+    @PreAuthorize("hasRole('ADMIN')")
     public ModuloResponse update(@PathVariable Long id, @Valid @RequestBody ModuloRequest request) {
         return ModuloResponse.fromEntity(moduloService.update(id, request));
     }
@@ -67,6 +73,7 @@ public class ModuloController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar modulo")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         moduloService.delete(id);
     }
