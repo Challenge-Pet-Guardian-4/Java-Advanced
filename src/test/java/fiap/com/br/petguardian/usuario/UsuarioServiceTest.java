@@ -21,7 +21,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -89,11 +88,11 @@ class UsuarioServiceTest {
     @DisplayName("Deve criar usuario com telefone e endereco resolvido")
     void deveCriarUsuarioComSucesso() {
         var enderecoReq = new EnderecoRequest("01310100", "100");
-        var request = new UsuarioRequest("Enzo", "enzo@fiap.com.br", "123456", "11", "987654321", "PREMIUM", enderecoReq);
+        var request = new UsuarioRequest("Enzo", "enzo@fiap.com.br", "123456", "11", "987654321", enderecoReq);
 
         Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
         Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("987654321").build();
-        Usuario usuarioSalvo = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").role(UsuarioRole.PREMIUM).endereco(endereco).build();
+        Usuario usuarioSalvo = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").role(UsuarioRole.COMUM).endereco(endereco).build();
 
         when(enderecoService.findOrCreateByCepAndNumero(enderecoReq)).thenReturn(endereco);
         when(telefoneRepository.save(any(Telefone.class))).thenReturn(telefone);
@@ -147,13 +146,53 @@ class UsuarioServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lancar excecao ao tentar criar usuario com role ADMIN")
-    void deveLancarExcecaoAoCriarUsuarioAdmin() {
+    @DisplayName("Deve criar usuario sempre com role COMUM independente de qualquer input")
+    void deveCriarUsuarioSempreComoComum() {
         var enderecoReq = new EnderecoRequest("01310100", "100");
-        var request = new UsuarioRequest("Admin", "admin@fiap.com.br", "123456", "11", "987654321", "ADMIN", enderecoReq);
+        var request = new UsuarioRequest("Enzo", "enzo@fiap.com.br", "123456", "11", "987654321", enderecoReq);
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> usuarioService.create(request));
-        assertEquals("Cadastro público não permite perfil de administrador.", ex.getMessage());
+        Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
+        Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("987654321").build();
+        Usuario usuarioSalvo = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").role(UsuarioRole.COMUM).endereco(endereco).build();
+
+        when(enderecoService.findOrCreateByCepAndNumero(enderecoReq)).thenReturn(endereco);
+        when(telefoneRepository.save(any(Telefone.class))).thenReturn(telefone);
+        when(passwordEncoder.encode("123456")).thenReturn("hashedPwd");
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuarioSalvo);
+
+        Usuario resultado = usuarioService.create(request);
+
+        assertEquals(UsuarioRole.COMUM, resultado.getRole());
+    }
+
+    @Test
+    @DisplayName("Deve realizar upgrade de COMUM para PREMIUM com sucesso")
+    void deveRealizarUpgradePremium() {
+        Usuario usuario = Usuario.builder().id(1L).role(UsuarioRole.COMUM).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Usuario resultado = usuarioService.upgradePremium(1L);
+
+        assertEquals(UsuarioRole.PREMIUM, resultado.getRole());
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar upgrade de usuario que ja eh PREMIUM")
+    void deveLancarExcecaoUpgradeJaPremium() {
+        Usuario usuario = Usuario.builder().id(1L).role(UsuarioRole.PREMIUM).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+        assertThrows(IllegalArgumentException.class, () -> usuarioService.upgradePremium(1L));
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar upgrade de usuario ADMIN")
+    void deveLancarExcecaoUpgradeAdmin() {
+        Usuario usuario = Usuario.builder().id(1L).role(UsuarioRole.ADMIN).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+        assertThrows(IllegalArgumentException.class, () -> usuarioService.upgradePremium(1L));
     }
 
     @Test
@@ -173,7 +212,7 @@ class UsuarioServiceTest {
     @DisplayName("Deve atualizar usuario sem alterar o campo role")
     void deveAtualizarUsuarioSemAlterarRole() {
         var enderecoReq = new EnderecoRequest("01310100", "100");
-        var request = new UsuarioRequest("Novo Nome", "novo@fiap.com.br", "novaSenha", "11", "912345678", "COMUM", enderecoReq);
+        var request = new UsuarioRequest("Novo Nome", "novo@fiap.com.br", "novaSenha", "11", "912345678", enderecoReq);
 
         Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
         Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("912345678").build();

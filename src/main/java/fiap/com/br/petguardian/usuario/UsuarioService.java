@@ -39,9 +39,6 @@ public class UsuarioService {
 
     @Transactional
     public Usuario create(UsuarioRequest request) {
-        if (UsuarioRole.ADMIN.name().equalsIgnoreCase(request.role().trim())) {
-            throw new IllegalArgumentException("Cadastro público não permite perfil de administrador.");
-        }
         Telefone telefone = telefoneRepository.save(request.toTelefone());
         Endereco endereco = enderecoService.findOrCreateByCepAndNumero(request.endereco());
         return usuarioRepository.save(request.toEntity(telefone, endereco, passwordEncoder.encode(request.senha())));
@@ -65,6 +62,16 @@ public class UsuarioService {
     public Usuario updateRole(Long id, String role) {
         Usuario usuario = findUsuarioById(id);
         usuario.setRole(UsuarioRole.valueOf(role.trim().toUpperCase()));
+        return usuarioRepository.save(usuario);
+    }
+
+    @Transactional
+    public Usuario upgradePremium(Long id) {
+        Usuario usuario = findUsuarioById(id);
+        if (usuario.getRole() != UsuarioRole.COMUM) {
+            throw new IllegalArgumentException("Somente usuários com perfil COMUM podem realizar upgrade para PREMIUM.");
+        }
+        usuario.setRole(UsuarioRole.PREMIUM);
         return usuarioRepository.save(usuario);
     }
 

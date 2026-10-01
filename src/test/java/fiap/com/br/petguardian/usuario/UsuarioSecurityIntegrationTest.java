@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ActiveProfiles;
@@ -27,9 +26,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -50,14 +49,13 @@ class UsuarioSecurityIntegrationTest {
     @MockitoBean
     private TokenService tokenService;
 
-    private UsuarioRequest criarRequest(String role, String email) {
+    private UsuarioRequest criarRequest(String email) {
         return new UsuarioRequest(
                 "Enzo",
                 email,
                 "senhaForte123",
                 "11",
                 "987654321",
-                role,
                 new EnderecoRequest("01310100", "100")
         );
     }
@@ -81,7 +79,7 @@ class UsuarioSecurityIntegrationTest {
     @Test
     @DisplayName("PUT /usuarios/{id} deve permitir dono atualizar seu cadastro com status 200")
     void devePermitirDonoAtualizarCadastro() throws Exception {
-        var request = criarRequest("COMUM", "dono@fiap.com.br");
+        var request = criarRequest("dono@fiap.com.br");
         Usuario usuarioSalvo = criarUsuarioMock(1L, "dono@fiap.com.br", UsuarioRole.COMUM);
 
         when(usuarioService.isOwner(1L, "dono@fiap.com.br")).thenReturn(true);
@@ -99,7 +97,7 @@ class UsuarioSecurityIntegrationTest {
     @Test
     @DisplayName("PUT /usuarios/{id} deve permitir dono alterar seu email com status 200")
     void devePermitirDonoAlterarEmail() throws Exception {
-        var request = criarRequest("COMUM", "novo_email@fiap.com.br");
+        var request = criarRequest("novo_email@fiap.com.br");
         Usuario usuarioSalvo = criarUsuarioMock(1L, "novo_email@fiap.com.br", UsuarioRole.COMUM);
 
         when(usuarioService.isOwner(1L, "antigo@fiap.com.br")).thenReturn(true);
@@ -116,7 +114,7 @@ class UsuarioSecurityIntegrationTest {
     @Test
     @DisplayName("PUT /usuarios/{id} deve bloquear usuario COMUM tentando atualizar cadastro de outro usuario com 403")
     void deveBloquearUsuarioComumTentandoAtualizarOutroUsuario() throws Exception {
-        var request = criarRequest("COMUM", "outro@fiap.com.br");
+        var request = criarRequest("outro@fiap.com.br");
 
         when(usuarioService.isOwner(2L, "invasor@fiap.com.br")).thenReturn(false);
 
@@ -128,9 +126,9 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /usuarios/{id} deve permitir ADMIN atualizar cadastro de qualquer usuario inclusive com role ADMIN")
+    @DisplayName("PUT /usuarios/{id} deve permitir ADMIN atualizar cadastro de qualquer usuario")
     void devePermitirAdminAtualizarQualquerCadastro() throws Exception {
-        var request = criarRequest("ADMIN", "admin@fiap.com.br");
+        var request = criarRequest("admin@fiap.com.br");
         Usuario usuarioSalvo = criarUsuarioMock(2L, "admin@fiap.com.br", UsuarioRole.ADMIN);
 
         when(usuarioService.update(eq(2L), any(UsuarioRequest.class))).thenReturn(usuarioSalvo);
@@ -146,7 +144,7 @@ class UsuarioSecurityIntegrationTest {
     @Test
     @DisplayName("PUT /usuarios/{id} sem autenticacao deve retornar 401")
     void deveRetornar401NoPutSemAutenticacao() throws Exception {
-        var request = criarRequest("COMUM", "qualquer@fiap.com.br");
+        var request = criarRequest("qualquer@fiap.com.br");
 
         mockMvc.perform(put("/usuarios/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -194,17 +192,65 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /usuarios tentando cadastrar como ADMIN deve retornar 400 Bad Request")
-    void deveRejeitarCadastroPublicoComoAdmin() throws Exception {
-        var request = criarRequest("ADMIN", "hacker@fiap.com.br");
+    @DisplayName("POST /usuarios cadastro publico deve criar usuario com sucesso e status 201")
+    void deveCriarUsuarioComSucesso() throws Exception {
+        var request = criarRequest("novo@fiap.com.br");
+        Usuario usuarioSalvo = criarUsuarioMock(1L, "novo@fiap.com.br", UsuarioRole.COMUM);
 
-        when(usuarioService.create(any(UsuarioRequest.class)))
-                .thenThrow(new IllegalArgumentException("Cadastro público não permite perfil de administrador."));
+        when(usuarioService.create(any(UsuarioRequest.class))).thenReturn(usuarioSalvo);
 
         mockMvc.perform(post("/usuarios")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Cadastro público não permite perfil de administrador."));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.role").value("COMUM"));
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/{id}/role deve permitir ADMIN alterar a role do usuario")
+    void devePermitirAdminAlterarRole() throws Exception {
+        Usuario usuarioSalvo = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.ADMIN);
+        when(usuarioService.updateRole(1L, "ADMIN")).thenReturn(usuarioSalvo);
+
+        mockMvc.perform(patch("/usuarios/1/role")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/{id}/role deve bloquear usuario COMUM tentando alterar role com 403")
+    void deveBloquearUsuarioComumTentandoAlterarRole() throws Exception {
+        mockMvc.perform(patch("/usuarios/1/role")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("user@fiap.com.br").claim("role", "COMUM")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"role\":\"ADMIN\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve permitir dono realizar upgrade para PREMIUM")
+    void devePermitirDonoRealizarUpgradePremium() throws Exception {
+        Usuario usuarioSalvo = criarUsuarioMock(1L, "dono@fiap.com.br", UsuarioRole.PREMIUM);
+        when(usuarioService.isOwner(1L, "dono@fiap.com.br")).thenReturn(true);
+        when(usuarioService.upgradePremium(1L)).thenReturn(usuarioSalvo);
+
+        mockMvc.perform(patch("/usuarios/1/upgrade-premium")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("dono@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PREMIUM"));
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve bloquear outro usuario tentando fazer upgrade com 403")
+    void deveBloquearOutroUsuarioTentandoUpgradePremium() throws Exception {
+        when(usuarioService.isOwner(2L, "invasor@fiap.com.br")).thenReturn(false);
+
+        mockMvc.perform(patch("/usuarios/2/upgrade-premium")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("invasor@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isForbidden());
     }
 }

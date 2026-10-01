@@ -17,7 +17,7 @@
 
 | Link Rápido | URL |
 |---|---|
-| **Repositório GitHub** | https://github.com/Challenge-Pet-Guardian-3/Java-Advanced |
+| **Repositório GitHub** | https://github.com/Challenge-Pet-Guardian-4/Java-Advanced |
 | **API em Produção (Railway)** | https://java-advanced-production-35ab.up.railway.app |
 | **Swagger UI Interativo (Produção)** | https://java-advanced-production-35ab.up.railway.app/swagger-ui/index.html |
 | **OpenAPI Docs JSON (Produção)** | https://java-advanced-production-35ab.up.railway.app/v3/api-docs |
@@ -143,8 +143,12 @@ src/main/java/fiap/com/br/petguardian/
 | Recurso / Rota | Método HTTP | `COMUM` | `PREMIUM` | `ADMIN` | Comportamento em Caso de Violação |
 |---|---|:---:|:---:|:---:|---|
 | `/login` | `POST` | 🔓 Livre | 🔓 Livre | 🔓 Livre | Rota pública para obtenção do token JWT |
-| `/usuarios` (Cadastro) | `POST` | 🔓 Livre | 🔓 Livre | 🔓 Livre | Rota pública de onboarding de novos tutores |
-| `/usuarios/**`, `/pets/**`, `/tarefas/**`, `/historicos/**`, `/enderecos/**` | Todos | 🔒 Autenticado | 🔒 Autenticado | 🔒 Autenticado | `401 Unauthorized` se sem token |
+| `/usuarios` (Cadastro) | `POST` | 🔓 Livre | 🔓 Livre | 🔓 Livre | Rota pública de cadastro (perfil atribuído sempre como `COMUM`) |
+| `/usuarios/{id}/upgrade-premium` | `PATCH` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se chamado por outro usuário |
+| `/usuarios/{id}/role` | `PATCH` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (exclusivo para `ADMIN` alterar role) |
+| `/usuarios`, `/usuarios/by-*` (Listagens) | `GET` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (consultas gerais exclusivas para `ADMIN`) |
+| `/usuarios/{id}`, `/usuarios/{id}/rede-cuidado` | `GET`, `PUT`, `DELETE` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se tentar acessar/alterar outro usuário |
+| `/pets/**`, `/tarefas/**`, `/historicos/**`, `/enderecos/**` | Vários | 🔒 Cuidador | 🔒 Cuidador | ✅ Permitido | `403 Forbidden` se não pertencer ao Care Circle do pet |
 | `/trilhas`, `/modulos`, `/aulas` | `GET` | ❌ Bloqueado | ✅ Permitido | ✅ Permitido | `403 Forbidden` para tutores comuns |
 | `/aulas/*/concluir`, `/aulas/*/desmarcar` | `PATCH` | ❌ Bloqueado | ✅ Permitido | ✅ Permitido | `403 Forbidden` para tutores comuns |
 | `/trilhas/**`, `/modulos/**`, `/aulas/**` (Gestão/CRUD) | `POST`, `PUT`, `DELETE` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` para tutores comuns e premium |
@@ -258,14 +262,16 @@ spring.flyway.locations=classpath:db/migration
 ### 2. Usuários (`/usuarios`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/usuarios` | Listar usuários cadastrados com paginação (`?page=0&size=10&sort=nome,asc`) | Autenticado |
-| `GET` | `/usuarios/by-nome` | Buscar usuários por nome (`?nome=Enzo`) | Autenticado |
-| `GET` | `/usuarios/by-email` | Buscar usuário por e-mail exato (`?email=...`) | Autenticado |
-| `GET` | `/usuarios/{id}` | Obter detalhes de um usuário por ID | Autenticado |
-| `GET` | `/usuarios/{id}/rede-cuidado` | Visão agregada da rede de cuidado (pets vinculados, co-cuidadores e rotinas) | Autenticado |
-| `POST` | `/usuarios` | Cadastrar novo tutor/usuário (com validação integrada de endereço ViaCEP) | Pública |
-| `PUT` | `/usuarios/{id}` | Atualizar dados cadastrais do usuário | Autenticado |
-| `DELETE` | `/usuarios/{id}` | Remover usuário | Autenticado |
+| `GET` | `/usuarios` | Listar usuários cadastrados com paginação (`?page=0&size=10&sort=nome,asc`) | `ADMIN` |
+| `GET` | `/usuarios/by-nome` | Buscar usuários por nome (`?nome=Enzo`) | `ADMIN` |
+| `GET` | `/usuarios/by-email` | Buscar usuário por e-mail exato (`?email=...`) | `ADMIN` |
+| `GET` | `/usuarios/{id}` | Obter detalhes de um usuário por ID | Dono da conta ou `ADMIN` |
+| `GET` | `/usuarios/{id}/rede-cuidado` | Visão agregada da rede de cuidado (pets vinculados, co-cuidadores e rotinas) | Dono da conta ou `ADMIN` |
+| `POST` | `/usuarios` | Cadastrar novo tutor/usuário (perfil nasce sempre como `COMUM`; endereço validado via ViaCEP) | Pública |
+| `PUT` | `/usuarios/{id}` | Atualizar dados cadastrais do usuário (requer todos os dados do `UsuarioRequest`; a `role` não é alterada) | Dono da conta ou `ADMIN` |
+| `DELETE` | `/usuarios/{id}` | Remover usuário | Dono da conta ou `ADMIN` |
+| `PATCH` | `/usuarios/{id}/role` | Alterar role do usuário para qualquer perfil (`COMUM`, `PREMIUM`, `ADMIN`) - body: `{"role": "ADMIN"}` | `ADMIN` |
+| `PATCH` | `/usuarios/{id}/upgrade-premium` | Realizar upgrade do perfil de `COMUM` para `PREMIUM` (simulação de adesão ao plano) | Dono da conta ou `ADMIN` |
 
 ---
 
@@ -273,41 +279,41 @@ spring.flyway.locations=classpath:db/migration
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
 | `GET` | `/pets` | Listar todos os pets do sistema com paginação | Autenticado |
-| `GET` | `/pets/by-usuario` | Listar todos os pets vinculados ao usuário (`?usuarioId=1`) como titular ou co-cuidador | Autenticado |
+| `GET` | `/pets/by-usuario` | Listar todos os pets vinculados ao usuário (`?usuarioId=1`) como titular ou co-cuidador | Dono ou `ADMIN` |
 | `GET` | `/pets/by-nome` | Filtrar pets por nome (`?nome=Thor`) | Autenticado |
 | `GET` | `/pets/{id}` | Buscar pet por ID | Autenticado |
-| `GET` | `/pets/{id}/historico` | Histórico compartilhado consolidado de tarefas concluídas de um pet | Autenticado |
-| `GET` | `/pets/{id}/pontos` | Score total consolidado (Tarefas de rotina + Aulas educativas) | Autenticado |
+| `GET` | `/pets/{id}/historico` | Histórico compartilhado consolidado de tarefas concluídas de um pet | Cuidador do pet ou `ADMIN` |
+| `GET` | `/pets/{id}/pontos` | Score total consolidado (Tarefas de rotina + Aulas educativas) | Cuidador do pet ou `ADMIN` |
 | `POST` | `/pets` | Cadastrar pet e vincular criador automaticamente como responsável principal | Autenticado |
-| `PUT` | `/pets/{id}` | Atualizar dados do pet (autorizado apenas para o responsável principal) | Autenticado |
-| `DELETE` | `/pets/{id}` | Remover pet (`?usuarioId=1` - restrito ao responsável principal) | Autenticado |
+| `PUT` | `/pets/{id}` | Atualizar dados do pet (autorizado apenas para o responsável principal ou `ADMIN`) | Responsável principal ou `ADMIN` |
+| `DELETE` | `/pets/{id}` | Remover pet | Responsável principal ou `ADMIN` |
 
 ---
 
 ### 4. Care Circle & Co-cuidadores (`/pets/{petId}`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/pets/{petId}/cuidadores` | Listar todos os cuidadores e tutores vinculados ao pet | Autenticado |
-| `POST` | `/pets/{petId}/cuidadores` | Convidar co-cuidador por e-mail (requer `responsavelPrincipalId` e `email`) | Autenticado |
-| `DELETE` | `/pets/{petId}/cuidadores/{usuarioId}` | Desvincular co-cuidador do animal (`?solicitanteId=1`) | Autenticado |
-| `PATCH` | `/pets/{petId}/responsavel-principal` | Transferir a titularidade de responsável principal para outro co-cuidador | Autenticado |
+| `GET` | `/pets/{petId}/cuidadores` | Listar todos os cuidadores e tutores vinculados ao pet | Cuidador do pet ou `ADMIN` |
+| `POST` | `/pets/{petId}/cuidadores` | Convidar co-cuidador por e-mail (body: `{"email": "..."}`) | Responsável principal ou `ADMIN` |
+| `DELETE` | `/pets/{petId}/cuidadores/{usuarioId}` | Desvincular co-cuidador do animal (autorização via JWT) | Próprio cuidador, Responsável ou `ADMIN` |
+| `PATCH` | `/pets/{petId}/responsavel-principal` | Transferir a titularidade de responsável principal para outro co-cuidador (via JWT) | Responsável principal atual ou `ADMIN` |
 
 ---
 
 ### 5. Tarefas da Rotina (`/tarefas`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/tarefas` | Listar todas as tarefas com auto-expiração automática de atrasadas | Autenticado |
-| `GET` | `/tarefas/by-usuario` | Listar tarefas do cuidador com filtro opcional (`?usuarioId=1&status=ALL\|PENDENTE...`) | Autenticado |
-| `GET` | `/tarefas/by-pet/{petId}` | Listar todas as tarefas da rotina de um pet | Autenticado |
-| `GET` | `/tarefas/{id}` | Buscar tarefa por ID | Autenticado |
-| `GET` | `/tarefas/by-usuario/{usuarioId}/{id}` | Buscar tarefa por cuidador e ID | Autenticado |
-| `GET` | `/tarefas/by-usuario/pontos` | Obter total de pontos acumulados pelo cuidador (`?usuarioId=1`) | Autenticado |
-| `POST` | `/tarefas` | Criar nova rotina de cuidado (exige que o usuário seja cuidador do pet) | Autenticado |
-| `PUT` | `/tarefas/{id}` | Atualizar dados e status da tarefa | Autenticado |
-| `PATCH` | `/tarefas/{id}/concluir` | Concluir tarefa (body: `{"concluinteId": 1}`) gerando pontos de bem-estar | Autenticado |
-| `PATCH` | `/tarefas/{id}/desmarcar` | Desmarcar tarefa concluída (`?usuarioId=1`) voltando ao status `PENDENTE` e estornando pontos | Autenticado |
-| `DELETE` | `/tarefas/{id}` | Excluir tarefa | Autenticado |
+| `GET` | `/tarefas` | Listar todas as tarefas com auto-expiração automática de atrasadas | `ADMIN` |
+| `GET` | `/tarefas/by-usuario` | Listar tarefas do cuidador com filtro opcional (`?usuarioId=1&status=ALL\|PENDENTE...`) | Dono ou `ADMIN` |
+| `GET` | `/tarefas/by-pet/{petId}` | Listar todas as tarefas da rotina de um pet | Cuidador do pet ou `ADMIN` |
+| `GET` | `/tarefas/{id}` | Buscar tarefa por ID | Cuidador da tarefa ou `ADMIN` |
+| `GET` | `/tarefas/by-usuario/{usuarioId}/{id}` | Buscar tarefa por cuidador e ID | Dono da tarefa ou `ADMIN` |
+| `GET` | `/tarefas/by-usuario/pontos` | Obter total de pontos acumulados pelo cuidador (`?usuarioId=1`) | Dono ou `ADMIN` |
+| `POST` | `/tarefas` | Criar nova rotina de cuidado vinculada ao cuidador autenticado no JWT | Cuidador do pet ou `ADMIN` |
+| `PUT` | `/tarefas/{id}` | Atualizar dados e status da tarefa | Cuidador da tarefa ou `ADMIN` |
+| `PATCH` | `/tarefas/{id}/concluir` | Concluir tarefa via JWT (marca executor logado e credita pontos de bem-estar) | Cuidador da tarefa ou `ADMIN` |
+| `PATCH` | `/tarefas/{id}/desmarcar` | Desmarcar tarefa concluída via JWT (retorna para `PENDENTE` e estorna pontos) | Cuidador da tarefa ou `ADMIN` |
+| `DELETE` | `/tarefas/{id}` | Excluir tarefa | Cuidador da tarefa ou `ADMIN` |
 
 ---
 
@@ -396,6 +402,17 @@ cp .env.example .env
 ### Passos de Execução
 
 #### Opção 1: Executar com Banco na Nuvem (Railway)
+Para facilitar a avaliação da banca examinadora e execução rápida sem necessidade de subir container local, disponibilizamos os parâmetros de conexão do banco de dados PostgreSQL na nuvem (Railway) para configuração no `.env`:
+
+```env
+PGHOST=altaria.proxy.rlwy.net
+PGPORT=41468
+PGDATABASE=railway
+PGUSER=postgres
+PGPASSWORD=PpPfEBowUuHgGMRqDzZjnOZbqKlbKrZl
+PORT=8080
+```
+
 Com as variáveis de conexão com o PostgreSQL no Railway configuradas no `.env` (ou exportadas na sessão), o Flyway executará as migrações automaticamente (`V1`, `V2` e `V3`):
 
 ```bash

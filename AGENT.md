@@ -65,7 +65,7 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 ## 🔄 4. Dois Fluxos Funcionais Completos do Sistema
 
 ### 🐾 **Fluxo 1: Cuidado Colaborativo e Rotina Diária (Acesso COMUM e PREMIUM)**
-1. **Cadastro & Login:** Tutor cadastra-se em `POST /usuarios` (recebe role `COMUM` por padrão ou `PREMIUM`) e faz login em `POST /login`.
+1. **Cadastro & Login:** Tutor cadastra-se em `POST /usuarios` (perfil inicial sempre `COMUM`) e faz login em `POST /login`. Caso deseje acesso aos recursos educativos exclusivos, pode realizar o upgrade via `PATCH /usuarios/{id}/upgrade-premium`.
 2. **Cadastro do Pet:** Criação do animal via `POST /pets` (o tutor criador torna-se automaticamente `responsavelPrincipal = true`).
 3. **Formação do Care Circle:** Tutor convida co-cuidadores pelo e-mail via `POST /pets/{petId}/cuidadores`.
 4. **Ciclo de Tarefas:** Cuidadores criam tarefas de rotina (`POST /tarefas` vinculadas obrigatoriamente a um cuidador) e concluem com `PATCH /tarefas/{id}/concluir`. Caso necessário, a conclusão pode ser revertida com `PATCH /tarefas/{id}/desmarcar`.
@@ -91,14 +91,16 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 ### 👤 Usuários (`/usuarios`)
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/usuarios` | `Pageable` (`page`, `size`, `sort`) | `Page<UsuarioResponse>` | Lista usuários paginados (ordenados por nome). |
-| `GET` | `/usuarios/by-nome` | `@RequestParam String nome`, `Pageable` | `Page<UsuarioResponse>` | Busca usuários por trecho do nome (case-insensitive). |
-| `GET` | `/usuarios/by-email` | `@RequestParam String email` | `UsuarioResponse` | Busca usuário por e-mail exato. |
-| `GET` | `/usuarios/{id}` | `@PathVariable Long id` | `UsuarioResponse` | Busca usuário por ID. |
+| `GET` | `/usuarios` | `Pageable` (`page`, `size`, `sort`) | `Page<UsuarioResponse>` | Lista usuários paginados (ordenados por nome, somente ADMIN). |
+| `GET` | `/usuarios/by-nome` | `@RequestParam String nome`, `Pageable` | `Page<UsuarioResponse>` | Busca usuários por trecho do nome (somente ADMIN). |
+| `GET` | `/usuarios/by-email` | `@RequestParam String email` | `UsuarioResponse` | Busca usuário por e-mail exato (somente ADMIN). |
+| `GET` | `/usuarios/{id}` | `@PathVariable Long id` | `UsuarioResponse` | Busca usuário por ID (ADMIN ou o próprio dono). |
 | `GET` | `/usuarios/{id}/rede-cuidado` | `@PathVariable Long id` | `RedeCuidadoResponse` | Retorna o Care Circle consolidado (pets, co-cuidadores e tarefas). |
-| `POST` | `/usuarios` | `UsuarioRequest` | `UsuarioResponse` (201 Created) | Cadastra um novo usuário (`role` opcional, default `COMUM`), telefone e endereço. |
-| `PUT` | `/usuarios/{id}` | `UsuarioRequest` | `UsuarioResponse` (200 OK) | Atualiza os dados do usuário. |
-| `DELETE`| `/usuarios/{id}` | `@PathVariable Long id` | 204 No Content | Remove o usuário do sistema. |
+| `POST` | `/usuarios` | `UsuarioRequest` | `UsuarioResponse` (201 Created) | Cadastra um novo usuário (perfil sempre `COMUM`; campos obrigatórios: `nome`, `email`, `senha`, `ddd`, `numeroTelefone` e `endereco`). |
+| `PUT` | `/usuarios/{id}` | `UsuarioRequest` | `UsuarioResponse` (200 OK) | Atualiza dados cadastrais do usuário (requer todos os campos obrigatórios do `UsuarioRequest`; a `role` não é alterada). |
+| `DELETE`| `/usuarios/{id}` | `@PathVariable Long id` | 204 No Content | Remove o usuário do sistema (ADMIN ou o próprio dono). |
+| `PATCH`| `/usuarios/{id}/role` | `RoleUpdateRequest` (`role`) | `UsuarioResponse` (200 OK) | Altera a role do usuário para qualquer perfil (`COMUM`, `PREMIUM`, `ADMIN`). Exclusivo para administradores (`ROLE_ADMIN`). |
+| `PATCH`| `/usuarios/{id}/upgrade-premium` | `@PathVariable Long id` | `UsuarioResponse` (200 OK) | Realiza o upgrade do perfil de `COMUM` para `PREMIUM` (simulação de adesão ao plano). Exige ser `ROLE_ADMIN` ou o próprio dono da conta via JWT. |
 
 ---
 
@@ -120,9 +122,9 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/pets/{petId}/cuidadores` | `@PathVariable Long petId` | `List<CoCuidadorResponse>` | Lista todos os cuidadores vinculados ao pet. |
-| `POST` | `/pets/{petId}/cuidadores` | `CoCuidadorRequest` (`responsavelPrincipalId`, `email`) | `CoCuidadorResponse` (201 Created) | Convida um co-cuidador por e-mail (autorizado pelo responsável). |
-| `DELETE`| `/pets/{petId}/cuidadores/{usuarioId}` | `petId`, `usuarioId`, `@RequestParam Long solicitanteId` | 204 No Content | Desvincula um co-cuidador (o próprio usuário ou o responsável). |
-| `PATCH`| `/pets/{petId}/responsavel-principal` | `TransferirResponsabilidadeRequest` | 204 No Content | Transfere a titularidade de responsável principal para outro co-cuidador. |
+| `POST` | `/pets/{petId}/cuidadores` | `CoCuidadorRequest` (`email`) | `CoCuidadorResponse` (201 Created) | Convida um co-cuidador por e-mail (autorizado pelo responsável autenticado no JWT). |
+| `DELETE`| `/pets/{petId}/cuidadores/{usuarioId}` | `petId`, `usuarioId` | 204 No Content | Desvincula um co-cuidador (o próprio usuário ou o responsável principal via JWT). |
+| `PATCH`| `/pets/{petId}/responsavel-principal` | `TransferirResponsabilidadeRequest` | 204 No Content | Transfere a titularidade de responsável principal para outro co-cuidador via JWT. |
 
 ---
 

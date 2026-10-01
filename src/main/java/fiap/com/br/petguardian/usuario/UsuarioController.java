@@ -97,4 +97,12 @@ public class UsuarioController {
     public UsuarioResponse updateRole(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest request) {
         return UsuarioResponse.fromEntity(usuarioService.updateRole(id, request.role()));
     }
+
+    @PatchMapping("/{id}/upgrade-premium")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Realizar upgrade do perfil COMUM para PREMIUM (simulação de adesão ao plano)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    public UsuarioResponse upgradePremium(@PathVariable Long id) {
+        return UsuarioResponse.fromEntity(usuarioService.upgradePremium(id));
+    }
 }
