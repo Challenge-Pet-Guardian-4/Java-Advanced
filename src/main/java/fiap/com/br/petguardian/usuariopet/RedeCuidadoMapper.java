@@ -48,14 +48,13 @@ public class RedeCuidadoMapper {
             List<UsuarioPet> todosVinculosDosPets,
             String usuarioLogadoEmail
     ) {
-        Map<Usuario, List<UsuarioPet>> vinculosPorCuidador = todosVinculosDosPets.stream()
+        Map<Long, List<UsuarioPet>> vinculosPorCuidador = todosVinculosDosPets.stream()
                 .filter(vinculo -> !vinculo.getUsuario().getEmail().equalsIgnoreCase(usuarioLogadoEmail))
-                .collect(Collectors.groupingBy(UsuarioPet::getUsuario));
+                .collect(Collectors.groupingBy(up -> up.getUsuario().getId()));
 
-        return vinculosPorCuidador.entrySet().stream()
-                .map(entry -> {
-                    Usuario cuidador = entry.getKey();
-                    List<UsuarioPet> vinculosDoCuidador = entry.getValue();
+        return vinculosPorCuidador.values().stream()
+                .map(vinculosDoCuidador -> {
+                    Usuario cuidador = vinculosDoCuidador.get(0).getUsuario();
 
                     List<String> petsPrincipalNomes = vinculosDoCuidador.stream()
                             .filter(UsuarioPet::isResponsavelPrincipal)

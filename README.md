@@ -2,17 +2,15 @@
 
 > **Challenge FIAP - Java Advanced (Spring Boot)**
 >
-> Plataforma corporativa para gestão da saúde e rotina de cuidados do pet em família sob a **Arquitetura Pet-Centric**.
+> Plataforma corporativa para gestão da saúde e rotina de cuidados do pet em família sob a **Arquitetura Pet-Centric**, com persistência relacional e rotinas analíticas corporativas em **Oracle Database 19c (PL/SQL)**.
 
 <p>
   <img src="https://img.shields.io/badge/Java-17_LTS-007396?logo=openjdk&logoColor=white" alt="Java 17 LTS" />
   <img src="https://img.shields.io/badge/Spring_Boot-4.1.1-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 4.1.1" />
   <img src="https://img.shields.io/badge/Build-Gradle-02303A?logo=gradle&logoColor=white" alt="Gradle" />
-  <img src="https://img.shields.io/badge/Database-PostgreSQL_16-336791?logo=postgresql&logoColor=white" alt="PostgreSQL 16" />
-  <img src="https://img.shields.io/badge/Flyway-Migrations-CC0200?logo=flyway&logoColor=white" alt="Flyway" />
+  <img src="https://img.shields.io/badge/Database-Oracle_19c-F80000?logo=oracle&logoColor=white" alt="Oracle Database 19c" />
   <img src="https://img.shields.io/badge/Security-JWT_RSA_(RBAC)-F80000?logo=jsonwebtokens&logoColor=white" alt="JWT RSA" />
   <img src="https://img.shields.io/badge/Docs-OpenAPI_3_Swagger-85EA2D?logo=swagger&logoColor=black" alt="Swagger" />
-  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white" alt="Docker Compose" />
 </p>
 
 | Link Rápido | URL |
@@ -57,13 +55,13 @@ O **PetGuardian** é uma API REST corporativa desenvolvida em **Spring Boot** pa
 
 ---
 
-## ☁️ Arquitetura e Deploy em Nuvem (Railway)
+## ☁️ Arquitetura e Integração em Nuvem
 
-A API **PetGuardian** e seu banco de dados relacional **PostgreSQL 16** estão provisionados e operando em alta disponibilidade em ambiente de produção no **Railway**:
+A API **PetGuardian** opera conectada diretamente à infraestrutura corporativa **Oracle Database 19c** da FIAP:
 
-* **Microsserviço da Aplicação (`Java-Advanced`):** Container Spring Boot 4.1.1 (Java 17 LTS / Gradle) com pipeline de entrega contínua vinculado ao GitHub, operando com status `Online`.
-* **Banco de Dados Relacional (`Postgres`):** Instância PostgreSQL 16 provisionada com volume persistente montado (`postgres-volume`), garantindo durabilidade das tabelas, histórico clínico e rotinas.
-* **Rede Privada Integrada:** Comunicação de baixa latência entre o container da aplicação e o container de banco de dados.
+* **Microsserviço da Aplicação (`Java-Advanced`):** Container Spring Boot 4.1.1 (Java 17 LTS / Gradle) com pipeline de entrega contínua vinculado ao GitHub, operando com status `Online` no Railway e em ambiente local.
+* **Banco de Dados Corporativo (`Oracle 19c`):** Instância gerenciada Oracle Database (`oracle.fiap.com.br:1521/orcl`), garantindo integridade transacional estrita, persistência das tabelas relacionais e execução do pacote PL/SQL `PKG_PETGUARDIAN`.
+* **Conectividade OJDBC11:** Pool de conexões otimizado com o driver oficial Oracle (`ojdbc11`) e dialeto Hibernate `OracleDialect`.
 
 ![Arquitetura de Deploy no Railway](docs/Railway.png)
 
@@ -86,7 +84,7 @@ src/main/java/fiap/com/br/petguardian/
 ├── auth/                # Autenticação stateless, SecurityConfig (RBAC), Tokens JWT com chaves RSA
 ├── config/              # OpenAPI/Swagger, beans globais e RestClient
 ├── exception/           # Tratamento centralizado de exceções (GlobalExceptionHandler)
-├── validation/          # Validadores de domínio (CEP, DDD, Enum, integridade de cuidadores, unicidade de nomes via @NomeUnicoValidation)
+├── validation/          # Validadores customizados de Bean Validation (DDD oficial Anatel, enums dinâmicos)
 │
 ├── usuario/             # Gestão de usuários/tutores, perfis RBAC e visão agregada da rede
 ├── usuariopet/          # Relação N:N Usuário x Pet (Care Circle, vínculos, transferência de tutela)
@@ -117,16 +115,17 @@ src/main/java/fiap/com/br/petguardian/
 |---|---|---|
 | **Java** | 17 LTS | Linguagem oficial do ecossistema corporativo |
 | **Spring Boot** | 4.1.1 | Framework base para microsserviços REST corporativos |
-| **Spring Data JPA / Hibernate** | Integrado | Mapeamento Objeto-Relacional (ORM) e consultas dinâmicas otimizadas |
-| **PostgreSQL** | 16-alpine | Sistema Gerenciador de Banco de Dados Relacional |
-| **Flyway Migration** | 10.x | Controle versionado e idempotente do schema e cargas do banco |
+| **Spring Data JPA / Hibernate** | Integrado | Mapeamento Objeto-Relacional (ORM) e consultas dinâmicas otimizadas via OracleDialect |
+| **Oracle Database** | 19c (FIAP Cloud) | Sistema Gerenciador de Banco de Dados Relacional corporativo e execução de PL/SQL (`PKG_PETGUARDIAN`) |
+| **Oracle JDBC (OJDBC11)** | 11.x | Driver oficial de conectividade de alto desempenho com o Oracle Database |
+| **Spring JdbcTemplate** | Integrado | Invocação performática de procedures e functions nativas do Oracle Database |
+| **Flyway Migration** | 10.x | Suporte a migrações versionadas com `flyway-database-oracle` |
 | **Spring Security & OAuth2** | Integrado | Segurança stateless e Resource Server com validação de tokens JWT |
 | **Nimbus JOSE + JWT** | Integrado | Criptografia assimétrica RSA (2048-bit) para assinatura e decodificação de tokens |
-| **Spring Validation** | Integrado | Bean Validation declarativo em DTOs Records puros/imutáveis (@NomeUnicoValidation, @CepValidation, etc.) |
+| **Spring Validation** | Integrado | Bean Validation declarativo em DTOs Records puros/imutáveis (@DddValidation, @EnumValidation, @Pattern, etc.) |
 | **SpringDoc OpenAPI 3** | 2.8.5 | Geração automática de documentação e console interativo Swagger UI |
 | **HTTP Service Interfaces** | Integrado | Cliente declarativo (`@HttpExchange`) para consumo assíncrono/síncrono do ViaCEP |
 | **Spring Boot Actuator** | Integrado | Observabilidade com métricas e healthcheck de infraestrutura |
-| **Docker & Docker Compose** | Multi-platform | Containerização e ambiente isolado para o banco de dados |
 | **Lombok** | Integrado | Redução de código boilerplate |
 | **Gradle** | 8.x | Gerenciamento determinístico de dependências e build |
 
@@ -134,9 +133,7 @@ src/main/java/fiap/com/br/petguardian/
 
 ## 🔐 Spring Security, RBAC & Credenciais de Avaliação
 
-> **Atendimento aos Requisitos da Sprint 3 FIAP (30 Pontos):**
-> O sistema adota segurança stateless com autenticação JWT e par de chaves assimétricas **RSA** (`private_key.pem` e `public_key.pem`).
-> A autorização é controlada por **Role-Based Access Control (RBAC)** em 3 níveis hierárquicos: `COMUM`, `PREMIUM` e `ADMIN`.
+O sistema adota segurança corporativa stateless com autenticação JWT e par de chaves assimétricas **RSA 2048-bit** (`private_key.pem` e `public_key.pem`). A autorização é controlada por **Role-Based Access Control (RBAC)** em 3 níveis hierárquicos: `COMUM`, `PREMIUM` e `ADMIN`.
 
 ### 🛡️ Matriz de Permissões por Perfil
 
@@ -165,46 +162,34 @@ Para agilizar a correção e os testes da banca avaliadora, os seguintes usuári
 
 ---
 
-## 🗃️ Controle de Migrações de Banco (Flyway)
+## 🗃️ Modelagem do Schema & Migrações de Banco
 
-> **Atendimento aos Requisitos da Sprint 3 FIAP (20 Pontos):**
-> O banco de dados é inteiramente versionado e gerenciado pelo **Flyway**, garantindo reprodutibilidade do schema e cargas essenciais em qualquer ambiente sem necessidade de scripts manuais.
+O schema relacional completo do ecossistema é mantido diretamente no **Oracle Database** corporativo da FIAP (`oracle.fiap.com.br`), garantindo integridade referencial rigorosa, sequences, índices de performance e o empacotamento do pacote PL/SQL `PKG_PETGUARDIAN`.
 
-As migrações estão localizadas em `src/main/resources/db/migration/`:
+A modelagem contempla 15 tabelas relacionais (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`), além de tabelas de auditoria:
 
-- **`V1__criar_tabelas.sql`**:
-  - DDL completo das 15 tabelas relacionais do sistema (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`, `usuario_endereco`).
-  - Criação de todas as constraints de integridade referencial (`FOREIGN KEY`), chaves primárias e índices únicos (`uc_usuario_email`, `uc_raca_nome_raca`, `uc_status_nome_status`).
-  - Tabelas de auditoria do Hibernate Envers (`revinfo`, `revchanges`) com sequence de revisão `revinfo_seq`.
-- **`V2__carga_inicial_status.sql`**:
-  - Carga e garantia dos registros fundamentais da tabela de domínio `status`:
-    - `1 - PENDENTE`
-    - `2 - CONCLUIDO`
-    - `3 - EXPIRADO`
-- **`V3__carga_inicial_admin_e_indices.sql`**:
-  - Carga de dados geográficos e de contato base (Estado, Cidade, Bairro, Endereço e Telefone).
-  - Provisionamento seguro dos usuários padrão de teste com senhas criptografadas via **BCrypt**:
-    - `enzo.admin@petguardian.com` (Perfil `ADMIN`)
-    - `carolina.cuidadora@petguardian.com` (Perfil `PREMIUM`)
-  - Criação de índices de performance para consultas e joins frequentes (`idx_tarefa_usuario_status`, `idx_tarefa_pet_prazo`, `idx_usuario_pet_pet`, `idx_historico_pet_data`, `idx_pet_nome`).
+- **Script DDL & Packages:** Disponível em [`Database-Advanced/sprint4_pkg_petguardian.sql`](../Database-Advanced/sprint4_pkg_petguardian.sql), com criação idempotente de tabelas, triggers de auditoria, constraints e procedures.
+- **Suporte ao Flyway:** A aplicação inclui a biblioteca `org.flywaydb:flyway-database-oracle` no `build.gradle`. Por padrão, na base gerenciada da FIAP onde o schema já se encontra provisionado pela equipe, a execução automática permanece desabilitada (`spring.flyway.enabled=false`), permitindo validação das entidades via JPA (`spring.jpa.hibernate.ddl-auto=none`).
 
 Configurações ativas no `application.properties`:
 ```properties
-spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=true
-spring.flyway.repair-on-migrate=true
-spring.flyway.locations=classpath:db/migration
+spring.datasource.url=${ORACLE_URL}
+spring.datasource.username=${ORACLE_USER}
+spring.datasource.password=${ORACLE_PASSWORD}
+spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
+spring.jpa.database-platform=org.hibernate.dialect.OracleDialect
+spring.jpa.hibernate.ddl-auto=none
+spring.flyway.enabled=${SPRING_FLYWAY_ENABLED:false}
 ```
 
 ---
 
 ## 🚀 Fluxos Completos do Sistema (Além de CRUD)
 
-> **Atendimento aos Requisitos da Sprint 3 FIAP (20 Pontos):**
-> O sistema implementa múltiplos fluxos de ponta a ponta com regras de negócio corporativas complexas:
+O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a ponta com regras de negócio corporativas complexas:
 
 ### 1. Fluxo de Gamificação e Ciclo de Vida da Rotina
-1. **Criação de Tarefa:** O tutor cria uma rotina (`/tarefas`) vinculando pet e responsável. O sistema valida se o usuário pertence à rede de cuidado do animal (`TarefaValidator`) e inicializa com status `PENDENTE`.
+1. **Criação de Tarefa:** O tutor cria uma rotina (`/tarefas`) vinculando pet e responsável. O sistema valida se o usuário pertence à rede de cuidado do animal e inicializa com status `PENDENTE`.
 2. **Auto-Expiração Inteligente:** Ao listar tarefas, o método `expirarTarefasPendentesAtrasadas()` avalia o `prazo` contra o relógio do servidor (`LocalDateTime.now()`) e transiciona tarefas atrasadas para `EXPIRADO` de forma automática.
 3. **Conclusão e Gamificação:** O cuidador conclui a tarefa via `PATCH /tarefas/{id}/concluir` autenticado via JWT. O sistema credita imediatamente os pontos ao cuidador (`calcularPontosTotaisUsuario`) e soma ao score de bem-estar do pet.
 4. **Desmarcação Resiliente:** Se houver necessidade de cancelamento ou correção operacional, o endpoint `PATCH /tarefas/{id}/desmarcar` (autenticado via JWT) valida a titularidade do cuidador no Care Circle, remove os pontos acumulados e retorna a tarefa para `PENDENTE`.
@@ -222,7 +207,11 @@ spring.flyway.locations=classpath:db/migration
 
 ### 4. Fluxo de Integração Declarativa de Endereço via ViaCEP
 1. **Consumo sem Boilerplate:** Utilizando HTTP Service Interfaces (`@HttpExchange`), o serviço `ViaCepService` consome a API do ViaCEP (`https://viacep.com.br/ws/{cep}/json`).
-2. **Normalização Automática de Entidades:** O `EnderecoService` decompõe a resposta, garantindo a normalização e reaproveitamento de `Bairro`, `Cidade` e `Estado` no PostgreSQL sem duplicidades.
+2. **Normalização Automática de Entidades:** O `EnderecoService` decompõe a resposta, garantindo a normalização e reaproveitamento de `Bairro`, `Cidade` e `Estado` no Oracle Database sem duplicidades.
+
+### 5. Fluxo de Processamento PL/SQL no Oracle Database (Stored Procedures & Functions)
+1. **Exportação de Rotinas via Stored Procedure (`pkg_petguardian.pr_exportar_tarefas_json`):** Disparado via `GET /tarefas/procedure/exportar-json` (com parâmetro opcional `statusId`), executa a procedure PL/SQL corporativa que serializa e agrega as rotinas de cuidado diretamente no motor do Oracle Database, devolvendo o documento consolidado via parâmetro `OUT CLOB`.
+2. **Classificação de Gamificação via Stored Function (`pkg_petguardian.fn_classificar_pontos`):** Disparado via `GET /tarefas/procedure/classificar-pontos/{pontos}`, executa a função de categorização diretamente no banco Oracle, retornando dinamicamente a medalha de cuidado (`BRONZE`, `PRATA`, `OURO` ou `DIAMANTE (MASTER)`).
 
 ---
 
@@ -262,8 +251,11 @@ spring.flyway.locations=classpath:db/migration
 ### 2. Usuários (`/usuarios`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
+| `GET` | `/usuarios/me` | Obter detalhes do próprio usuário autenticado via JWT | Autenticado |
+| `PUT` | `/usuarios/me` | Atualizar dados cadastrais do próprio usuário autenticado via JWT | Autenticado |
+| `GET` | `/usuarios/me/rede-cuidado` | Visão agregada da rede de cuidado do próprio usuário autenticado via JWT | Autenticado |
+| `PATCH` | `/usuarios/me/upgrade-premium` | Realizar upgrade do perfil do usuário autenticado de `COMUM` para `PREMIUM` | Autenticado |
 | `GET` | `/usuarios` | Listar usuários cadastrados com paginação (`?page=0&size=10&sort=nome,asc`) | `ADMIN` |
-| `GET` | `/usuarios/by-nome` | Buscar usuários por nome (`?nome=Enzo`) | `ADMIN` |
 | `GET` | `/usuarios/by-email` | Buscar usuário por e-mail exato (`?email=...`) | `ADMIN` |
 | `GET` | `/usuarios/{id}` | Obter detalhes de um usuário por ID | Dono da conta ou `ADMIN` |
 | `GET` | `/usuarios/{id}/rede-cuidado` | Visão agregada da rede de cuidado (pets vinculados, co-cuidadores e rotinas) | Dono da conta ou `ADMIN` |
@@ -278,9 +270,9 @@ spring.flyway.locations=classpath:db/migration
 ### 3. Pets (`/pets`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/pets` | Listar todos os pets do sistema com paginação | Autenticado |
-| `GET` | `/pets/by-usuario` | Listar todos os pets vinculados ao usuário (`?usuarioId=1`) como titular ou co-cuidador | Dono ou `ADMIN` |
-| `GET` | `/pets/by-nome` | Filtrar pets por nome (`?nome=Thor`) | Autenticado |
+| `GET` | `/pets/me` | Listar pets associados ao usuário logado como tutor ou co-cuidador | Autenticado |
+| `GET` | `/pets` | Listar todos os pets do sistema com paginação | `ADMIN` |
+| `GET` | `/pets/by-usuario` | Listar todos os pets vinculados ao usuário (`?usuarioId=1`) como titular ou co-cuidador | `ADMIN` |
 | `GET` | `/pets/{id}` | Buscar pet por ID | Autenticado |
 | `GET` | `/pets/{id}/historico` | Histórico compartilhado consolidado de tarefas concluídas de um pet | Cuidador do pet ou `ADMIN` |
 | `GET` | `/pets/{id}/pontos` | Score total consolidado (Tarefas de rotina + Aulas educativas) | Cuidador do pet ou `ADMIN` |
@@ -295,7 +287,7 @@ spring.flyway.locations=classpath:db/migration
 |---|---|---|---|
 | `GET` | `/pets/{petId}/cuidadores` | Listar todos os cuidadores e tutores vinculados ao pet | Cuidador do pet ou `ADMIN` |
 | `POST` | `/pets/{petId}/cuidadores` | Convidar co-cuidador por e-mail (body: `{"email": "..."}`) | Responsável principal ou `ADMIN` |
-| `DELETE` | `/pets/{petId}/cuidadores/{usuarioId}` | Desvincular co-cuidador do animal (autorização via JWT) | Próprio cuidador, Responsável ou `ADMIN` |
+| `DELETE` | `/pets/{petId}/cuidadores` | Desvincular co-cuidador do animal por e-mail (`?email=...`) via JWT | Próprio cuidador, Responsável ou `ADMIN` |
 | `PATCH` | `/pets/{petId}/responsavel-principal` | Transferir a titularidade de responsável principal para outro co-cuidador (via JWT) | Responsável principal atual ou `ADMIN` |
 
 ---
@@ -303,29 +295,32 @@ spring.flyway.locations=classpath:db/migration
 ### 5. Tarefas da Rotina (`/tarefas`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
+| `GET` | `/tarefas/me` | Listar tarefas do cuidador autenticado via JWT com auto-expiração dinâmica | Autenticado |
+| `GET` | `/tarefas/me/pontos` | Consultar pontos totais de tarefas do cuidador logado via JWT | Autenticado |
 | `GET` | `/tarefas` | Listar todas as tarefas com auto-expiração automática de atrasadas | `ADMIN` |
-| `GET` | `/tarefas/by-usuario` | Listar tarefas do cuidador com filtro opcional (`?usuarioId=1&status=ALL\|PENDENTE...`) | Dono ou `ADMIN` |
+| `GET` | `/tarefas/by-usuario` | Listar tarefas do cuidador com filtro opcional (`?usuarioId=1&status=ALL\|PENDENTE...`) | `ADMIN` |
 | `GET` | `/tarefas/by-pet/{petId}` | Listar todas as tarefas da rotina de um pet | Cuidador do pet ou `ADMIN` |
 | `GET` | `/tarefas/{id}` | Buscar tarefa por ID | Cuidador da tarefa ou `ADMIN` |
-| `GET` | `/tarefas/by-usuario/{usuarioId}/{id}` | Buscar tarefa por cuidador e ID | Dono da tarefa ou `ADMIN` |
-| `GET` | `/tarefas/by-usuario/pontos` | Obter total de pontos acumulados pelo cuidador (`?usuarioId=1`) | Dono ou `ADMIN` |
+| `GET` | `/tarefas/by-usuario/pontos` | Obter total de pontos acumulados pelo cuidador (`?usuarioId=1`) | `ADMIN` |
 | `POST` | `/tarefas` | Criar nova rotina de cuidado vinculada ao cuidador autenticado no JWT | Cuidador do pet ou `ADMIN` |
 | `PUT` | `/tarefas/{id}` | Atualizar dados e status da tarefa | Cuidador da tarefa ou `ADMIN` |
 | `PATCH` | `/tarefas/{id}/concluir` | Concluir tarefa via JWT (marca executor logado e credita pontos de bem-estar) | Cuidador da tarefa ou `ADMIN` |
 | `PATCH` | `/tarefas/{id}/desmarcar` | Desmarcar tarefa concluída via JWT (retorna para `PENDENTE` e estorna pontos) | Cuidador da tarefa ou `ADMIN` |
 | `DELETE` | `/tarefas/{id}` | Excluir tarefa | Cuidador da tarefa ou `ADMIN` |
+| `GET` | `/tarefas/procedure/exportar-json` | Exportar tarefas em JSON via Stored Procedure Oracle (`pkg_petguardian.pr_exportar_tarefas_json`) | Autenticado |
+| `GET` | `/tarefas/procedure/classificar-pontos/{pontos}` | Classificar pontos via Stored Function Oracle (`pkg_petguardian.fn_classificar_pontos`) | Autenticado |
 
 ---
 
 ### 6. Histórico Clínico de Saúde (`/historicos`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/historicos` | Listar registros clínicos com paginação | Autenticado |
-| `GET` | `/historicos/pet/{petId}` | Prontuário médico de eventos do pet ordenados por data | Autenticado |
-| `GET` | `/historicos/{id}` | Obter detalhes do registro de saúde por ID | Autenticado |
-| `POST` | `/historicos` | Registrar vacina, consulta, exame ou cirurgia | Autenticado |
-| `PUT` | `/historicos/{id}` | Atualizar registro de histórico clínico | Autenticado |
-| `DELETE` | `/historicos/{id}` | Excluir registro de histórico clínico | Autenticado |
+| `GET` | `/historicos` | Listar registros clínicos com paginação | `ADMIN` |
+| `GET` | `/historicos/pet/{petId}` | Prontuário médico de eventos do pet ordenados por data | Cuidador do pet ou `ADMIN` |
+| `GET` | `/historicos/{id}` | Obter detalhes do registro de saúde por ID | Cuidador do histórico ou `ADMIN` |
+| `POST` | `/historicos` | Registrar vacina, consulta, exame ou cirurgia | Cuidador do pet ou `ADMIN` |
+| `PUT` | `/historicos/{id}` | Atualizar registro de histórico clínico | Cuidador do histórico e do pet ou `ADMIN` |
+| `DELETE` | `/historicos/{id}` | Excluir registro de histórico clínico | Cuidador do histórico ou `ADMIN` |
 
 ---
 
@@ -383,37 +378,34 @@ spring.flyway.locations=classpath:db/migration
 ### Pré-requisitos
 - **Java 17 LTS** instalado e configurado no `JAVA_HOME`.
 - **Git** para clonagem do repositório.
-- *(Opcional)* **Docker e Docker Compose**, caso prefira rodar o banco localmente em vez de usar o PostgreSQL da nuvem no Railway.
+- Conectividade de rede com o servidor Oracle da FIAP (`oracle.fiap.com.br:1521`).
 
 ---
 
 ### Configuração de Ambientes (`.env`)
 
-Seguindo as melhores práticas de segurança do **OWASP**, a aplicação **não embute credenciais de produção no código-fonte**. As credenciais de banco de dados são injetadas estritamente via variáveis de ambiente (`PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`), configuradas no arquivo `.env` na raiz do projeto.
+Seguindo as melhores práticas de segurança do **OWASP**, a aplicação **não embute credenciais de produção no código-fonte**. As credenciais de conexão ao Oracle Database corporativo da FIAP são injetadas estritamente via variáveis de ambiente configuradas no arquivo `.env` na pasta `Java-Advanced`.
 
-Copie o `.env.example` para `.env` na raiz do projeto:
+Copie o template `.env.example` para `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
----
-
-### Passos de Execução
-
-#### Opção 1: Executar com Banco na Nuvem (Railway)
-Para facilitar a avaliação da banca examinadora e execução rápida sem necessidade de subir container local, disponibilizamos os parâmetros de conexão do banco de dados PostgreSQL na nuvem (Railway) para configuração no `.env`:
+Parâmetros ativos no `.env`:
 
 ```env
-PGHOST=altaria.proxy.rlwy.net
-PGPORT=41468
-PGDATABASE=railway
-PGUSER=postgres
-PGPASSWORD=PpPfEBowUuHgGMRqDzZjnOZbqKlbKrZl
+ORACLE_URL=jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl
+ORACLE_USER=RM561432
+ORACLE_PASSWORD=sua_senha_aqui
 PORT=8080
 ```
 
-Com as variáveis de conexão com o PostgreSQL no Railway configuradas no `.env` (ou exportadas na sessão), o Flyway executará as migrações automaticamente (`V1`, `V2` e `V3`):
+---
+
+### Execução da Aplicação
+
+Com as variáveis configuradas no `.env`:
 
 ```bash
 # No Linux / macOS:
@@ -422,30 +414,42 @@ Com as variáveis de conexão com o PostgreSQL no Railway configuradas no `.env`
 # No Windows (PowerShell / CMD):
 .\gradlew.bat bootRun
 ```
-*(Ou execute a classe `PetGuardianApplication.java` diretamente pela sua IDE favorita).*
+*(Ou execute a classe principal `PetGuardianApplication.java` diretamente pela sua IDE favorita).*
 
 ---
 
-#### Opção 2: Executar Localmente com Docker Compose
-1. Subir o container do PostgreSQL:
-```bash
-docker compose up -d
+## 🗄️ Procedimentos & Funções Corporativas em Oracle Database (PL/SQL)
+
+No escopo corporativo de **Mastering Relational and Non-Relational Database**, a API PetGuardian adota o **Oracle Database 19c** como base de dados relacional oficial e centralizada para persistência de dados, integridade referencial, e execução de rotinas analíticas em lote e classificação de gamificação empacotadas no pacote PL/SQL `PKG_PETGUARDIAN`:
+
+### 1. Configuração de Variáveis de Ambiente (.env)
+As credenciais e a URL de conexão não são versionadas no código-fonte. Configure o arquivo `.env` a partir do template `.env.example`:
+
+```properties
+ORACLE_HOST=oracle.fiap.com.br
+ORACLE_PORT=1521
+ORACLE_SERVICE=orcl
+ORACLE_USER=RM561432
+ORACLE_PASSWORD=sua_senha_aqui
 ```
 
-2. Configurar as variáveis para apontar para o container local:
-```powershell
-# PowerShell:
-$env:PGHOST="localhost"
-$env:PGPORT="5432"
-$env:PGDATABASE="petguardian"
-$env:PGUSER="petguardian"
-$env:PGPASSWORD="petguardian"
-```
+> **Para execução local ou pelo professor:**  
+> A string de conexão utilizada é:  
+> `jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl`  
+> Usuário: `RM561432`  
 
-3. Iniciar o Spring Boot:
-```powershell
-.\gradlew.bat bootRun
-```
+### 2. Endpoints de Invocação Direta de Procedures
+As rotinas empacotadas são disparadas diretamente pelos endpoints REST de tarefas:
+
+* **Exportação JSON via Stored Procedure (`pkg_petguardian.pr_exportar_tarefas_json`):**
+  - **Método / Rota:** `GET /tarefas/procedure/exportar-json`
+  - **Parâmetros Opcionais:** `?statusId=1` (1 = PENDENTE, 2 = CONCLUIDO, 3 = EXPIRADO)
+  - **Operação:** Dispara a procedure que serializa as tarefas no banco de dados e retorna o documento JSON consolidado via parâmetro `OUT CLOB`.
+
+* **Classificação de Pontos via Stored Function (`pkg_petguardian.fn_classificar_pontos`):**
+  - **Método / Rota:** `GET /tarefas/procedure/classificar-pontos/{pontos}`
+  - **Exemplo:** `GET /tarefas/procedure/classificar-pontos/85`
+  - **Operação:** Executa a regra corporativa de gamificação diretamente no motor do Oracle (`SELECT pkg_petguardian.fn_classificar_pontos(:pontos) FROM DUAL`), retornando `BRONZE`, `PRATA`, `OURO` ou `DIAMANTE (MASTER)`.
 
 ---
 
@@ -491,7 +495,7 @@ powershell -ExecutionPolicy Bypass -File .\seed-railway.ps1 -BaseUrl "http://loc
 A API possui interceptador global (`@RestControllerAdvice` em `GlobalExceptionHandler`) que padroniza os erros nos formatos:
 
 ### Formato 1: Erros de Validação de Campos (`400 Bad Request`)
-Disparado por falhas no Bean Validation (`@NotBlank`, `@NotNull`, `@NomeUnicoValidation`, `@CepValidation`, `@DddValidation`, etc.):
+Disparado por falhas no Bean Validation (`@NotBlank`, `@NotNull`, `@Pattern`, `@DddValidation`, `@EnumValidation`, etc.):
 ```json
 {
   "erros": [

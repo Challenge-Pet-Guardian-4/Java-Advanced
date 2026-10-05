@@ -11,13 +11,15 @@ import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
 import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
-import fiap.com.br.petguardian.validation.UsuarioPetValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,7 +29,6 @@ public class UsuarioPetService {
     private final UsuarioRepository usuarioRepository;
     private final PetRepository petRepository;
     private final TarefaRepository tarefaRepository;
-    private final UsuarioPetValidator usuarioPetValidator;
     private final RedeCuidadoMapper redeCuidadoMapper;
 
     @Transactional(readOnly = true)
@@ -58,7 +59,7 @@ public class UsuarioPetService {
     @Transactional
     public CoCuidadorResponse convidarCoCuidador(Long petId, CoCuidadorRequest request) {
         Pet pet = findPetById(petId);
-        usuarioPetValidator.validarUsuarioNaoVinculadoPorEmail(request.email(), petId);
+        validarUsuarioNaoVinculadoPorEmail(request.email(), petId);
         Usuario convidado = findUsuarioByEmail(request.email());
 
         return CoCuidadorResponse.fromEntity(usuarioPetRepository.save(request.toEntity(convidado, pet)));
@@ -79,7 +80,7 @@ public class UsuarioPetService {
     @Transactional
     public void desvincularCuidador(Long petId, String cuidadorEmail, String solicitanteEmail) {
         UsuarioPet vinculo = findVinculoPorEmail(cuidadorEmail, petId);
-        usuarioPetValidator.validarPermissaoDesvinculacao(vinculo, solicitanteEmail);
+        validarPermissaoDesvinculacao(vinculo, solicitanteEmail);
         usuarioPetRepository.delete(vinculo);
     }
 
@@ -138,5 +139,25 @@ public class UsuarioPetService {
     private UsuarioPet findVinculoPorEmail(String email, Long petId) {
         return usuarioPetRepository.findByUsuarioEmailAndPetId(email.trim(), petId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vinculo nao encontrado entre o usuario e o pet informados."));
+    }
+
+    private void validarUsuarioNaoVinculadoPorEmail(String email, Long petId) {
+        if (usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId)) {
+            throw new IllegalArgumentException("Usuario informado ja possui vinculo com este pet.");
+        }
+    }
+
+    private void validarPermissaoDesvinculacao(UsuarioPet vinculo, String solicitanteEmail) {
+        if (vinculo.isResponsavelPrincipal()) {
+            throw new IllegalArgumentException("Nao e permitido desvincular o responsavel principal do pet sem antes transferir a titularidade.");
+        }
+
+        Long petId = vinculo.getPet().getId();
+        boolean isProprioUsuario = vinculo.getUsuario().getEmail().equalsIgnoreCase(solicitanteEmail.trim());
+        boolean isResponsavel = usuarioPetRepository.isResponsavelPrincipalPorEmail(solicitanteEmail.trim(), petId);
+
+        if (!isProprioUsuario && !isResponsavel) {
+            throw new IllegalArgumentException("Apenas o proprio cuidador ou o responsavel principal podem remover este vinculo.");
+        }
     }
 }

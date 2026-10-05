@@ -30,7 +30,7 @@ public record UsuarioRequest(
         String ddd,
 
         @NotBlank
-        @Pattern(regexp = "\\d{9}", message = "Número de telefone deve conter exatamente 9 dígitos numéricos.")
+        @Pattern(regexp = "\\d{9}")
         String numeroTelefone,
 
         @NotNull

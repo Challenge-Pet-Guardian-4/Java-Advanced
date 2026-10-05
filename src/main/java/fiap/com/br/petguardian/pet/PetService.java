@@ -12,7 +12,9 @@ import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
 import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
-import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
+import fiap.com.br.petguardian.usuariopet.UsuarioPet;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetId;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,7 +27,7 @@ public class PetService {
 
     private final PetRepository petRepository;
     private final UsuarioRepository usuarioRepository;
-    private final UsuarioPetService usuarioPetService;
+    private final UsuarioPetRepository usuarioPetRepository;
     private final RacaRepository racaRepository;
     private final TarefaRepository tarefaRepository;
     private final AulaRepository aulaRepository;
@@ -48,11 +50,11 @@ public class PetService {
     }
 
     public boolean isResponsavelPrincipal(Long petId, String email) {
-        return usuarioPetService.isResponsavelPrincipal(petId, email);
+        return usuarioPetRepository.isResponsavelPrincipalPorEmail(email.trim(), petId);
     }
 
     public boolean isCuidadorDoPet(Long petId, String email) {
-        return usuarioPetService.isCuidadorDoPet(petId, email);
+        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId);
     }
 
     @Transactional
@@ -61,7 +63,8 @@ public class PetService {
         Raca raca = findOrCreateRaca(petRequest.raca());
         Pet petSalvo = petRepository.save(petRequest.toEntity(raca));
 
-        usuarioPetService.vincularPrimeiroResponsavelPrincipal(usuario, petSalvo);
+        UsuarioPet vinculo = new UsuarioPet(new UsuarioPetId(usuario.getId(), petSalvo.getId()), usuario, petSalvo, true);
+        usuarioPetRepository.save(vinculo);
         return petSalvo;
     }
 

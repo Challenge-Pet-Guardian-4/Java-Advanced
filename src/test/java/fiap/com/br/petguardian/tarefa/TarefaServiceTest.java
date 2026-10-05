@@ -8,7 +8,7 @@ import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.tarefa.status.StatusService;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
-import fiap.com.br.petguardian.validation.TarefaValidator;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,9 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -48,7 +46,7 @@ class TarefaServiceTest {
     private StatusService statusService;
 
     @Mock
-    private TarefaValidator tarefaValidator;
+    private UsuarioPetRepository usuarioPetRepository;
 
     @InjectMocks
     private TarefaService tarefaService;
@@ -91,6 +89,7 @@ class TarefaServiceTest {
                 .build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
@@ -100,8 +99,19 @@ class TarefaServiceTest {
         assertNotNull(resultado);
         assertEquals("Remédio", resultado.getTitulo());
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
-        verify(tarefaValidator).validarCuidadorDoPet("enzo@fiap.com.br", 10L);
         verify(tarefaRepository).save(any(Tarefa.class));
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao criar tarefa quando usuario nao for cuidador do pet")
+    void deveLancarExcecaoAoCriarTarefaQuandoNaoForCuidador() {
+        var request = new TarefaRequest("Remédio", 15, "Dar antibiótico", LocalDateTime.now().plusDays(1), 10L, "PENDENTE", null);
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("outro@fiap.com.br", 10L)).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.create(request, "outro@fiap.com.br"));
     }
 
     @Test
@@ -127,6 +137,7 @@ class TarefaServiceTest {
                 .build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("concluinte@fiap.com.br", 10L)).thenReturn(true);
         when(usuarioRepository.findByEmailIgnoreCase("concluinte@fiap.com.br")).thenReturn(Optional.of(concluinte));
         when(statusService.findStatus(EnumStatus.CONCLUIDO)).thenReturn(statusConcluido);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -137,8 +148,17 @@ class TarefaServiceTest {
         assertEquals(EnumStatus.CONCLUIDO, resultado.getStatus().getNomeStatus());
         assertEquals(2L, resultado.getUsuario().getId());
         assertNotNull(resultado.getConclusao());
-        verify(tarefaValidator).validarPendenteParaConclusao(tarefa);
-        verify(tarefaValidator).validarCuidadorDoPet("concluinte@fiap.com.br", 10L);
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar concluir tarefa nao pendente")
+    void deveLancarExcecaoAoConcluirTarefaNaoPendente() {
+        Status statusConcluido = Status.builder().id(2L).nomeStatus(EnumStatus.CONCLUIDO).build();
+        Tarefa tarefa = Tarefa.builder().id(100L).status(statusConcluido).build();
+
+        when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
+
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.concluir(100L, "cuidador@fiap.com.br"));
     }
 
     @Test
@@ -160,8 +180,9 @@ class TarefaServiceTest {
                 .pet(pet)
                 .build();
 
-        when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(true);
+        when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Tarefa resultado = tarefaService.desmarcar(100L, "cuidador@fiap.com.br");
@@ -169,8 +190,19 @@ class TarefaServiceTest {
         assertNotNull(resultado);
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
         assertNull(resultado.getConclusao());
-        verify(tarefaValidator).validarCuidadorDoPet("cuidador@fiap.com.br", 10L);
-        verify(tarefaValidator).validarConcluidaParaDesmarcar(tarefa);
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar desmarcar tarefa que nao esteja concluida")
+    void deveLancarExcecaoAoDesmarcarTarefaNaoConcluida() {
+        Pet pet = Pet.builder().id(10L).build();
+        Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
+        Tarefa tarefa = Tarefa.builder().id(100L).pet(pet).status(statusPendente).build();
+
+        when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(true);
+
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.desmarcar(100L, "cuidador@fiap.com.br"));
     }
 
     @Test
@@ -221,5 +253,17 @@ class TarefaServiceTest {
         Integer pontos = tarefaService.calcularPontosTotaisEmail("enzo@fiap.com.br");
 
         assertEquals(150, pontos);
+    }
+
+    @Test
+    @DisplayName("Deve verificar se usuario e cuidador da tarefa")
+    void deveVerificarCuidadorDaTarefa() {
+        Pet pet = Pet.builder().id(10L).build();
+        Tarefa tarefa = Tarefa.builder().id(100L).pet(pet).build();
+
+        when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
+
+        assertTrue(tarefaService.isCuidadorDaTarefa(100L, "enzo@fiap.com.br"));
     }
 }

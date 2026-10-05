@@ -29,7 +29,7 @@ public interface UsuarioPetRepository extends JpaRepository<UsuarioPet, UsuarioP
     @Query("select up from UsuarioPet up join fetch up.pet p join fetch up.usuario u where up.pet.id in :petIds")
     List<UsuarioPet> findAllByPetIdIn(@Param("petIds") List<Long> petIds);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("update UsuarioPet up set up.responsavelPrincipal = false where up.pet.id = :petId")
     void limparResponsavelPrincipalPorPet(@Param("petId") Long petId);

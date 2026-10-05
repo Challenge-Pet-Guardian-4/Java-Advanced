@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -141,4 +142,10 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
             @Param("pendente") Status pendente,
             @Param("expirada") Status expirada
     );
+
+    @Procedure(procedureName = "pkg_petguardian.pr_exportar_tarefas_json")
+    String exportarTarefasJsonNoBanco(@Param("p_status_id") Long statusId);
+
+    @Query(value = "SELECT pkg_petguardian.fn_classificar_pontos(:pontos) FROM DUAL", nativeQuery = true)
+    String classificarPontosNoBanco(@Param("pontos") Integer pontos);
 }

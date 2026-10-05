@@ -4,7 +4,7 @@ import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.pet.historico.dto.HistoricoRequest;
-import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,11 +19,11 @@ public class HistoricoService {
 
     private final HistoricoRepository historicoRepository;
     private final PetRepository petRepository;
-    private final UsuarioPetService usuarioPetService;
+    private final UsuarioPetRepository usuarioPetRepository;
 
     public boolean isCuidadorDoHistorico(Long historicoId, String email) {
         Historico historico = findHistoricoById(historicoId);
-        return usuarioPetService.isCuidadorDoPet(historico.getPet().getId(), email);
+        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), historico.getPet().getId());
     }
 
     public Page<Historico> findAll(Pageable pageable) {

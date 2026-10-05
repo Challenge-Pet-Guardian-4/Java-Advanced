@@ -9,7 +9,6 @@ import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
 import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
-import fiap.com.br.petguardian.validation.UsuarioPetValidator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,9 +40,6 @@ class UsuarioPetServiceTest {
     private TarefaRepository tarefaRepository;
 
     @Mock
-    private UsuarioPetValidator usuarioPetValidator;
-
-    @Mock
     private RedeCuidadoMapper redeCuidadoMapper;
 
     @InjectMocks
@@ -64,6 +60,7 @@ class UsuarioPetServiceTest {
         var request = new CoCuidadorRequest("familiar@fiap.com.br");
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("familiar@fiap.com.br", 10L)).thenReturn(false);
         when(usuarioRepository.findByEmailIgnoreCase("familiar@fiap.com.br")).thenReturn(Optional.of(convidado));
         when(usuarioPetRepository.save(any(UsuarioPet.class))).thenReturn(novoVinculo);
 
@@ -73,22 +70,73 @@ class UsuarioPetServiceTest {
         assertEquals("Familiar", response.nome());
         assertEquals("familiar@fiap.com.br", response.email());
         assertFalse(response.responsavelPrincipal());
-        verify(usuarioPetValidator).validarUsuarioNaoVinculadoPorEmail("familiar@fiap.com.br", 10L);
+        verify(usuarioPetRepository).save(any(UsuarioPet.class));
     }
 
     @Test
-    @DisplayName("Deve desvincular co-cuidador com sucesso via email")
+    @DisplayName("Deve lancar excecao ao convidar usuario ja vinculado ao pet")
+    void deveLancarExcecaoAoConvidarUsuarioJaVinculado() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        var request = new CoCuidadorRequest("familiar@fiap.com.br");
+
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("familiar@fiap.com.br", 10L)).thenReturn(true);
+
+        assertThrows(IllegalArgumentException.class, () -> usuarioPetService.convidarCoCuidador(10L, request));
+    }
+
+    @Test
+    @DisplayName("Deve desvincular co-cuidador com sucesso via email pelo responsavel principal")
     void deveDesvincularCuidador() {
         Pet pet = Pet.builder().id(10L).build();
         Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
         UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
 
         when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.isResponsavelPrincipalPorEmail("enzo@fiap.com.br", 10L)).thenReturn(true);
 
         usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "enzo@fiap.com.br");
 
-        verify(usuarioPetValidator).validarPermissaoDesvinculacao(vinculo, "enzo@fiap.com.br");
         verify(usuarioPetRepository).delete(vinculo);
+    }
+
+    @Test
+    @DisplayName("Deve permitir o proprio co-cuidador se desvincular")
+    void devePermitirProprioCuidadorDesvincular() {
+        Pet pet = Pet.builder().id(10L).build();
+        Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
+        UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
+
+        when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+
+        usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "cuidador@fiap.com.br");
+
+        verify(usuarioPetRepository).delete(vinculo);
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar desvincular o responsavel principal sem transferir titularidade")
+    void deveLancarExcecaoAoDesvincularResponsavelPrincipal() {
+        Pet pet = Pet.builder().id(10L).build();
+        Usuario principal = Usuario.builder().id(1L).email("principal@fiap.com.br").build();
+        UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(1L, 10L)).usuario(principal).pet(pet).responsavelPrincipal(true).build();
+
+        when(usuarioPetRepository.findByUsuarioEmailAndPetId("principal@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+
+        assertThrows(IllegalArgumentException.class, () -> usuarioPetService.desvincularCuidador(10L, "principal@fiap.com.br", "principal@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar desvincular cuidador sem ser o proprio ou responsavel principal")
+    void deveLancarExcecaoAoDesvincularCuidadorSemPermissao() {
+        Pet pet = Pet.builder().id(10L).build();
+        Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
+        UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
+
+        when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.isResponsavelPrincipalPorEmail("estranho@fiap.com.br", 10L)).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "estranho@fiap.com.br"));
     }
 
     @Test

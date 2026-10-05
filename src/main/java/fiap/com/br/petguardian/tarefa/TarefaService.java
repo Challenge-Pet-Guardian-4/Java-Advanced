@@ -9,8 +9,7 @@ import fiap.com.br.petguardian.tarefa.status.StatusService;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
-import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
-import fiap.com.br.petguardian.validation.TarefaValidator;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,12 +25,11 @@ public class TarefaService {
     private final UsuarioRepository usuarioRepository;
     private final PetRepository petRepository;
     private final StatusService statusService;
-    private final TarefaValidator tarefaValidator;
-    private final UsuarioPetService usuarioPetService;
+    private final UsuarioPetRepository usuarioPetRepository;
 
     public boolean isCuidadorDaTarefa(Long tarefaId, String email) {
         Tarefa tarefa = findTarefaById(tarefaId);
-        return usuarioPetService.isCuidadorDoPet(tarefa.getPet().getId(), email);
+        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), tarefa.getPet().getId());
     }
 
     public Page<Tarefa> findAll(Pageable pageable) {
@@ -74,7 +72,7 @@ public class TarefaService {
     @Transactional
     public Tarefa create(TarefaRequest request, String authEmail) {
         Pet pet = findPetById(request.petId());
-        tarefaValidator.validarCuidadorDoPet(authEmail, pet.getId());
+        validarCuidadorDoPet(authEmail, pet.getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
 
         Tarefa tarefa = request.toEntity(usuario, pet, LocalDateTime.now());
@@ -86,7 +84,7 @@ public class TarefaService {
     public Tarefa update(Long id, TarefaRequest request, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
         Pet pet = findPetById(request.petId());
-        tarefaValidator.validarCuidadorDoPet(authEmail, pet.getId());
+        validarCuidadorDoPet(authEmail, pet.getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
         EnumStatus status = EnumStatus.valueOf(request.status().trim().toUpperCase());
 
@@ -104,8 +102,8 @@ public class TarefaService {
     @Transactional
     public Tarefa concluir(Long id, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
-        tarefaValidator.validarPendenteParaConclusao(tarefa);
-        tarefaValidator.validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
+        validarPendenteParaConclusao(tarefa);
+        validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
 
         aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
@@ -115,8 +113,8 @@ public class TarefaService {
     @Transactional
     public Tarefa desmarcar(Long id, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
-        tarefaValidator.validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
-        tarefaValidator.validarConcluidaParaDesmarcar(tarefa);
+        validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
+        validarConcluidaParaDesmarcar(tarefa);
 
         tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
         tarefa.setConclusao(null);
@@ -175,5 +173,33 @@ public class TarefaService {
         tarefa.setUsuario(usuario);
         tarefa.setStatus(statusConcluido);
         tarefa.setConclusao(LocalDateTime.now());
+    }
+
+    @Transactional(readOnly = true)
+    public String exportarTarefasJson(Long statusId) {
+        return tarefaRepository.exportarTarefasJsonNoBanco(statusId);
+    }
+
+    @Transactional(readOnly = true)
+    public String classificarPontos(Integer pontos) {
+        return tarefaRepository.classificarPontosNoBanco(pontos);
+    }
+
+    private void validarCuidadorDoPet(String email, Long petId) {
+        if (!usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId)) {
+            throw new IllegalArgumentException("Usuario informado nao esta vinculado ao pet da tarefa.");
+        }
+    }
+
+    private void validarPendenteParaConclusao(Tarefa tarefa) {
+        if (tarefa.getStatus().getNomeStatus() != EnumStatus.PENDENTE) {
+            throw new IllegalArgumentException("Apenas tarefas pendentes podem ser concluidas.");
+        }
+    }
+
+    private void validarConcluidaParaDesmarcar(Tarefa tarefa) {
+        if (tarefa.getStatus().getNomeStatus() != EnumStatus.CONCLUIDO) {
+            throw new IllegalArgumentException("Apenas tarefas concluidas podem ser desmarcadas.");
+        }
     }
 }

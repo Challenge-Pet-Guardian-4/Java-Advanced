@@ -12,7 +12,8 @@ import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
-import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
+import fiap.com.br.petguardian.usuariopet.UsuarioPet;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,7 +46,7 @@ class PetServiceTest {
     private UsuarioRepository usuarioRepository;
 
     @Mock
-    private UsuarioPetService usuarioPetService;
+    private UsuarioPetRepository usuarioPetRepository;
 
     @Mock
     private RacaRepository racaRepository;
@@ -92,7 +93,7 @@ class PetServiceTest {
 
         assertNotNull(resultado);
         assertEquals("Thor", resultado.getNome());
-        verify(usuarioPetService).vincularPrimeiroResponsavelPrincipal(usuario, petSalvo);
+        verify(usuarioPetRepository).save(any(UsuarioPet.class));
     }
 
     @Test

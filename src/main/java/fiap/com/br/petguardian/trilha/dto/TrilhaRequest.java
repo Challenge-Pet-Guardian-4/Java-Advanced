@@ -2,12 +2,10 @@ package fiap.com.br.petguardian.trilha.dto;
 
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.trilha.Trilha;
-import fiap.com.br.petguardian.validation.NomeUnicoValidation;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-@NomeUnicoValidation(message = "Ja existe uma trilha cadastrada com este nome para este pet.")
 public record TrilhaRequest(
         @NotBlank
         @Size(max = 30)

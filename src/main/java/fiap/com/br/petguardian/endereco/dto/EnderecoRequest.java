@@ -2,12 +2,12 @@ package fiap.com.br.petguardian.endereco.dto;
 
 import fiap.com.br.petguardian.endereco.Endereco;
 import fiap.com.br.petguardian.endereco.bairro.Bairro;
-import fiap.com.br.petguardian.validation.CepValidation;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 
 public record EnderecoRequest(
         @NotBlank
-        @CepValidation
+        @Pattern(regexp = "^\\d{5}-?\\d{3}$")
         String cep,
 
         @NotBlank

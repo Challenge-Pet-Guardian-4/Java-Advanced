@@ -28,7 +28,7 @@ public class UsuarioPetController {
     @GetMapping("/cuidadores")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todos os cuidadores vinculados a um pet")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
     public List<CoCuidadorResponse> listarCuidadores(@PathVariable Long petId) {
         return usuarioPetService.listarCuidadoresDoPet(petId);
     }
@@ -36,7 +36,7 @@ public class UsuarioPetController {
     @PostMapping("/cuidadores")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Convidar um novo co-cuidador para o pet (por ID ou e-mail)")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#petId, authentication.name)")
     public CoCuidadorResponse convidarCuidador(
             @PathVariable Long petId,
             @Valid @RequestBody CoCuidadorRequest request
@@ -47,7 +47,7 @@ public class UsuarioPetController {
     @DeleteMapping("/cuidadores")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Desvincular um co-cuidador do pet por e-mail")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
     public void desvincularCuidador(
             @PathVariable Long petId,
             @RequestParam @NotBlank @Email String email,
@@ -59,7 +59,7 @@ public class UsuarioPetController {
     @PatchMapping("/responsavel-principal")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Transferir a titularidade de responsavel principal para outro co-cuidador")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#petId, authentication.name)")
     public void transferirResponsavelPrincipal(
             @PathVariable Long petId,
             @Valid @RequestBody TransferirResponsabilidadeRequest request,

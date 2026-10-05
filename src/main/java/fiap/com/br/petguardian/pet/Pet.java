@@ -1,7 +1,9 @@
 package fiap.com.br.petguardian.pet;
 
+import fiap.com.br.petguardian.pet.historico.Historico;
 import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.tarefa.Tarefa;
+import fiap.com.br.petguardian.trilha.Trilha;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
 import jakarta.persistence.*;
 import lombok.*;
@@ -51,4 +53,12 @@ public class Pet {
     @OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<UsuarioPet> usuarioPets = new HashSet<>();
+
+    @OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Historico> historicos = new HashSet<>();
+
+    @OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
+    private Set<Trilha> trilhas = new HashSet<>();
 }

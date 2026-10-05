@@ -11,9 +11,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/tarefas")
@@ -126,5 +130,23 @@ public class TarefaController {
     @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
     public void delete(@PathVariable Long id) {
         tarefaService.delete(id);
+    }
+
+    @GetMapping(value = "/procedure/exportar-json", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Executar Stored Procedure pkg_petguardian.pr_exportar_tarefas_json no Oracle e retornar o JSON serializado pelo banco")
+    public ResponseEntity<String> exportarTarefasJson(@RequestParam(required = false) Long statusId) {
+        return ResponseEntity.ok(tarefaService.exportarTarefasJson(statusId));
+    }
+
+    @GetMapping("/procedure/classificar-pontos/{pontos}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Executar Stored Function pkg_petguardian.fn_classificar_pontos no Oracle e retornar a categoria calculada")
+    public ResponseEntity<Map<String, Object>> classificarPontos(@PathVariable Integer pontos) {
+        String categoria = tarefaService.classificarPontos(pontos);
+        return ResponseEntity.ok(Map.of(
+                "pontos_informados", pontos,
+                "categoria_calculada_no_banco", categoria
+        ));
     }
 }

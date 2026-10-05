@@ -3,7 +3,7 @@ package fiap.com.br.petguardian.pet.historico;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.pet.historico.dto.HistoricoRequest;
-import fiap.com.br.petguardian.usuariopet.UsuarioPetService;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +32,7 @@ class HistoricoServiceTest {
     private PetRepository petRepository;
 
     @Mock
-    private UsuarioPetService usuarioPetService;
+    private UsuarioPetRepository usuarioPetRepository;
 
     @InjectMocks
     private HistoricoService historicoService;
@@ -87,7 +87,7 @@ class HistoricoServiceTest {
         Historico hist = Historico.builder().id(1L).pet(pet).build();
 
         when(historicoRepository.findById(1L)).thenReturn(Optional.of(hist));
-        when(usuarioPetService.isCuidadorDoPet(10L, "enzo@fiap.com.br")).thenReturn(true);
+        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
 
         assertTrue(historicoService.isCuidadorDoHistorico(1L, "enzo@fiap.com.br"));
     }

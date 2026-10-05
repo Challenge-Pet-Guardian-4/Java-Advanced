@@ -2,13 +2,11 @@ package fiap.com.br.petguardian.trilha.aula.dto;
 
 import fiap.com.br.petguardian.trilha.aula.Aula;
 import fiap.com.br.petguardian.trilha.modulo.Modulo;
-import fiap.com.br.petguardian.validation.NomeUnicoValidation;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
-@NomeUnicoValidation(message = "Ja existe uma aula cadastrada com este nome para este modulo.")
 public record AulaRequest(
         @NotBlank
         @Size(max = 50)

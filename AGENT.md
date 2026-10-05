@@ -14,8 +14,7 @@ Guia completo e documentação técnica da arquitetura, regras de negócio, perf
 - **Segurança:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas RSA (PKCS#8).
 - **Testes:** JUnit 5, Mockito e Spring Boot 4 Modular Testing (`spring-boot-starter-webmvc-test` com `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`).
 - **Cache:** Spring Starter Cache (cache em memória para lookups de Status).
-- **Documentação de API:** SpringDoc OpenAPI 3 (`/swagger-ui.html` e `/v3/api-docs`).
-- **Banco de Dados:** PostgreSQL 16 (ambiente local via Docker Compose e produção no Railway) com migrações gerenciadas via Flyway e Hibernate com `ddl-auto=validate`.
+- **Banco de Dados:** Oracle Database 19c corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`) com driver oficial `ojdbc11`, dialeto Hibernate `OracleDialect` e rotinas analíticas PL/SQL (`PKG_PETGUARDIAN`); H2 em memória para a suíte de testes automatizados.
 
 ---
 
@@ -141,29 +140,33 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | `GET` | `/tarefas/by-usuario` | `@RequestParam Long usuarioId`, `@RequestParam(defaultValue = "ALL") String status`, `Pageable` | `Page<TarefaResponse>` | Lista tarefas de um cuidador por ID (somente ADMIN). |
 | `GET` | `/tarefas/by-usuario/pontos` | `@RequestParam Long usuarioId` | `Integer` | Consulta pontos totais do cuidador por ID (somente ADMIN). |
 | `GET` | `/tarefas/by-pet/{petId}` | `@PathVariable Long petId`, `Pageable` | `Page<TarefaResponse>` | Lista todas as tarefas vinculadas a um pet específico. |
-| `GET` | `/tarefas/{id}` | `@PathVariable Long id` | `TarefaResponse` | Busca tarefa por ID. |
+| `GET` | `/tarefas/{id}` | `@PathVariable Long id` | `TarefaResponse` | Busca tarefa por ID (Cuidador da tarefa ou ADMIN). |
 | `POST` | `/tarefas` | `TarefaRequest` | `TarefaResponse` (201 Created) | Cria nova tarefa vinculada ao cuidador autenticado com status `PENDENTE`. |
 | `PUT` | `/tarefas/{id}` | `TarefaRequest` | `TarefaResponse` (200 OK) | Atualiza os dados e status da tarefa. |
 | `PATCH`| `/tarefas/{id}/concluir` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Marca tarefa como `CONCLUIDO`, vincula executor autenticado e data de conclusão. |
 | `PATCH`| `/tarefas/{id}/desmarcar` | Token JWT (`Authentication`) | `TarefaResponse` (200 OK) | Desmarca tarefa previamente concluída retornando-a ao status `PENDENTE`. |
 | `DELETE`| `/tarefas/{id}` | `@PathVariable Long id` | 204 No Content | Deleta uma tarefa. |
+| `GET` | `/tarefas/procedure/exportar-json` | `@RequestParam(required = false) Long statusId` | `ResponseEntity<String>` (JSON) | Executa Stored Procedure `pkg_petguardian.pr_exportar_tarefas_json` no Oracle e retorna JSON consolidado via `OUT CLOB`. |
+| `GET` | `/tarefas/procedure/classificar-pontos/{pontos}` | `@PathVariable Integer pontos` | `Map<String, Object>` | Executa Stored Function `pkg_petguardian.fn_classificar_pontos` no Oracle e retorna a categoria calculada. |
 
 ---
 
 ### 🩺 Histórico Clínico e Eventos (`/historicos`)
-| Método | Endpoint | Parâmetros / Body | Response | Descrição |
-| :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/historicos/pet/{petId}` | `@PathVariable Long petId` | `List<HistoricoResponse>` | Lista eventos de saúde do pet ordenados por data decrescente. |
-| `GET` | `/historicos/{id}` | `@PathVariable Long id` | `HistoricoResponse` | Busca evento de histórico por ID. |
-| `POST` | `/historicos` | `HistoricoRequest` | `HistoricoResponse` (201 Created) | Registra evento de histórico (Vacina, Consulta, Exame, etc.). |
-| `PUT` | `/historicos/{id}` | `HistoricoRequest` | `HistoricoResponse` (200 OK) | Atualiza registro de histórico. |
-| `DELETE`| `/historicos/{id}` | `@PathVariable Long id` | 204 No Content | Remove registro de histórico. |
+| Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/historicos` | `Pageable` (`page`, `size`, `sort`) | `Page<HistoricoResponse>` | Lista todos os registros clínicos paginados ordenados por data decrescente. | `ADMIN` |
+| `GET` | `/historicos/pet/{petId}` | `@PathVariable Long petId` | `List<HistoricoResponse>` | Prontuário médico de eventos do pet ordenados por data decrescente. | Cuidador do pet ou `ADMIN` |
+| `GET` | `/historicos/{id}` | `@PathVariable Long id` | `HistoricoResponse` | Busca evento de histórico por ID. | Cuidador do histórico ou `ADMIN` |
+| `POST` | `/historicos` | `HistoricoRequest` | `HistoricoResponse` (201 Created) | Registra evento de histórico (Vacina, Consulta, Exame, etc.). | Cuidador do pet ou `ADMIN` |
+| `PUT` | `/historicos/{id}` | `HistoricoRequest` | `HistoricoResponse` (200 OK) | Atualiza registro de histórico. | Cuidador do histórico e do pet ou `ADMIN` |
+| `DELETE`| `/historicos/{id}` | `@PathVariable Long id` | 204 No Content | Remove registro de histórico. | Cuidador do histórico ou `ADMIN` |
 
 ---
 
 ### 🎓 Trilhas de Aprendizado (`/trilhas`) - ⭐ LEITURA: PREMIUM & ADMIN | ESCRITA: ADMIN
 | Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/trilhas` | `Pageable` (`page`, `size`, `sort`) | `Page<TrilhaResponse>` | Lista todas as trilhas cadastradas com paginação e ordenação por nome. | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/pet/{petId}` | `@PathVariable Long petId` | `List<TrilhaResponse>` | Lista trilhas cadastradas para o pet. | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/{id}` | `@PathVariable Long id` | `TrilhaResponse` | Busca trilha por ID. | `PREMIUM`, `ADMIN` |
 | `POST` | `/trilhas` | `TrilhaRequest` | `TrilhaResponse` (201 Created) | Cria nova trilha para o pet. | `ADMIN` |
@@ -175,6 +178,7 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 ### 📦 Módulos das Trilhas (`/modulos`) - ⭐ LEITURA: PREMIUM & ADMIN | ESCRITA: ADMIN
 | Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/modulos` | `Pageable` (`page`, `size`, `sort`) | `Page<ModuloResponse>` | Lista todos os módulos com paginação e ordenação por nome. | `PREMIUM`, `ADMIN` |
 | `GET` | `/modulos/trilha/{trilhaId}` | `@PathVariable Long trilhaId` | `List<ModuloResponse>` | Lista módulos pertencentes a uma trilha. | `PREMIUM`, `ADMIN` |
 | `GET` | `/modulos/{id}` | `@PathVariable Long id` | `ModuloResponse` | Busca módulo por ID. | `PREMIUM`, `ADMIN` |
 | `POST` | `/modulos` | `ModuloRequest` | `ModuloResponse` (201 Created) | Cria novo módulo associado a uma trilha. | `ADMIN` |
@@ -186,6 +190,7 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 ### 📝 Aulas e Conteúdos Educativos (`/aulas`) - ⭐ LEITURA: PREMIUM & ADMIN | ESCRITA: ADMIN
 | Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/aulas` | `Pageable` (`page`, `size`, `sort`) | `Page<AulaResponse>` | Lista todas as aulas com paginação e ordenação por nome. | `PREMIUM`, `ADMIN` |
 | `GET` | `/aulas/modulo/{moduloId}` | `@PathVariable Long moduloId` | `List<AulaResponse>` | Lista aulas pertencentes a um módulo. | `PREMIUM`, `ADMIN` |
 | `GET` | `/aulas/{id}` | `@PathVariable Long id` | `AulaResponse` | Busca aula por ID. | `PREMIUM`, `ADMIN` |
 | `POST` | `/aulas` | `AulaRequest` | `AulaResponse` (201 Created) | Cria nova aula (pontuação, conteúdo até 1000 caracteres, concluida = false). | `ADMIN` |
@@ -216,13 +221,13 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 - `@Positive`: Pontos de tarefas e aulas.
 - `@Email`: Formato do e-mail.
 - `@Size(max = ...)`: Limites de tamanho de string.
-- `@DddValidation` / `@DddValidator`: Valida DDD válido no Brasil.
-- `@CepValidation` / `@CepValidator`: Valida formato numérico de 8 dígitos de CEP.
+- `@DddValidation` / `@DddValidator`: Valida DDD válido no Brasil (67 DDDs oficiais da Anatel).
+- `@Pattern(regexp = "^\\d{5}-?\\d{3}$")`: Validação canônica de formato de CEP brasileiro de 8 dígitos.
 - `@EnumValidation` / `@EnumValidator`: Valida enums dinâmicos (`PetPorte`, `EnumStatus`, `UsuarioRole`).
 
 ### B. Validação de Regras de Negócio (Domain / Service Components)
-- **`TarefaValidator`**: Valida se o atribuído/executor é cuidador do pet e se a tarefa está apta para conclusão/desmarcação.
-- **`UsuarioPetService`**: Valida regras de titularidade única de responsável principal, vínculo prévio e permissões de desvinculação no Care Circle.
+- **`TarefaService`**: Valida se o atribuído/executor é cuidador do pet e se a tarefa está apta para conclusão/desmarcação (regras encapsuladas no próprio service).
+- **`UsuarioPetService`**: Valida regras de titularidade única de responsável principal, vínculo prévio e permissões de desvinculação no Care Circle (regras encapsuladas no próprio service).
 
 ### C. Tratamento Global de Erros (`GlobalExceptionHandler`)
 - `400 Bad Request`: `MethodArgumentNotValidException`, `IllegalArgumentException`, `HttpMessageNotReadableException`, `DataIntegrityViolationException`.
@@ -242,15 +247,19 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 2. **Exclusão Segura com `deleteById`:**
    - Métodos `delete(Long id)` validam a existência chamando `find<Entity>ById(id)` e em seguida invocam diretamente `repository.deleteById(id)`.
 3. **Desacoplamento Horizontal entre Services Irmãos:**
-   - Cada service injeta diretamente os **Repositories** das entidades relacionadas de que necessita (`PetRepository`, `UsuarioRepository`, etc.) e mantém seu próprio helper privado `findPetById` / `findUsuarioById`.
-   - **NÃO** injetar Services irmãos (ex: `PetService` dentro de `HistoricoService` ou `UsuarioService` dentro de `UsuarioPetService`) para prevenir horizontal coupling e ciclos de dependência circular.
+   - Cada service injeta diretamente os **Repositories** das entidades relacionadas de que necessita (`PetRepository`, `UsuarioRepository`, `UsuarioPetRepository`, etc.) e mantém seu próprio helper privado `findPetById` / `findUsuarioById` / verificações de titularidade (`existsByUsuarioEmailAndPetId`, `isResponsavelPrincipalPorEmail`).
+   - **NÃO** injetar Services irmãos (ex: `UsuarioPetService` dentro de `PetService`, `HistoricoService` ou `TarefaService`) para prevenir horizontal coupling e ciclos de dependência circular.
 4. **Sem `Locale.ROOT`:** Utilizar `.toUpperCase()` ou `.toLowerCase()` padrão.
-5. **DTOs Limpos e Imutáveis:** DTOs são records puros contendo apenas campos, validações e conversão inicial (`toEntity(...)`). Não contêm métodos de mutação de entidades de domínio.
+5. **DTOs Limpos e Imutáveis:** DTOs são records puros contendo apenas campos, validações canônicas de Bean Validation (sem mensagens customizadas redundantes em anotações padrão) e conversão inicial (`toEntity(...)`). Não contêm métodos de mutação de entidades de domínio.
 6. **Encapsulamento de Mutação via `aplicarEm` nos Services:** Métodos `update` nos Services orquestram dependências e encapsulam as atribuições da entidade em método privado `aplicarEm(...)` no próprio Service, mutando a entidade gerenciada com segurança.
 7. **Inicialização com `@Builder.Default`:** Coleções e campos booleanos sempre inicializados.
 8. **DTOs Limpos:** Records de DTO contêm apenas anotações essenciais de validação, sem `@Schema`.
-9. **Sem Verificações Redundantes de Null (Proibido Null-Checks Paranoicos):** DTOs com Bean Validation (`@NotNull`, `@NotBlank`, `@CepValidation`, etc.) e entidades com `@Builder.Default` garantem a integridade dos dados na entrada. É terminantemente proibido poluir services e controllers com checagens de `!= null` e verificações defensivas em cascata desnecessárias.
+9. **Sem Verificações Redundantes de Null (Proibido Null-Checks Paranoicos):** DTOs com Bean Validation (`@NotNull`, `@NotBlank`, `@Pattern`, `@DddValidation`, etc.) e entidades com `@Builder.Default` garantem a integridade dos dados na entrada. É terminantemente proibido poluir services e controllers com checagens de `!= null` e verificações defensivas em cascata desnecessárias.
 10. **Sem Over-Engineering / Métodos Auxiliares Desnecessários (KISS):** Não criar métodos auxiliares, records intermediários descartáveis (como `ResolvedAddress`) ou validações encapsuladas isoladas que só são utilizadas em um único ponto e podem ser resolvidas de forma simples e direta em uma única linha.
 11. **Imports no Topo (Proibido FQCN inline):** NUNCA declarar pacotes inteiros inline no meio do código (ex: `org.springframework...`, `java.time...`). SEMPRE importar a classe no topo do arquivo com `import` e usar apenas o nome da classe no corpo do código.
 12. **Integrações Externas Declarativas (@HttpExchange):** Consumo de APIs externas (ex: ViaCEP) deve utilizar interfaces HTTP declarativas com `@HttpExchange` e `@GetExchange` registradas via `@ImportHttpServices`.
+13. **Autorização SpEL no Care Circle:** As anotações `@PreAuthorize` no `UsuarioPetController` devem invocar diretamente `@usuarioPetService.isCuidadorDoPet` e `@usuarioPetService.isResponsavelPrincipal`, eliminando pontes indiretas por outros controllers ou services.
+14. **Integridade Referencial e Cascades em `Pet`:** O mapeamento de `Pet` inclui `@OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)` para `tarefas`, `usuarioPets`, `historicos` e `trilhas`, garantindo exclusão segura e atômica do agregado sem violação de foreign keys.
+15. **Entidade `UsuarioPet` & Bulk Operations:** `UsuarioPet` implementa `@EqualsAndHashCode(of = "id")` para estabilidade em coleções `Set<UsuarioPet>` baseadas no `@EmbeddedId UsuarioPetId`. Métodos `@Modifying` de atualização em lote no `UsuarioPetRepository` utilizam `(clearAutomatically = true, flushAutomatically = true)` para sincronização do cache de primeiro nível do EntityManager.
+16. **Perfil Inicial de Tutores (Onboarding):** Novos usuários nascem obrigatoriamente no perfil gratuito com `@Builder.Default private UsuarioRole role = UsuarioRole.COMUM;` em `Usuario.java`. O upgrade para `PREMIUM` ocorre sob demanda via endpoint dedicado `PATCH /usuarios/{id}/upgrade-premium`.
 

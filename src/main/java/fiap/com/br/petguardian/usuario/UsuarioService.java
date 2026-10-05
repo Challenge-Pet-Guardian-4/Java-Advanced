@@ -27,8 +27,7 @@ public class UsuarioService {
     }
 
     public Usuario findById(Long id) {
-        return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+        return findUsuarioById(id);
     }
 
     public Usuario findByEmail(String email) {
@@ -45,7 +44,7 @@ public class UsuarioService {
 
     @Transactional
     public Usuario update(Long id, UsuarioRequest request) {
-        return atualizarDados(findById(id), request);
+        return atualizarDados(findUsuarioById(id), request);
     }
 
     @Transactional
@@ -55,7 +54,7 @@ public class UsuarioService {
 
     @Transactional
     public Usuario upgradePremium(Long id) {
-        return executarUpgradePremium(findById(id));
+        return executarUpgradePremium(findUsuarioById(id));
     }
 
     @Transactional
@@ -65,15 +64,20 @@ public class UsuarioService {
 
     @Transactional
     public Usuario updateRole(Long id, String role) {
-        Usuario usuario = findById(id);
+        Usuario usuario = findUsuarioById(id);
         usuario.setRole(UsuarioRole.valueOf(role.trim().toUpperCase()));
         return usuarioRepository.save(usuario);
     }
 
     @Transactional
     public void delete(Long id) {
-        findById(id);
+        findUsuarioById(id);
         usuarioRepository.deleteById(id);
+    }
+
+    private Usuario findUsuarioById(Long id) {
+        return usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
     }
 
     public boolean isOwner(Long id, String email) {

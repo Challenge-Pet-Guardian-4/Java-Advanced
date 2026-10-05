@@ -35,7 +35,7 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     @Builder.Default
-    private UsuarioRole role = UsuarioRole.PREMIUM;
+    private UsuarioRole role = UsuarioRole.COMUM;
 
     @ManyToOne
     @JoinColumn(name = "telefone_id_telefone", nullable = false)
