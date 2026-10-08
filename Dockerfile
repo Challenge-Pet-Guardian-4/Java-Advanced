@@ -10,8 +10,18 @@ COPY build.gradle settings.gradle ./
 COPY gradle/ gradle/
 RUN gradle dependencies --no-daemon || true
 
-# Copia o restante do código-fonte e builda
+# Copia o restante do código-fonte
 COPY src/ src/
+
+# Garante que as chaves RSA para JWT existam antes de empacotar o JAR (sem expor no GitHub)
+RUN mkdir -p src/main/resources/keys && \
+    if [ ! -f src/main/resources/keys/private_key.pem ]; then \
+        apt-get update && apt-get install -y openssl && \
+        openssl genpkey -algorithm RSA -out src/main/resources/keys/private_key.pem -pkeyopt rsa_keygen_bits:2048 && \
+        openssl rsa -pubout -in src/main/resources/keys/private_key.pem -out src/main/resources/keys/public_key.pem && \
+        rm -rf /var/lib/apt/lists/*; \
+    fi
+
 RUN gradle bootJar --no-daemon -x test
 
 # ============================================================
@@ -31,9 +41,6 @@ RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copia o JAR gerado no estágio de build
 COPY --from=build /app/build/libs/pet-guardian-0.0.1-SNAPSHOT.jar app.jar
-
-# Copia os recursos de chaves RSA para JWT
-COPY --from=build /app/src/main/resources/keys/ /app/keys/
 
 # Define permissões corretas para o usuário não privilegiado
 RUN chown -R appuser:appgroup /app
