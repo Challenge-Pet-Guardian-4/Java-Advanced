@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,17 @@ import java.util.List;
 public class TrilhaController {
 
     private final TrilhaService trilhaService;
+
+    @GetMapping("/me")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Listar trilhas associadas aos pets do usuário autenticado")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
+    public List<TrilhaResponse> findMyTrilhas(Authentication authentication) {
+        return trilhaService.findByUsuarioEmail(authentication.getName())
+                .stream()
+                .map(TrilhaResponse::fromEntity)
+                .toList();
+    }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)

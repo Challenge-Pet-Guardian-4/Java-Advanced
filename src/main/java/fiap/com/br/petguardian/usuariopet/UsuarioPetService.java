@@ -5,6 +5,7 @@ import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
+import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
@@ -29,6 +30,7 @@ public class UsuarioPetService {
     private final UsuarioRepository usuarioRepository;
     private final PetRepository petRepository;
     private final TarefaRepository tarefaRepository;
+    private final AulaRepository aulaRepository;
     private final RedeCuidadoMapper redeCuidadoMapper;
 
     @Transactional(readOnly = true)
@@ -103,7 +105,9 @@ public class UsuarioPetService {
 
         int pendentes = tarefaRepository.countByPetIdInAndStatusAndPrazoFuturo(petIds, EnumStatus.PENDENTE, LocalDateTime.now());
         int concluidas = tarefaRepository.countByPetIdInAndStatus(petIds, EnumStatus.CONCLUIDO);
-        int pontos = tarefaRepository.calcularPontosTotaisEmail(email.trim(), EnumStatus.CONCLUIDO);
+        int pontosTarefas = tarefaRepository.calcularPontosTotaisEmail(email.trim(), EnumStatus.CONCLUIDO);
+        int pontosAulas = petIds.isEmpty() ? 0 : aulaRepository.calcularPontosAulasConcluidasPorPetIds(petIds);
+        int pontos = pontosTarefas + pontosAulas;
 
         return new RedeCuidadoResponse(usuario.getEmail(), usuario.getNome(), pets, cuidadores, pendentes, concluidas, pontos);
     }

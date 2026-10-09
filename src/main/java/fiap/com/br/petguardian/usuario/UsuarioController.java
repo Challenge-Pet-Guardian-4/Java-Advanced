@@ -40,6 +40,13 @@ public class UsuarioController {
         return UsuarioResponse.fromEntity(usuarioService.update(authentication.getName(), usuarioRequest));
     }
 
+    @DeleteMapping("/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Deletar perfil do usuário autenticado")
+    public void deleteMe(Authentication authentication) {
+        usuarioService.delete(authentication.getName());
+    }
+
     @GetMapping("/me/rede-cuidado")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Visualizar rede de cuidado do usuário autenticado")

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,6 +24,16 @@ import java.util.List;
 public class HistoricoController {
 
     private final HistoricoService historicoService;
+
+    @GetMapping("/me")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Listar histórico agregado de todos os pets do cuidador autenticado")
+    public List<HistoricoResponse> findMyHistorico(Authentication authentication) {
+        return historicoService.findAllByUsuarioEmail(authentication.getName())
+                .stream()
+                .map(HistoricoResponse::fromEntity)
+                .toList();
+    }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)

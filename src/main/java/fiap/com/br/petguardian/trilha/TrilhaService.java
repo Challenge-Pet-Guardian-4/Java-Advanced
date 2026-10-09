@@ -28,6 +28,10 @@ public class TrilhaService {
         return trilhaRepository.findAllByPetId(petId);
     }
 
+    public List<Trilha> findByUsuarioEmail(String email) {
+        return trilhaRepository.findAllByUsuarioEmail(email.trim());
+    }
+
     public Trilha findById(Long id) {
         return findTrilhaById(id);
     }

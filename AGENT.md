@@ -9,12 +9,15 @@ Guia completo e documentação técnica da arquitetura, regras de negócio, perf
 - **Java Version:** Java 17 LTS
 - **Framework:** Spring Boot 4.1.1
 - **HTTP Clients:** HTTP Service Interfaces declarativas (`@HttpExchange`, `@GetExchange`) registradas via `@ImportHttpServices`.
-- **Persistência & ORM:** Spring Data JPA + Hibernate (com `ddl-auto=validate`)
-- **Migrações de Banco:** Flyway (`org.flywaydb:flyway-core`) com scripts em `src/main/resources/db/migration/`
-- **Segurança:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas RSA (PKCS#8).
-- **Testes:** JUnit 5, Mockito e Spring Boot 4 Modular Testing (`spring-boot-starter-webmvc-test` com `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`).
+- **Persistência Relacional & ORM:** Spring Data JPA + Hibernate (com `ddl-auto=update` para sincronização e geração contínua de schema).
+- **Persistência NoSQL (Documentos):** Spring Data MongoDB (`spring-boot-starter-data-mongodb`) integrado no namespace `spring.mongodb.*` do Spring Boot 4 para conteúdos ricos e dinâmicos de aulas em Markdown (`conteudos_aula`).
+- **Migrações de Banco:** Flyway (`org.flywaydb:flyway-core`, desabilitado por padrão via `spring.flyway.enabled=false` em favor da sincronização nativa das entidades pelo Hibernate).
+- **Segurança:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas RSA 2048-bit (PKCS#8).
+- **Testes:** JUnit 5, Mockito e Spring Boot 4 Modular Testing (`spring-boot-starter-webmvc-test` com `org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc`) em perfil limpo e isolado (sem H2).
 - **Cache:** Spring Starter Cache (cache em memória para lookups de Status).
-- **Banco de Dados:** Oracle Database 19c corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`) com driver oficial `ojdbc11`, dialeto Hibernate `OracleDialect` e rotinas analíticas PL/SQL (`PKG_PETGUARDIAN`); H2 em memória para a suíte de testes automatizados.
+- **Bancos de Dados (Persistência Híbrida / Poliglota):**
+  - **Oracle Database 19c** corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`) com driver oficial `ojdbc11`, dialeto Hibernate `OracleDialect` e rotinas analíticas PL/SQL (`PKG_PETGUARDIAN`).
+  - **MongoDB 7+ (Railway NoSQL):** cluster NoSQL na nuvem para armazenar documentos com texto rico pedagógico, links e mídias de apoio.
 
 ---
 
@@ -70,11 +73,12 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 4. **Ciclo de Tarefas:** Cuidadores criam tarefas de rotina (`POST /tarefas` vinculadas obrigatoriamente a um cuidador) e concluem com `PATCH /tarefas/{id}/concluir`. Caso necessário, a conclusão pode ser revertida com `PATCH /tarefas/{id}/desmarcar`.
 5. **Score:** Consulta de pontos acumulados do cuidador e visualização consolidada da rede em `GET /usuarios/{id}/rede-cuidado`.
 
-### 🎓 **Fluxo 2: Gamificação Educativa & Trilhas (Exclusivo PREMIUM)**
+### 🎓 **Fluxo 2: Gamificação Educativa & Conteúdo Rico NoSQL (Exclusivo PREMIUM)**
 1. **Acesso Protegido:** Tutor `PREMIUM` acessa as trilhas de adestramento do pet via `GET /trilhas/pet/{petId}`.
-2. **Progresso de Conteúdo:** Tutor navega pelos módulos (`GET /modulos/trilha/{trilhaId}`) e acessa as aulas (`GET /aulas/modulo/{moduloId}`).
-3. **Conclusão de Aulas:** Conclusão de aula marcando `concluida = true` com pontuação educativa.
-4. **Gamificação Consolidada:** O endpoint `GET /pets/{id}/pontos` agrega em tempo real os pontos das tarefas de rotina + pontos das aulas concluídas, gerando o score total de evolução do pet.
+2. **Progresso de Conteúdo:** Tutor navega pelos módulos (`GET /modulos/trilha/{trilhaId}`) e acessa os metadados da aula no Oracle (`GET /aulas/{id}`).
+3. **Leitura Rica no MongoDB (NoSQL):** O aplicativo consome `GET /aulas/{aulaId}/conteudo` para renderizar o texto pedagógico completo formatado em Markdown, listas de links de apoio e referências de estudo persistidas no documento NoSQL da coleção `conteudos_aula`.
+4. **Conclusão de Aulas:** Conclusão de aula marcando `concluida = true` com pontuação educativa via `PATCH /aulas/{id}/concluir`.
+5. **Gamificação Consolidada:** O endpoint `GET /pets/{id}/pontos` agrega em tempo real os pontos das tarefas de rotina + pontos das aulas concluídas, gerando o score total de evolução do pet.
 
 ---
 
@@ -92,6 +96,7 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/usuarios/me` | Nenhum (via JWT) | `UsuarioResponse` | Busca o perfil do usuário logado diretamente via token JWT. |
 | `PUT` | `/usuarios/me` | `UsuarioRequest` | `UsuarioResponse` (200 OK) | Atualiza dados cadastrais do próprio usuário logado. |
+| `DELETE`| `/usuarios/me` | Nenhum (via JWT) | 204 No Content | Remove a conta do próprio usuário logado do sistema. |
 | `GET` | `/usuarios/me/rede-cuidado` | Nenhum (via JWT) | `RedeCuidadoResponse` | Retorna o Care Circle consolidado do usuário logado (pets, co-cuidadores e tarefas). |
 | `PATCH`| `/usuarios/me/upgrade-premium` | Nenhum (via JWT) | `UsuarioResponse` (200 OK) | Realiza o upgrade do perfil do usuário logado de `COMUM` para `PREMIUM`. |
 | `GET` | `/usuarios` | `Pageable` (`page`, `size`, `sort`) | `Page<UsuarioResponse>` | Lista usuários paginados (ordenados por nome, somente ADMIN). |
@@ -110,11 +115,13 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | Método | Endpoint | Parâmetros / Body | Response | Descrição |
 | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/pets/me` | Nenhum (via JWT), `Pageable` | `Page<PetResponse>` | Lista pets associados ao usuário logado (tutor principal ou co-cuidador, otimizado por email via JOIN). |
+| `GET` | `/pets/me/pontos` | Nenhum (via JWT) | `PetPontuacaoAgregadaResponse` | Retorna a pontuação agregada consolidada de todos os pets do usuário logado (tarefas + aulas) em batch único via `UsuarioPet`. |
+| `GET` | `/pets/me/historico` | Nenhum (via JWT) | `List<PetHistoryResponse>` | Histórico consolidado de tarefas concluídas de todos os pets do usuário logado via JWT. |
 | `GET` | `/pets` | `Pageable` (`page`, `size`, `sort`) | `Page<PetResponse>` | Lista pets com paginação (somente ADMIN). |
 | `GET` | `/pets/by-usuario` | `@RequestParam Long usuarioId`, `Pageable` | `Page<PetResponse>` | Busca pets associados a um ID de usuário (somente ADMIN). |
 | `GET` | `/pets/{id}` | `@PathVariable Long id` | `PetResponse` | Busca pet por ID. |
-| `GET` | `/pets/{id}/historico` | `@PathVariable Long id` | `PetHistoryResponse` | Histórico consolidado de tarefas concluídas do pet. |
-| `GET` | `/pets/{id}/pontos` | `@PathVariable Long id` | `PetPontuacaoResponse` | Retorna a soma de pontos do pet (Tarefas + Aulas). |
+| `GET` | `/pets/{id}/historico` | `@PathVariable Long id` | `PetHistoryResponse` | Histórico consolidado de tarefas concluídas do pet por ID. |
+| `GET` | `/pets/{id}/pontos` | `@PathVariable Long id` | `PetPontuacaoResponse` | Retorna a soma de pontos do pet (Tarefas + Aulas) por ID. |
 | `POST` | `/pets` | `PetRequest` | `PetResponse` (201 Created) | Cria um pet e vincula o criador como `responsavelPrincipal`. |
 | `PUT` | `/pets/{id}` | `PetRequest` | `PetResponse` (200 OK) | Atualiza os dados do pet e seu responsável. |
 | `DELETE`| `/pets/{id}` | `@PathVariable Long id` | 204 No Content | Remove o pet do sistema. |
@@ -155,6 +162,7 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/historicos` | `Pageable` (`page`, `size`, `sort`) | `Page<HistoricoResponse>` | Lista todos os registros clínicos paginados ordenados por data decrescente. | `ADMIN` |
+| `GET` | `/historicos/me` | Nenhum (via JWT) | `List<HistoricoResponse>` | Prontuário médico consolidado de todos os pets do tutor autenticado no JWT. | Usuário autenticado |
 | `GET` | `/historicos/pet/{petId}` | `@PathVariable Long petId` | `List<HistoricoResponse>` | Prontuário médico de eventos do pet ordenados por data decrescente. | Cuidador do pet ou `ADMIN` |
 | `GET` | `/historicos/{id}` | `@PathVariable Long id` | `HistoricoResponse` | Busca evento de histórico por ID. | Cuidador do histórico ou `ADMIN` |
 | `POST` | `/historicos` | `HistoricoRequest` | `HistoricoResponse` (201 Created) | Registra evento de histórico (Vacina, Consulta, Exame, etc.). | Cuidador do pet ou `ADMIN` |
@@ -167,6 +175,7 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/trilhas` | `Pageable` (`page`, `size`, `sort`) | `Page<TrilhaResponse>` | Lista todas as trilhas cadastradas com paginação e ordenação por nome. | `PREMIUM`, `ADMIN` |
+| `GET` | `/trilhas/me` | Nenhum (via JWT) | `List<TrilhaResponse>` | Lista todas as trilhas cadastradas de todos os pets do usuário logado. | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/pet/{petId}` | `@PathVariable Long petId` | `List<TrilhaResponse>` | Lista trilhas cadastradas para o pet. | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/{id}` | `@PathVariable Long id` | `TrilhaResponse` | Busca trilha por ID. | `PREMIUM`, `ADMIN` |
 | `POST` | `/trilhas` | `TrilhaRequest` | `TrilhaResponse` (201 Created) | Cria nova trilha para o pet. | `ADMIN` |
@@ -198,6 +207,17 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 | `PATCH`| `/aulas/{id}/concluir` | `@PathVariable Long id` | `AulaResponse` (200 OK) | Marca aula como concluída (`concluida = true`), gerando pontos para o pet. | `PREMIUM`, `ADMIN` |
 | `PATCH`| `/aulas/{id}/desmarcar` | `@PathVariable Long id` | `AulaResponse` (200 OK) | Desmarca aula concluída (`concluida = false`), estornando pontos do pet dinamicamente. | `PREMIUM`, `ADMIN` |
 | `DELETE`| `/aulas/{id}` | `@PathVariable Long id` | 204 No Content | Deleta uma aula. | `ADMIN` |
+
+---
+
+### 🍃 Conteúdos NoSQL de Aulas no MongoDB (`/aulas`) - ⭐ LEITURA: PREMIUM & ADMIN | ESCRITA: ADMIN
+| Método | Endpoint | Parâmetros / Body | Response | Descrição | Permissão |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/aulas/conteudos` | `Pageable` (`page`, `size`, `sort`) | `Page<ConteudoAulaResponse>` | Lista todos os conteúdos ricos de aulas no MongoDB com paginação. | `PREMIUM`, `ADMIN` |
+| `GET` | `/aulas/{aulaId}/conteudo` | `@PathVariable Long aulaId` | `ConteudoAulaResponse` | Busca o conteúdo rico (Markdown e links de apoio) de uma aula específica por `aulaId`. | `PREMIUM`, `ADMIN` |
+| `POST` | `/aulas/{aulaId}/conteudo` | `@PathVariable Long aulaId`, `ConteudoAulaRequest` | `ConteudoAulaResponse` (201 Created) | Cria documento NoSQL de conteúdo rico vinculado à aula no MongoDB. | `ADMIN` |
+| `PUT` | `/aulas/{aulaId}/conteudo` | `@PathVariable Long aulaId`, `ConteudoAulaRequest` | `ConteudoAulaResponse` (200 OK) | Atualiza o documento de conteúdo rico da aula no MongoDB. | `ADMIN` |
+| `DELETE`| `/aulas/{aulaId}/conteudo` | `@PathVariable Long aulaId` | 204 No Content | Remove o documento NoSQL da aula no MongoDB. | `ADMIN` |
 
 ---
 
@@ -262,4 +282,18 @@ O sistema opera com três perfis de acesso formalizados no Enum `UsuarioRole`:
 14. **Integridade Referencial e Cascades em `Pet`:** O mapeamento de `Pet` inclui `@OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)` para `tarefas`, `usuarioPets`, `historicos` e `trilhas`, garantindo exclusão segura e atômica do agregado sem violação de foreign keys.
 15. **Entidade `UsuarioPet` & Bulk Operations:** `UsuarioPet` implementa `@EqualsAndHashCode(of = "id")` para estabilidade em coleções `Set<UsuarioPet>` baseadas no `@EmbeddedId UsuarioPetId`. Métodos `@Modifying` de atualização em lote no `UsuarioPetRepository` utilizam `(clearAutomatically = true, flushAutomatically = true)` para sincronização do cache de primeiro nível do EntityManager.
 16. **Perfil Inicial de Tutores (Onboarding):** Novos usuários nascem obrigatoriamente no perfil gratuito com `@Builder.Default private UsuarioRole role = UsuarioRole.COMUM;` em `Usuario.java`. O upgrade para `PREMIUM` ocorre sob demanda via endpoint dedicado `PATCH /usuarios/{id}/upgrade-premium`.
+17. **Persistência Poliglota & Segregação Estrita de Repositórios:**
+    - A classe principal `PetGuardianApplication.java` adota segregação type-safe entre os módulos Spring Data:
+      - `@EnableJpaRepositories(basePackageClasses = PetGuardianApplication.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = ConteudoAulaRepository.class))`
+      - `@EnableMongoRepositories(basePackageClasses = ConteudoAulaRepository.class)`
+    - Isso impede conflitos em tempo de inicialização entre os proxies do Spring Data JPA e Spring Data MongoDB.
+18. **Padrão de Documentos NoSQL (MongoDB):**
+    - Documentos NoSQL residem no pacote `fiap.com.br.petguardian.trilha.aula.conteudo`.
+    - Anotados com `@Document(collection = "conteudos_aula")`.
+    - Contêm `@Id private String id` e `@Indexed(unique = true) private Long aulaId` para manter a integridade com o ID da aula no Oracle.
+    - O `ConteudoAulaService` segue rigorosamente o padrão dos demais services do projeto com helper privado `findConteudoByAulaId(Long aulaId)` lançando `ResourceNotFoundException`.
+19. **Configuração de Conectividade do MongoDB no Spring Boot 4:**
+    - No Spring Boot 4.x, as propriedades de conexão com o MongoDB residem obrigatoriamente no namespace **`spring.mongodb.*`** (`host`, `port`, `username`, `password`, `database`, `authentication-database`), enquanto a criação de índices automáticos fica em `spring.data.mongodb.auto-index-creation=true`.
+    - Não utilizar o prefixo legado `spring.data.mongodb.host`, que é desconsiderado pelo auto-configurador do Spring Boot 4.
+
 

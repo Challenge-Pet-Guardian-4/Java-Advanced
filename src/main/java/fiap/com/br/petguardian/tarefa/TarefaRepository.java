@@ -120,6 +120,11 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
             @Param("petId") Long petId,
             @Param("status") EnumStatus status);
 
+    @Query("select t from Tarefa t join fetch t.pet p where t.pet.id in :petIds and t.status.nomeStatus = :status order by t.conclusao desc")
+    List<Tarefa> findConcluidasByPetIdIn(
+            @Param("petIds") List<Long> petIds,
+            @Param("status") EnumStatus status);
+
     @Query("select t.pet.id, t.id from Tarefa t where t.pet.id in :petIds")
     List<Object[]> findTarefaIdsByPetIdIn(@Param("petIds") List<Long> petIds);
 

@@ -35,6 +35,10 @@ public class HistoricoService {
         return historicoRepository.findAllByPetIdOrderByDataHistDesc(petId);
     }
 
+    public List<Historico> findAllByUsuarioEmail(String email) {
+        return historicoRepository.findAllByUsuarioEmailOrderByDataHistDesc(email.trim());
+    }
+
     public Historico findById(Long id) {
         return findHistoricoById(id);
     }

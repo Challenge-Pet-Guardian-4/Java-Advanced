@@ -1,9 +1,11 @@
 package fiap.com.br.petguardian.pet;
 
 import fiap.com.br.petguardian.pet.dto.PetHistoryResponse;
+import fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoResponse;
 import fiap.com.br.petguardian.pet.dto.PetRequest;
 import fiap.com.br.petguardian.pet.dto.PetResponse;
+import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/pets")
@@ -34,6 +38,20 @@ public class PetController {
     ) {
         return petService.findByEmail(authentication.getName(), pageable)
                 .map(PetResponse::fromEntity);
+    }
+
+    @GetMapping("/me/pontos")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Consultar pontuação total acumulada de todos os pets do usuário autenticado (tarefas + aulas)")
+    public PetPontuacaoAgregadaResponse getMyPetsPontos(Authentication authentication) {
+        return petService.calcularPontuacaoAgregadaPetsUsuario(authentication.getName());
+    }
+
+    @GetMapping("/me/historico")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Obter histórico consolidado de cuidados de todos os pets do usuário autenticado (tarefas concluídas)")
+    public List<TarefaResponse> getMyHistoricoTarefas(Authentication authentication) {
+        return petService.getConsolidatedHistoryMe(authentication.getName());
     }
 
     @GetMapping

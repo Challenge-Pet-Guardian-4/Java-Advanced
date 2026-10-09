@@ -2,6 +2,7 @@ package fiap.com.br.petguardian.pet;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.dto.PetHistoryResponse;
+import fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoResponse;
 import fiap.com.br.petguardian.pet.dto.PetRequest;
 import fiap.com.br.petguardian.pet.raca.Raca;
@@ -20,6 +21,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -94,11 +97,39 @@ public class PetService {
     }
 
     @Transactional(readOnly = true)
+    public List<TarefaResponse> getConsolidatedHistoryMe(String email) {
+        List<Long> petIds = usuarioPetRepository.findAllByUsuarioEmail(email.trim()).stream()
+                .map(up -> up.getPet().getId())
+                .toList();
+
+        if (petIds.isEmpty()) return List.of();
+
+        return tarefaRepository.findConcluidasByPetIdIn(petIds, EnumStatus.CONCLUIDO).stream()
+                .map(TarefaResponse::fromEntity)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public PetPontuacaoResponse calcularPontuacaoTotalPet(Long petId) {
-        Pet pet = findPetById(petId);
-        int pontosTarefas = tarefaRepository.calcularPontosTarefasPorPet(petId, EnumStatus.CONCLUIDO);
-        int pontosAulas = aulaRepository.calcularPontosAulasConcluidasPorPet(petId);
-        return new PetPontuacaoResponse(pet.getId(), pet.getNome(), pontosTarefas, pontosAulas, pontosTarefas + pontosAulas);
+        return calcularPontuacaoPet(findPetById(petId));
+    }
+
+    public PetPontuacaoResponse calcularPontuacaoPet(Pet pet) {
+        int tarefas = tarefaRepository.calcularPontosTarefasPorPet(pet.getId(), EnumStatus.CONCLUIDO);
+        int aulas = aulaRepository.calcularPontosAulasConcluidasPorPet(pet.getId());
+        return new PetPontuacaoResponse(pet.getId(), pet.getNome(), tarefas, aulas, tarefas + aulas);
+    }
+
+    @Transactional(readOnly = true)
+    public PetPontuacaoAgregadaResponse calcularPontuacaoAgregadaPetsUsuario(String email) {
+        List<PetPontuacaoResponse> detalhes = usuarioPetRepository.findAllByUsuarioEmail(email.trim()).stream()
+                .map(up -> calcularPontuacaoPet(up.getPet()))
+                .toList();
+
+        int totalTarefas = detalhes.stream().mapToInt(PetPontuacaoResponse::pontosTarefas).sum();
+        int totalAulas = detalhes.stream().mapToInt(PetPontuacaoResponse::pontosAulas).sum();
+
+        return new PetPontuacaoAgregadaResponse(totalTarefas, totalAulas, totalTarefas + totalAulas, detalhes);
     }
 
     private Pet findPetById(Long id) {

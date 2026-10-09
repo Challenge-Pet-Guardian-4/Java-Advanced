@@ -75,6 +75,12 @@ public class UsuarioService {
         usuarioRepository.deleteById(id);
     }
 
+    @Transactional
+    public void delete(String email) {
+        Usuario usuario = findByEmail(email);
+        usuarioRepository.delete(usuario);
+    }
+
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
