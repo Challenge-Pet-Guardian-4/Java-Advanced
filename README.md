@@ -116,7 +116,9 @@ src/main/java/fiap/com/br/petguardian/
 | **Java** | 17 LTS | Linguagem oficial do ecossistema corporativo |
 | **Spring Boot** | 4.1.1 | Framework base para microsserviços REST corporativos |
 | **Spring Data JPA / Hibernate** | Integrado | Mapeamento Objeto-Relacional (ORM) e consultas dinâmicas otimizadas via OracleDialect |
+| **Spring Data MongoDB** | Integrado | Persistência NoSQL orientada a documentos para conteúdos didáticos ricos em Markdown (`conteudos_aula`) |
 | **Oracle Database** | 19c (FIAP Cloud) | Sistema Gerenciador de Banco de Dados Relacional corporativo e execução de PL/SQL (`PKG_PETGUARDIAN`) |
+| **MongoDB** | 7+ (Cloud NoSQL) | Banco de Dados NoSQL de alta performance para armazenamento de textos longos pedagógicos |
 | **Oracle JDBC (OJDBC11)** | 11.x | Driver oficial de conectividade de alto desempenho com o Oracle Database |
 | **Spring JdbcTemplate** | Integrado | Invocação performática de procedures e functions nativas do Oracle Database |
 | **Flyway Migration** | 10.x | Suporte a migrações versionadas com `flyway-database-oracle` |
@@ -209,9 +211,9 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 1. **Consumo sem Boilerplate:** Utilizando HTTP Service Interfaces (`@HttpExchange`), o serviço `ViaCepService` consome a API do ViaCEP (`https://viacep.com.br/ws/{cep}/json`).
 2. **Normalização Automática de Entidades:** O `EnderecoService` decompõe a resposta, garantindo a normalização e reaproveitamento de `Bairro`, `Cidade` e `Estado` no Oracle Database sem duplicidades.
 
-### 5. Fluxo de Processamento PL/SQL no Oracle Database (Stored Procedures & Functions)
-1. **Exportação de Rotinas via Stored Procedure (`pkg_petguardian.pr_exportar_tarefas_json`):** Disparado via `GET /tarefas/procedure/exportar-json` (com parâmetro opcional `statusId`), executa a procedure PL/SQL corporativa que serializa e agrega as rotinas de cuidado diretamente no motor do Oracle Database, devolvendo o documento consolidado via parâmetro `OUT CLOB`.
-2. **Classificação de Gamificação via Stored Function (`pkg_petguardian.fn_classificar_pontos`):** Disparado via `GET /tarefas/procedure/classificar-pontos/{pontos}`, executa a função de categorização diretamente no banco Oracle, retornando dinamicamente a medalha de cuidado (`BRONZE`, `PRATA`, `OURO` ou `DIAMANTE (MASTER)`).
+### 5. Fluxo de Processamento PL/SQL no Oracle Database (Stored Procedures)
+1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos`, `/pets/{id}/pontos`, `/pets/{petId}/cuidadores/me/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet`, `pr_calcular_pontuacao_usuario`, `pr_calcular_pontuacao_usuario_pet`) calculando os pontos de tarefas e aulas concluídas diretamente no banco de dados.
+2. **Transferência Atômica de Titularidade:** Disparado por `PATCH /pets/{petId}/responsavel-principal`, executa `pkg_petguardian.pr_transferir_responsavel_principal` garantindo consistência na troca do titular principal do animal.
 
 ---
 
@@ -287,6 +289,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 |---|---|---|---|
 | `GET` | `/pets/{petId}/cuidadores` | Listar todos os cuidadores e tutores vinculados ao pet | Cuidador do pet ou `ADMIN` |
 | `POST` | `/pets/{petId}/cuidadores` | Convidar co-cuidador por e-mail (body: `{"email": "..."}`) | Responsável principal ou `ADMIN` |
+| `DELETE` | `/pets/{petId}/cuidadores/me` | Desvincular o próprio cuidador autenticado do animal via JWT | Cuidador do pet ou `ADMIN` |
 | `DELETE` | `/pets/{petId}/cuidadores` | Desvincular co-cuidador do animal por e-mail (`?email=...`) via JWT | Próprio cuidador, Responsável ou `ADMIN` |
 | `PATCH` | `/pets/{petId}/responsavel-principal` | Transferir a titularidade de responsável principal para outro co-cuidador (via JWT) | Responsável principal atual ou `ADMIN` |
 
@@ -307,8 +310,6 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 | `PATCH` | `/tarefas/{id}/concluir` | Concluir tarefa via JWT (marca executor logado e credita pontos de bem-estar) | Cuidador da tarefa ou `ADMIN` |
 | `PATCH` | `/tarefas/{id}/desmarcar` | Desmarcar tarefa concluída via JWT (retorna para `PENDENTE` e estorna pontos) | Cuidador da tarefa ou `ADMIN` |
 | `DELETE` | `/tarefas/{id}` | Excluir tarefa | Cuidador da tarefa ou `ADMIN` |
-| `GET` | `/tarefas/procedure/exportar-json` | Exportar tarefas em JSON via Stored Procedure Oracle (`pkg_petguardian.pr_exportar_tarefas_json`) | Autenticado |
-| `GET` | `/tarefas/procedure/classificar-pontos/{pontos}` | Classificar pontos via Stored Function Oracle (`pkg_petguardian.fn_classificar_pontos`) | Autenticado |
 
 ---
 
@@ -362,7 +363,18 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 
 ---
 
-### 10. Endereços (`/enderecos`)
+### 10. Conteúdos NoSQL de Aulas no MongoDB (`/aulas`)
+| Método | Endpoint | Descrição | Permissão |
+|---|---|---|---|
+| `GET` | `/aulas/conteudos` | Listar todos os conteúdos didáticos ricos no MongoDB com paginação | `PREMIUM`, `ADMIN` |
+| `GET` | `/aulas/{aulaId}/conteudo` | Obter conteúdo didático rico (Markdown e links) de uma aula por `aulaId` | `PREMIUM`, `ADMIN` |
+| `POST` | `/aulas/{aulaId}/conteudo` | Criar documento NoSQL de conteúdo rico para a aula | `ADMIN` |
+| `PUT` | `/aulas/{aulaId}/conteudo` | Atualizar documento NoSQL de conteúdo rico | `ADMIN` |
+| `DELETE` | `/aulas/{aulaId}/conteudo` | Excluir documento NoSQL de conteúdo rico | `ADMIN` |
+
+---
+
+### 11. Endereços (`/enderecos`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
 | `GET` | `/enderecos` | Listar endereços cadastrados | Autenticado |
@@ -395,9 +407,19 @@ cp .env.example .env
 Parâmetros ativos no `.env`:
 
 ```env
+# Oracle Database 19c
 ORACLE_URL=jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl
 ORACLE_USER=RM561432
 ORACLE_PASSWORD=sua_senha_aqui
+
+# MongoDB NoSQL
+MONGOHOST=localhost
+MONGOPORT=27017
+MONGOUSER=mongo
+MONGOPASSWORD=sua_senha_mongo
+MONGODATABASE=petguardian
+
+# Servidor
 PORT=8080
 ```
 
@@ -420,7 +442,7 @@ Com as variáveis configuradas no `.env`:
 
 ## 🗄️ Procedimentos & Funções Corporativas em Oracle Database (PL/SQL)
 
-No escopo corporativo de **Mastering Relational and Non-Relational Database**, a API PetGuardian adota o **Oracle Database 19c** como base de dados relacional oficial e centralizada para persistência de dados, integridade referencial, e execução de rotinas analíticas em lote e classificação de gamificação empacotadas no pacote PL/SQL `PKG_PETGUARDIAN`:
+No escopo corporativo de **Mastering Relational and Non-Relational Database**, a API PetGuardian adota o **Oracle Database 19c** como base de dados relacional oficial e centralizada para persistência de dados, integridade referencial, e execução de rotinas analíticas em lote e pontuação de gamificação empacotadas no pacote PL/SQL `PKG_PETGUARDIAN`:
 
 ### 1. Configuração de Variáveis de Ambiente (.env)
 As credenciais e a URL de conexão não são versionadas no código-fonte. Configure o arquivo `.env` a partir do template `.env.example`:
@@ -438,18 +460,23 @@ ORACLE_PASSWORD=sua_senha_aqui
 > `jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl`  
 > Usuário: `RM561432`  
 
-### 2. Endpoints de Invocação Direta de Procedures
-As rotinas empacotadas são disparadas diretamente pelos endpoints REST de tarefas:
+### 2. Endpoints com Execução Direta de Stored Procedures
+As rotinas empacotadas no Oracle PL/SQL (`PKG_PETGUARDIAN`) são disparadas diretamente pelos endpoints oficiais do sistema via Spring Data `@Procedure`:
 
-* **Exportação JSON via Stored Procedure (`pkg_petguardian.pr_exportar_tarefas_json`):**
-  - **Método / Rota:** `GET /tarefas/procedure/exportar-json`
-  - **Parâmetros Opcionais:** `?statusId=1` (1 = PENDENTE, 2 = CONCLUIDO, 3 = EXPIRADO)
-  - **Operação:** Dispara a procedure que serializa as tarefas no banco de dados e retorna o documento JSON consolidado via parâmetro `OUT CLOB`.
+* **Pontuação Agregada dos Pets do Usuário Autenticado (`pkg_petguardian.pr_calcular_pontuacao_usuario`):**
+  - **Método / Rota:** `GET /pets/me/pontos` e `GET /usuarios/me/rede-cuidado`
+  - **Permissão:** Tutor autenticado no JWT (rota prioritária do aplicativo Mobile).
+  - **Operação:** Executa a Stored Procedure corporativa que agrega tarefas e aulas concluídas de todos os pets vinculados ao usuário autenticado em `USUARIO_PET`, retornando pontuações totais calculadas diretamente no motor Oracle.
 
-* **Classificação de Pontos via Stored Function (`pkg_petguardian.fn_classificar_pontos`):**
-  - **Método / Rota:** `GET /tarefas/procedure/classificar-pontos/{pontos}`
-  - **Exemplo:** `GET /tarefas/procedure/classificar-pontos/85`
-  - **Operação:** Executa a regra corporativa de gamificação diretamente no motor do Oracle (`SELECT pkg_petguardian.fn_classificar_pontos(:pontos) FROM DUAL`), retornando `BRONZE`, `PRATA`, `OURO` ou `DIAMANTE (MASTER)`.
+* **Pontuação Consolidada do Pet por ID (`pkg_petguardian.pr_calcular_pontuacao_pet`):**
+  - **Método / Rota:** `GET /pets/{id}/pontos`
+  - **Permissão:** `ADMIN` ou cuidador autorizado do pet.
+  - **Operação:** Dispara a Stored Procedure para o pet individual, retornando `pontosTarefas`, `pontosAulas` e `pontosTotais`.
+
+* **Transferência de Titularidade Principal (`pkg_petguardian.pr_transferir_responsavel_principal`):**
+  - **Método / Rota:** `PATCH /pets/{id}/responsavel-principal`
+  - **Permissão:** Responsável principal atual ou `ADMIN`.
+  - **Operação:** Transação atômica em `USUARIO_PET` que desmarca a titularidade anterior e promove o novo titular.
 
 ---
 

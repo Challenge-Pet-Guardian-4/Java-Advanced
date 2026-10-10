@@ -9,7 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -26,118 +25,27 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @EntityGraph(attributePaths = {"status", "pet"})
     Optional<Tarefa> findById(Long id);
 
-    @Query(value = "select t from Tarefa t " +
-            "join fetch t.status s " +
-            "join fetch t.pet p " +
-            "join p.usuarioPets up " +
-            "where up.usuario.id = :usuarioId " +
-            "and s.nomeStatus = :status",
-           countQuery = "select count(t) from Tarefa t " +
-            "join t.pet p " +
-            "join p.usuarioPets up " +
-            "where up.usuario.id = :usuarioId " +
-            "and t.status.nomeStatus = :status")
-    Page<Tarefa> findAllDoCuidadorByStatus(
-            @Param("usuarioId") Long usuarioId,
-            @Param("status") EnumStatus status,
-            Pageable pageable);
+    @EntityGraph(attributePaths = {"status", "pet"})
+    Page<Tarefa> findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(Long usuarioId, EnumStatus status, Pageable pageable);
 
-    @Query(value = "select t from Tarefa t " +
-            "join fetch t.status " +
-            "join fetch t.pet p " +
-            "join p.usuarioPets up " +
-            "where up.usuario.id = :usuarioId",
-           countQuery = "select count(t) from Tarefa t " +
-            "join t.pet p " +
-            "join p.usuarioPets up " +
-            "where up.usuario.id = :usuarioId")
-    Page<Tarefa> findAllDoCuidador(
-            @Param("usuarioId") Long usuarioId,
-            Pageable pageable);
+    @EntityGraph(attributePaths = {"status", "pet"})
+    Page<Tarefa> findAllByPetUsuarioPetsUsuarioId(Long usuarioId, Pageable pageable);
 
-    @Query(value = "select t from Tarefa t " +
-            "join fetch t.status s " +
-            "join fetch t.pet p " +
-            "join p.usuarioPets up " +
-            "where lower(up.usuario.email) = lower(:email) " +
-            "and s.nomeStatus = :status",
-           countQuery = "select count(t) from Tarefa t " +
-            "join t.pet p " +
-            "join p.usuarioPets up " +
-            "where lower(up.usuario.email) = lower(:email) " +
-            "and t.status.nomeStatus = :status")
-    Page<Tarefa> findAllDoCuidadorByEmailAndStatus(
-            @Param("email") String email,
-            @Param("status") EnumStatus status,
-            Pageable pageable);
+    @EntityGraph(attributePaths = {"status", "pet"})
+    Page<Tarefa> findAllByPetId(Long petId, Pageable pageable);
 
-    @Query(value = "select t from Tarefa t " +
-            "join fetch t.status " +
-            "join fetch t.pet p " +
-            "join p.usuarioPets up " +
-            "where lower(up.usuario.email) = lower(:email)",
-           countQuery = "select count(t) from Tarefa t " +
-            "join t.pet p " +
-            "join p.usuarioPets up " +
-            "where lower(up.usuario.email) = lower(:email)")
-    Page<Tarefa> findAllDoCuidadorByEmail(
-            @Param("email") String email,
-            Pageable pageable);
+    @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t where t.usuario.id = :usuarioId and t.status.nomeStatus = :status")
+    Integer calcularPontosTotaisUsuario(@Param("usuarioId") Long usuarioId, @Param("status") EnumStatus status);
 
-    @Query(value = "select t from Tarefa t " +
-            "join fetch t.status " +
-            "join fetch t.pet " +
-            "where t.pet.id = :petId",
-           countQuery = "select count(t) from Tarefa t " +
-            "where t.pet.id = :petId")
-    Page<Tarefa> findAllByPetId(
-            @Param("petId") Long petId,
-            Pageable pageable);
-
-    @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t " +
-            "where t.usuario.id = :usuarioId " +
-            "and t.status.nomeStatus = :status")
-    Integer calcularPontosTotaisUsuario(
-            @Param("usuarioId") Long usuarioId,
-            @Param("status") EnumStatus status);
-
-    @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t " +
-            "where lower(t.usuario.email) = lower(:email) " +
-            "and t.status.nomeStatus = :status")
-    Integer calcularPontosTotaisEmail(
-            @Param("email") String email,
-            @Param("status") EnumStatus status);
-
-    @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t " +
-            "where t.pet.id = :petId " +
-            "and t.status.nomeStatus = :status")
-    Integer calcularPontosTarefasPorPet(
-            @Param("petId") Long petId,
-            @Param("status") EnumStatus status);
-
-    @Query("select t from Tarefa t where t.pet.id = :petId and t.status.nomeStatus = :status order by t.conclusao desc")
-    List<Tarefa> findConcluidasByPetId(
-            @Param("petId") Long petId,
-            @Param("status") EnumStatus status);
-
-    @Query("select t from Tarefa t join fetch t.pet p where t.pet.id in :petIds and t.status.nomeStatus = :status order by t.conclusao desc")
-    List<Tarefa> findConcluidasByPetIdIn(
-            @Param("petIds") List<Long> petIds,
-            @Param("status") EnumStatus status);
+    @EntityGraph(attributePaths = {"pet"})
+    List<Tarefa> findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List<Long> petIds, EnumStatus status);
 
     @Query("select t.pet.id, t.id from Tarefa t where t.pet.id in :petIds")
     List<Object[]> findTarefaIdsByPetIdIn(@Param("petIds") List<Long> petIds);
 
-    @Query("select count(t) from Tarefa t where t.pet.id in :petIds and t.status.nomeStatus = :status")
-    int countByPetIdInAndStatus(
-            @Param("petIds") List<Long> petIds,
-            @Param("status") EnumStatus status);
+    int countByPetIdInAndStatusNomeStatus(List<Long> petIds, EnumStatus status);
 
-    @Query("select count(t) from Tarefa t where t.pet.id in :petIds and t.status.nomeStatus = :status and t.prazo >= :agora")
-    int countByPetIdInAndStatusAndPrazoFuturo(
-            @Param("petIds") List<Long> petIds,
-            @Param("status") EnumStatus status,
-            @Param("agora") LocalDateTime agora);
+    int countByPetIdInAndStatusNomeStatusAndPrazoGreaterThanEqual(List<Long> petIds, EnumStatus status, LocalDateTime agora);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
@@ -147,10 +55,4 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
             @Param("pendente") Status pendente,
             @Param("expirada") Status expirada
     );
-
-    @Procedure(procedureName = "pkg_petguardian.pr_exportar_tarefas_json")
-    String exportarTarefasJsonNoBanco(@Param("p_status_id") Long statusId);
-
-    @Query(value = "SELECT pkg_petguardian.fn_classificar_pontos(:pontos) FROM DUAL", nativeQuery = true)
-    String classificarPontosNoBanco(@Param("pontos") Integer pontos);
 }

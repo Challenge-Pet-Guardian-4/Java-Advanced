@@ -4,9 +4,13 @@ import fiap.com.br.petguardian.endereco.Endereco;
 import fiap.com.br.petguardian.endereco.EnderecoService;
 import fiap.com.br.petguardian.endereco.dto.EnderecoRequest;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import fiap.com.br.petguardian.pet.Pet;
+import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.telefone.TelefoneRepository;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
+import fiap.com.br.petguardian.usuariopet.UsuarioPet;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,9 +25,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -41,6 +47,9 @@ class UsuarioServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private PetRepository petRepository;
 
     @InjectMocks
     private UsuarioService usuarioService;
@@ -104,12 +113,12 @@ class UsuarioServiceTest {
     @Test
     @DisplayName("Deve deletar usuario existente")
     void deveDeletarUsuario() {
-        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").build();
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
 
         usuarioService.delete(1L);
 
-        verify(usuarioRepository).deleteById(1L);
+        verify(usuarioRepository).delete(usuario);
     }
 
     @Test
@@ -222,5 +231,51 @@ class UsuarioServiceTest {
 
         assertEquals(UsuarioRole.ADMIN, resultado.getRole());
         assertEquals("Novo Nome", resultado.getNome());
+    }
+
+    @Test
+    @DisplayName("Deve excluir usuario e seus pets onde eh titular, desvinculando co-cuidadores")
+    void deveExcluirUsuarioComPetsOndeEhTitular() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        UsuarioPet vinculoTitular = UsuarioPet.builder()
+                .id(new UsuarioPetId(1L, 10L))
+                .pet(pet)
+                .responsavelPrincipal(true)
+                .build();
+        Usuario usuario = Usuario.builder()
+                .id(1L)
+                .email("enzo@fiap.com.br")
+                .usuarioPets(Set.of(vinculoTitular))
+                .build();
+
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+        usuarioService.delete(1L);
+
+        verify(petRepository).delete(pet);
+        verify(usuarioRepository).delete(usuario);
+    }
+
+    @Test
+    @DisplayName("Deve desvincular co-cuidador sem excluir o pet onde outro usuario eh titular")
+    void deveDesvincularCoCuidadorSemExcluirPet() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        UsuarioPet vinculoCoCuidador = UsuarioPet.builder()
+                .id(new UsuarioPetId(2L, 10L))
+                .pet(pet)
+                .responsavelPrincipal(false)
+                .build();
+        Usuario coCuidador = Usuario.builder()
+                .id(2L)
+                .email("luna@fiap.com.br")
+                .usuarioPets(Set.of(vinculoCoCuidador))
+                .build();
+
+        when(usuarioRepository.findById(2L)).thenReturn(Optional.of(coCuidador));
+
+        usuarioService.delete(2L);
+
+        verify(petRepository, never()).delete(any(Pet.class));
+        verify(usuarioRepository).delete(coCuidador);
     }
 }

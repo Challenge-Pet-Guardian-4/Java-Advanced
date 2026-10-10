@@ -45,7 +45,7 @@ public class Usuario {
     @JoinColumn(name = "endereco_id_endereco", nullable = false)
     private Endereco endereco;
 
-    @OneToMany(mappedBy = "usuario")
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<Tarefa> tarefas = new HashSet<>();
 

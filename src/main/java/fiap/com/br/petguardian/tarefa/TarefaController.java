@@ -11,13 +11,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/tarefas")
@@ -25,6 +21,10 @@ import java.util.Map;
 @Tag(name = "Tarefas", description = "Gerenciamento de tarefas e rotinas de cuidados do pet")
 public class TarefaController {
     private final TarefaService tarefaService;
+
+    // =========================================================================
+    // 1. FLUXO DO USUÁRIO / CUIDADOR LOGADO (/me)
+    // =========================================================================
 
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
@@ -44,34 +44,9 @@ public class TarefaController {
         return tarefaService.calcularPontosTotaisEmail(authentication.getName());
     }
 
-    @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todas as tarefas com paginação e ordenação")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Page<TarefaResponse> findAll(@PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
-        return tarefaService.findAll(pageable)
-            .map(TarefaResponse::fromEntity);
-    }
-
-    @GetMapping("/by-usuario")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar tarefas do cuidador com filtro opcional de status e paginação (somente ADMIN)")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Page<TarefaResponse> findByUsuario(
-            @RequestParam Long usuarioId,
-            @RequestParam(defaultValue = "ALL") String status,
-            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
-        return tarefaService.findAllByUsuario(usuarioId, status, pageable)
-            .map(TarefaResponse::fromEntity);
-    }
-
-    @GetMapping("/by-usuario/pontos")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador (somente ADMIN)")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Integer calcularPontosTotaisUsuario(@RequestParam Long usuarioId) {
-        return tarefaService.calcularPontosTotaisUsuario(usuarioId);
-    }
+    // =========================================================================
+    // 2. OPERAÇÕES DE GESTÃO DA TAREFA POR ID (CUIDADOR OU ADMIN)
+    // =========================================================================
 
     @GetMapping("/by-pet/{petId}")
     @ResponseStatus(HttpStatus.OK)
@@ -132,21 +107,36 @@ public class TarefaController {
         tarefaService.delete(id);
     }
 
-    @GetMapping(value = "/procedure/exportar-json", produces = MediaType.APPLICATION_JSON_VALUE)
+    // =========================================================================
+    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO E INTEGRAÇÃO PROCEDURES (ROLE ADMIN)
+    // =========================================================================
+
+    @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Executar Stored Procedure pkg_petguardian.pr_exportar_tarefas_json no Oracle e retornar o JSON serializado pelo banco")
-    public ResponseEntity<String> exportarTarefasJson(@RequestParam(required = false) Long statusId) {
-        return ResponseEntity.ok(tarefaService.exportarTarefasJson(statusId));
+    @Operation(summary = "Listar todas as tarefas com paginação e ordenação")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<TarefaResponse> findAll(@PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
+        return tarefaService.findAll(pageable)
+            .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/procedure/classificar-pontos/{pontos}")
+    @GetMapping("/by-usuario")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Executar Stored Function pkg_petguardian.fn_classificar_pontos no Oracle e retornar a categoria calculada")
-    public ResponseEntity<Map<String, Object>> classificarPontos(@PathVariable Integer pontos) {
-        String categoria = tarefaService.classificarPontos(pontos);
-        return ResponseEntity.ok(Map.of(
-                "pontos_informados", pontos,
-                "categoria_calculada_no_banco", categoria
-        ));
+    @Operation(summary = "Listar tarefas do cuidador com filtro opcional de status e paginação (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<TarefaResponse> findByUsuario(
+            @RequestParam Long usuarioId,
+            @RequestParam(defaultValue = "ALL") String status,
+            @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
+        return tarefaService.findAllByUsuario(usuarioId, status, pageable)
+            .map(TarefaResponse::fromEntity);
+    }
+
+    @GetMapping("/by-usuario/pontos")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Consultar pontos totais acumulados pelo cuidador (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Integer calcularPontosTotaisUsuario(@RequestParam Long usuarioId) {
+        return tarefaService.calcularPontosTotaisUsuario(usuarioId);
     }
 }

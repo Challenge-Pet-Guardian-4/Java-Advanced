@@ -10,7 +10,6 @@ import fiap.com.br.petguardian.pet.raca.RacaRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
-import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
@@ -23,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -33,7 +33,22 @@ public class PetService {
     private final UsuarioPetRepository usuarioPetRepository;
     private final RacaRepository racaRepository;
     private final TarefaRepository tarefaRepository;
-    private final AulaRepository aulaRepository;
+
+    // =========================================================================
+    // 1. CHECAGEM DE AUTORIZAÇÃO E SEGURANÇA (SpEL)
+    // =========================================================================
+
+    public boolean isResponsavelPrincipal(Long petId, String email) {
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue(email.trim(), petId);
+    }
+
+    public boolean isCuidadorDoPet(Long petId, String email) {
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId);
+    }
+
+    // =========================================================================
+    // 2. CONSULTAS GERAIS E POR USUÁRIO
+    // =========================================================================
 
     public Page<Pet> findAll(Pageable pageable) {
         return petRepository.findAll(pageable);
@@ -45,20 +60,17 @@ public class PetService {
     }
 
     public Page<Pet> findByEmail(String email, Pageable pageable) {
-        return petRepository.findByUsuarioEmail(email.trim(), pageable);
+        Usuario usuario = findUsuarioByEmail(email);
+        return findByUsuario(usuario.getId(), pageable);
     }
 
     public Pet findById(Long id) {
         return findPetById(id);
     }
 
-    public boolean isResponsavelPrincipal(Long petId, String email) {
-        return usuarioPetRepository.isResponsavelPrincipalPorEmail(email.trim(), petId);
-    }
-
-    public boolean isCuidadorDoPet(Long petId, String email) {
-        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId);
-    }
+    // =========================================================================
+    // 3. CICLO DE VIDA DO PET (CRIAÇÃO, ATUALIZAÇÃO, EXCLUSÃO)
+    // =========================================================================
 
     @Transactional
     public Pet create(PetRequest petRequest, String authEmail) {
@@ -85,29 +97,37 @@ public class PetService {
         petRepository.deleteById(id);
     }
 
-    public PetHistoryResponse getConsolidatedHistory(Long petId) {
-        Pet pet = findPetById(petId);
-        return new PetHistoryResponse(
-                pet.getId(),
-                pet.getNome(),
-                tarefaRepository.findConcluidasByPetId(petId, EnumStatus.CONCLUIDO)
-                        .stream()
-                        .map(TarefaResponse::fromEntity)
-                        .toList());
-    }
+    // =========================================================================
+    // 4. HISTÓRICO CONSOLIDADO DE TAREFAS
+    // =========================================================================
 
     @Transactional(readOnly = true)
     public List<TarefaResponse> getConsolidatedHistoryMe(String email) {
-        List<Long> petIds = usuarioPetRepository.findAllByUsuarioEmail(email.trim()).stream()
+        List<Long> petIds = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(email.trim()).stream()
                 .map(up -> up.getPet().getId())
                 .toList();
 
         if (petIds.isEmpty()) return List.of();
 
-        return tarefaRepository.findConcluidasByPetIdIn(petIds, EnumStatus.CONCLUIDO).stream()
+        return tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(petIds, EnumStatus.CONCLUIDO).stream()
                 .map(TarefaResponse::fromEntity)
                 .toList();
     }
+
+    public PetHistoryResponse getConsolidatedHistory(Long petId) {
+        Pet pet = findPetById(petId);
+        return new PetHistoryResponse(
+                pet.getId(),
+                pet.getNome(),
+                tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List.of(petId), EnumStatus.CONCLUIDO)
+                        .stream()
+                        .map(TarefaResponse::fromEntity)
+                        .toList());
+    }
+
+    // =========================================================================
+    // 5. PONTUAÇÃO E PROCEDURES ORACLE (INDIVIDUAL E AGREGADA)
+    // =========================================================================
 
     @Transactional(readOnly = true)
     public PetPontuacaoResponse calcularPontuacaoTotalPet(Long petId) {
@@ -115,22 +135,25 @@ public class PetService {
     }
 
     public PetPontuacaoResponse calcularPontuacaoPet(Pet pet) {
-        int tarefas = tarefaRepository.calcularPontosTarefasPorPet(pet.getId(), EnumStatus.CONCLUIDO);
-        int aulas = aulaRepository.calcularPontosAulasConcluidasPorPet(pet.getId());
-        return new PetPontuacaoResponse(pet.getId(), pet.getNome(), tarefas, aulas, tarefas + aulas);
+        Map<String, Object> out = petRepository.calcularPontuacaoPetNoBanco(pet.getId());
+        return PetPontuacaoResponse.fromMap(pet.getId(), pet.getNome(), out);
     }
 
     @Transactional(readOnly = true)
     public PetPontuacaoAgregadaResponse calcularPontuacaoAgregadaPetsUsuario(String email) {
-        List<PetPontuacaoResponse> detalhes = usuarioPetRepository.findAllByUsuarioEmail(email.trim()).stream()
+        Usuario usuario = findUsuarioByEmail(email);
+        Map<String, Object> out = petRepository.calcularPontuacaoUsuarioNoBanco(usuario.getId());
+
+        List<PetPontuacaoResponse> detalhePets = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(email.trim()).stream()
                 .map(up -> calcularPontuacaoPet(up.getPet()))
                 .toList();
 
-        int totalTarefas = detalhes.stream().mapToInt(PetPontuacaoResponse::pontosTarefas).sum();
-        int totalAulas = detalhes.stream().mapToInt(PetPontuacaoResponse::pontosAulas).sum();
-
-        return new PetPontuacaoAgregadaResponse(totalTarefas, totalAulas, totalTarefas + totalAulas, detalhes);
+        return PetPontuacaoAgregadaResponse.fromMap(out, detalhePets);
     }
+
+    // =========================================================================
+    // 6. HELPERS PRIVADOS (BUSCAS E VALIDAÇÕES)
+    // =========================================================================
 
     private Pet findPetById(Long id) {
         return petRepository.findById(id)

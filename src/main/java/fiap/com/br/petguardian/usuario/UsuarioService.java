@@ -3,9 +3,11 @@ package fiap.com.br.petguardian.usuario;
 import fiap.com.br.petguardian.endereco.Endereco;
 import fiap.com.br.petguardian.endereco.EnderecoService;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.telefone.TelefoneRepository;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
+import fiap.com.br.petguardian.usuariopet.UsuarioPet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +23,7 @@ public class UsuarioService {
     private final EnderecoService enderecoService;
     private final TelefoneRepository telefoneRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PetRepository petRepository;
 
     public Page<Usuario> findAll(Pageable pageable) {
         return usuarioRepository.findAll(pageable);
@@ -71,13 +74,21 @@ public class UsuarioService {
 
     @Transactional
     public void delete(Long id) {
-        findUsuarioById(id);
-        usuarioRepository.deleteById(id);
+        deleteUsuario(findUsuarioById(id));
     }
 
     @Transactional
     public void delete(String email) {
-        Usuario usuario = findByEmail(email);
+        deleteUsuario(findByEmail(email));
+    }
+
+    private void deleteUsuario(Usuario usuario) {
+        usuario.getUsuarioPets().stream()
+                .filter(UsuarioPet::isResponsavelPrincipal)
+                .map(UsuarioPet::getPet)
+                .toList()
+                .forEach(petRepository::delete);
+
         usuarioRepository.delete(usuario);
     }
 

@@ -5,7 +5,6 @@ import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
-import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
@@ -30,8 +29,25 @@ public class UsuarioPetService {
     private final UsuarioRepository usuarioRepository;
     private final PetRepository petRepository;
     private final TarefaRepository tarefaRepository;
-    private final AulaRepository aulaRepository;
     private final RedeCuidadoMapper redeCuidadoMapper;
+
+    // =========================================================================
+    // 1. CHECAGEM DE AUTORIZAÇÃO E SEGURANÇA (SpEL)
+    // =========================================================================
+
+    @Transactional(readOnly = true)
+    public boolean isResponsavelPrincipal(Long petId, String email) {
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue(email.trim(), petId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isCuidadorDoPet(Long petId, String email) {
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId);
+    }
+
+    // =========================================================================
+    // 2. CONSULTAS DO CARE CIRCLE
+    // =========================================================================
 
     @Transactional(readOnly = true)
     public List<CoCuidadorResponse> listarCuidadoresDoPet(Long petId) {
@@ -42,15 +58,9 @@ public class UsuarioPetService {
                 .toList();
     }
 
-    @Transactional(readOnly = true)
-    public boolean isResponsavelPrincipal(Long petId, String email) {
-        return usuarioPetRepository.isResponsavelPrincipalPorEmail(email.trim(), petId);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isCuidadorDoPet(Long petId, String email) {
-        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId);
-    }
+    // =========================================================================
+    // 3. GESTÃO DE VÍNCULOS E TITULARIDADE (CARE CIRCLE)
+    // =========================================================================
 
     @Transactional
     public UsuarioPet vincularPrimeiroResponsavelPrincipal(Usuario usuario, Pet pet) {
@@ -74,9 +84,7 @@ public class UsuarioPetService {
         }
 
         UsuarioPet novoResponsavel = findVinculoPorEmail(request.novoResponsavelEmail(), petId);
-        usuarioPetRepository.limparResponsavelPrincipalPorPet(petId);
-        novoResponsavel.promoverResponsavelPrincipal();
-        usuarioPetRepository.save(novoResponsavel);
+        usuarioPetRepository.transferirResponsavelPrincipalNoBanco(petId, novoResponsavel.getUsuario().getId());
     }
 
     @Transactional
@@ -86,10 +94,14 @@ public class UsuarioPetService {
         usuarioPetRepository.delete(vinculo);
     }
 
+    // =========================================================================
+    // 4. CONSOLIDAÇÃO DA REDE DE CUIDADO
+    // =========================================================================
+
     @Transactional(readOnly = true)
     public RedeCuidadoResponse montarRedeCuidado(String email) {
         Usuario usuario = findUsuarioByEmail(email);
-        List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmail(email.trim());
+        List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(email.trim());
 
         if (vinculos.isEmpty()) {
             return redeCuidadoMapper.toEmptyResponse(usuario);
@@ -103,11 +115,11 @@ public class UsuarioPetService {
                 usuario.getEmail()
         );
 
-        int pendentes = tarefaRepository.countByPetIdInAndStatusAndPrazoFuturo(petIds, EnumStatus.PENDENTE, LocalDateTime.now());
-        int concluidas = tarefaRepository.countByPetIdInAndStatus(petIds, EnumStatus.CONCLUIDO);
-        int pontosTarefas = tarefaRepository.calcularPontosTotaisEmail(email.trim(), EnumStatus.CONCLUIDO);
-        int pontosAulas = petIds.isEmpty() ? 0 : aulaRepository.calcularPontosAulasConcluidasPorPetIds(petIds);
-        int pontos = pontosTarefas + pontosAulas;
+        int pendentes = tarefaRepository.countByPetIdInAndStatusNomeStatusAndPrazoGreaterThanEqual(petIds, EnumStatus.PENDENTE, LocalDateTime.now());
+        int concluidas = tarefaRepository.countByPetIdInAndStatusNomeStatus(petIds, EnumStatus.CONCLUIDO);
+        Map<String, Object> outPontos = petRepository.calcularPontuacaoUsuarioNoBanco(usuario.getId());
+        Object valPontos = outPontos != null ? outPontos.getOrDefault("p_total_geral", outPontos.get("P_TOTAL_GERAL")) : null;
+        int pontos = valPontos instanceof Number n ? n.intValue() : 0;
 
         return new RedeCuidadoResponse(usuario.getEmail(), usuario.getNome(), pets, cuidadores, pendentes, concluidas, pontos);
     }
@@ -117,6 +129,10 @@ public class UsuarioPetService {
         Usuario usuario = findUsuarioById(usuarioId);
         return montarRedeCuidado(usuario.getEmail());
     }
+
+    // =========================================================================
+    // 5. HELPERS PRIVADOS DE VALIDAÇÃO E BUSCA
+    // =========================================================================
 
     private Map<Long, List<Long>> carregarMapaTarefasPorPet(List<Long> petIds) {
         Map<Long, List<Long>> mapa = new HashMap<>();
@@ -141,12 +157,12 @@ public class UsuarioPetService {
     }
 
     private UsuarioPet findVinculoPorEmail(String email, Long petId) {
-        return usuarioPetRepository.findByUsuarioEmailAndPetId(email.trim(), petId)
+        return usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)
                 .orElseThrow(() -> new ResourceNotFoundException("Vinculo nao encontrado entre o usuario e o pet informados."));
     }
 
     private void validarUsuarioNaoVinculadoPorEmail(String email, Long petId) {
-        if (usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId)) {
+        if (usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {
             throw new IllegalArgumentException("Usuario informado ja possui vinculo com este pet.");
         }
     }
@@ -158,7 +174,7 @@ public class UsuarioPetService {
 
         Long petId = vinculo.getPet().getId();
         boolean isProprioUsuario = vinculo.getUsuario().getEmail().equalsIgnoreCase(solicitanteEmail.trim());
-        boolean isResponsavel = usuarioPetRepository.isResponsavelPrincipalPorEmail(solicitanteEmail.trim(), petId);
+        boolean isResponsavel = usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue(solicitanteEmail.trim(), petId);
 
         if (!isProprioUsuario && !isResponsavel) {
             throw new IllegalArgumentException("Apenas o proprio cuidador ou o responsavel principal podem remover este vinculo.");

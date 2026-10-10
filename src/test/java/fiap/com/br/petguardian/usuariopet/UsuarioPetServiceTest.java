@@ -60,7 +60,7 @@ class UsuarioPetServiceTest {
         var request = new CoCuidadorRequest("familiar@fiap.com.br");
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("familiar@fiap.com.br", 10L)).thenReturn(false);
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("familiar@fiap.com.br", 10L)).thenReturn(false);
         when(usuarioRepository.findByEmailIgnoreCase("familiar@fiap.com.br")).thenReturn(Optional.of(convidado));
         when(usuarioPetRepository.save(any(UsuarioPet.class))).thenReturn(novoVinculo);
 
@@ -80,7 +80,7 @@ class UsuarioPetServiceTest {
         var request = new CoCuidadorRequest("familiar@fiap.com.br");
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("familiar@fiap.com.br", 10L)).thenReturn(true);
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("familiar@fiap.com.br", 10L)).thenReturn(true);
 
         assertThrows(IllegalArgumentException.class, () -> usuarioPetService.convidarCoCuidador(10L, request));
     }
@@ -92,8 +92,8 @@ class UsuarioPetServiceTest {
         Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
         UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
 
-        when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
-        when(usuarioPetRepository.isResponsavelPrincipalPorEmail("enzo@fiap.com.br", 10L)).thenReturn(true);
+        when(usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue("enzo@fiap.com.br", 10L)).thenReturn(true);
 
         usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "enzo@fiap.com.br");
 
@@ -107,7 +107,7 @@ class UsuarioPetServiceTest {
         Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
         UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
 
-        when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
 
         usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "cuidador@fiap.com.br");
 
@@ -121,7 +121,7 @@ class UsuarioPetServiceTest {
         Usuario principal = Usuario.builder().id(1L).email("principal@fiap.com.br").build();
         UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(1L, 10L)).usuario(principal).pet(pet).responsavelPrincipal(true).build();
 
-        when(usuarioPetRepository.findByUsuarioEmailAndPetId("principal@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId("principal@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
 
         assertThrows(IllegalArgumentException.class, () -> usuarioPetService.desvincularCuidador(10L, "principal@fiap.com.br", "principal@fiap.com.br"));
     }
@@ -133,8 +133,8 @@ class UsuarioPetServiceTest {
         Usuario cuidador = Usuario.builder().id(2L).email("cuidador@fiap.com.br").build();
         UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(cuidador).pet(pet).responsavelPrincipal(false).build();
 
-        when(usuarioPetRepository.findByUsuarioEmailAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
-        when(usuarioPetRepository.isResponsavelPrincipalPorEmail("estranho@fiap.com.br", 10L)).thenReturn(false);
+        when(usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(Optional.of(vinculo));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue("estranho@fiap.com.br", 10L)).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> usuarioPetService.desvincularCuidador(10L, "cuidador@fiap.com.br", "estranho@fiap.com.br"));
     }
@@ -148,14 +148,11 @@ class UsuarioPetServiceTest {
 
         var request = new TransferirResponsabilidadeRequest("novo@fiap.com.br");
 
-        when(usuarioPetRepository.findByUsuarioEmailAndPetId("novo@fiap.com.br", 10L)).thenReturn(Optional.of(vinculoNovoResp));
-        when(usuarioPetRepository.save(vinculoNovoResp)).thenReturn(vinculoNovoResp);
+        when(usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId("novo@fiap.com.br", 10L)).thenReturn(Optional.of(vinculoNovoResp));
 
         usuarioPetService.transferirResponsabilidadePrincipal(10L, request, "enzo@fiap.com.br");
 
-        verify(usuarioPetRepository).limparResponsavelPrincipalPorPet(10L);
-        assertTrue(vinculoNovoResp.isResponsavelPrincipal());
-        verify(usuarioPetRepository).save(vinculoNovoResp);
+        verify(usuarioPetRepository).transferirResponsavelPrincipalNoBanco(10L, 2L);
     }
 
     @Test
@@ -184,7 +181,7 @@ class UsuarioPetServiceTest {
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(usuarioPetRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of());
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
         when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado(1L);
@@ -201,7 +198,7 @@ class UsuarioPetServiceTest {
         var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0);
 
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(usuarioPetRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of());
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
         when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");

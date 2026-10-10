@@ -29,7 +29,7 @@ public class TarefaService {
 
     public boolean isCuidadorDaTarefa(Long tarefaId, String email) {
         Tarefa tarefa = findTarefaById(tarefaId);
-        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), tarefa.getPet().getId());
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), tarefa.getPet().getId());
     }
 
     public Page<Tarefa> findAll(Pageable pageable) {
@@ -40,22 +40,20 @@ public class TarefaService {
     public Page<Tarefa> findAllByUsuario(Long usuarioId, String statusFiltro, Pageable pageable) {
         expirarTarefasPendentesAtrasadas();
         if ("ALL".equalsIgnoreCase(statusFiltro)) {
-            return tarefaRepository.findAllDoCuidador(usuarioId, pageable);
+            return tarefaRepository.findAllByPetUsuarioPetsUsuarioId(usuarioId, pageable);
         }
-        return tarefaRepository.findAllDoCuidadorByStatus(usuarioId, EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
+        return tarefaRepository.findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(usuarioId, EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
     }
 
     public Page<Tarefa> findAllByEmail(String email, String statusFiltro, Pageable pageable) {
-        expirarTarefasPendentesAtrasadas();
-        if ("ALL".equalsIgnoreCase(statusFiltro)) {
-            return tarefaRepository.findAllDoCuidadorByEmail(email.trim(), pageable);
-        }
-        return tarefaRepository.findAllDoCuidadorByEmailAndStatus(email.trim(), EnumStatus.valueOf(statusFiltro.trim().toUpperCase()), pageable);
+        Usuario usuario = findUsuarioByEmail(email);
+        return findAllByUsuario(usuario.getId(), statusFiltro, pageable);
     }
 
     @Transactional(readOnly = true)
     public Integer calcularPontosTotaisEmail(String email) {
-        return tarefaRepository.calcularPontosTotaisEmail(email.trim(), EnumStatus.CONCLUIDO);
+        Usuario usuario = findUsuarioByEmail(email);
+        return calcularPontosTotaisUsuario(usuario.getId());
     }
 
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {
@@ -175,18 +173,8 @@ public class TarefaService {
         tarefa.setConclusao(LocalDateTime.now());
     }
 
-    @Transactional(readOnly = true)
-    public String exportarTarefasJson(Long statusId) {
-        return tarefaRepository.exportarTarefasJsonNoBanco(statusId);
-    }
-
-    @Transactional(readOnly = true)
-    public String classificarPontos(Integer pontos) {
-        return tarefaRepository.classificarPontosNoBanco(pontos);
-    }
-
     private void validarCuidadorDoPet(String email, Long petId) {
-        if (!usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), petId)) {
+        if (!usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {
             throw new IllegalArgumentException("Usuario informado nao esta vinculado ao pet da tarefa.");
         }
     }

@@ -25,6 +25,25 @@ public class UsuarioPetController {
 
     private final UsuarioPetService usuarioPetService;
 
+    // =========================================================================
+    // 1. FLUXO DO USUÁRIO LOGADO (/me)
+    // =========================================================================
+
+    @DeleteMapping("/cuidadores/me")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Desvincular o próprio cuidador autenticado do Care Circle deste pet via JWT")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
+    public void sairDoCareCircle(
+            @PathVariable Long petId,
+            Authentication authentication
+    ) {
+        usuarioPetService.desvincularCuidador(petId, authentication.getName(), authentication.getName());
+    }
+
+    // =========================================================================
+    // 2. GESTÃO DO CARE CIRCLE POR ID DO PET (CUIDADOR / RESPONSÁVEL / ADMIN)
+    // =========================================================================
+
     @GetMapping("/cuidadores")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todos os cuidadores vinculados a um pet")

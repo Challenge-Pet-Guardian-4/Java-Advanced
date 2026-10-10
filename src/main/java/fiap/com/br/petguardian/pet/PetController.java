@@ -29,6 +29,10 @@ public class PetController {
 
     private final PetService petService;
 
+    // =========================================================================
+    // 1. FLUXO DO USUÁRIO LOGADO (/me)
+    // =========================================================================
+
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar pets associados ao usuário autenticado (como tutor principal ou co-cuidador)")
@@ -42,7 +46,7 @@ public class PetController {
 
     @GetMapping("/me/pontos")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Consultar pontuação total acumulada de todos os pets do usuário autenticado (tarefas + aulas)")
+    @Operation(summary = "Consultar pontuação total acumulada de todos os pets do usuário autenticado via Stored Procedure Oracle (tarefas + aulas)")
     public PetPontuacaoAgregadaResponse getMyPetsPontos(Authentication authentication) {
         return petService.calcularPontuacaoAgregadaPetsUsuario(authentication.getName());
     }
@@ -54,9 +58,64 @@ public class PetController {
         return petService.getConsolidatedHistoryMe(authentication.getName());
     }
 
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Criar pet associado ao usuário autenticado como responsável principal")
+    public PetResponse create(@Valid @RequestBody PetRequest petRequest, Authentication authentication) {
+        return PetResponse.fromEntity(petService.create(petRequest, authentication.getName()));
+    }
+
+    // =========================================================================
+    // 2. OPERAÇÕES DE GESTÃO DO PET POR ID (CUIDADOR / ADMIN)
+    // =========================================================================
+
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Buscar pet por ID")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    public PetResponse findById(@PathVariable Long id) {
+        return PetResponse.fromEntity(petService.findById(id));
+    }
+
+    @GetMapping("/{id}/pontos")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Consultar pontuação total acumulada pelo pet via Stored Procedure Oracle (tarefas + aulas concluídas)")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    public PetPontuacaoResponse getPontosTotais(@PathVariable Long id) {
+        return petService.calcularPontuacaoTotalPet(id);
+    }
+
+    @GetMapping("/{id}/historico")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Obter histórico consolidado de cuidados do pet (tarefas concluídas)")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    public PetHistoryResponse getHistorico(@PathVariable Long id) {
+        return petService.getConsolidatedHistory(id);
+    }
+
+    @PutMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Atualizar pet")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    public PetResponse update(@PathVariable Long id, @Valid @RequestBody PetRequest petRequest) {
+        return PetResponse.fromEntity(petService.update(id, petRequest));
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Deletar pet (somente o responsável principal tem permissão)")
+    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#id, authentication.name)")
+    public void delete(@PathVariable Long id) {
+        petService.delete(id);
+    }
+
+    // =========================================================================
+    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
+
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar pets com paginação e ordenação (somente ADMIN)")
+    @Operation(summary = "Listar todos os pets com paginação e ordenação (somente ADMIN)")
     @PreAuthorize("hasRole('ADMIN')")
     public Page<PetResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
@@ -75,52 +134,5 @@ public class PetController {
     ) {
         return petService.findByUsuario(usuarioId, pageable)
                 .map(PetResponse::fromEntity);
-    }
-
-    @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar pet por ID")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
-    public PetResponse findById(@PathVariable Long id) {
-        return PetResponse.fromEntity(petService.findById(id));
-    }
-
-    @GetMapping("/{id}/historico")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Obter histórico consolidado de cuidados do pet (tarefas concluídas)")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
-    public PetHistoryResponse getHistorico(@PathVariable Long id) {
-        return petService.getConsolidatedHistory(id);
-    }
-
-    @GetMapping("/{id}/pontos")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Consultar pontuacao total acumulada pelo pet (tarefas + aulas concluidas)")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
-    public PetPontuacaoResponse getPontosTotais(@PathVariable Long id) {
-        return petService.calcularPontuacaoTotalPet(id);
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar pet")
-    public PetResponse create(@Valid @RequestBody PetRequest petRequest, Authentication authentication) {
-        return PetResponse.fromEntity(petService.create(petRequest, authentication.getName()));
-    }
-
-    @PutMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar pet")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
-    public PetResponse update(@PathVariable Long id, @Valid @RequestBody PetRequest petRequest) {
-        return PetResponse.fromEntity(petService.update(id, petRequest));
-    }
-
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Deletar pet (somente o responsável principal tem permissão)")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#id, authentication.name)")
-    public void delete(@PathVariable Long id) {
-        petService.delete(id);
     }
 }

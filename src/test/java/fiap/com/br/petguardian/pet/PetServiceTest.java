@@ -9,11 +9,11 @@ import fiap.com.br.petguardian.tarefa.Tarefa;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.status.Status;
-import fiap.com.br.petguardian.trilha.aula.AulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
+import fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,9 +54,6 @@ class PetServiceTest {
 
     @Mock
     private TarefaRepository tarefaRepository;
-
-    @Mock
-    private AulaRepository aulaRepository;
 
     @InjectMocks
     private PetService petService;
@@ -118,7 +116,7 @@ class PetServiceTest {
                 .build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(tarefaRepository.findConcluidasByPetId(10L, EnumStatus.CONCLUIDO)).thenReturn(List.of(tarefa));
+        when(tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List.of(10L), EnumStatus.CONCLUIDO)).thenReturn(List.of(tarefa));
 
         PetHistoryResponse response = petService.getConsolidatedHistory(10L);
 
@@ -130,14 +128,17 @@ class PetServiceTest {
     }
 
     @Test
-    @DisplayName("Deve calcular pontuacao total consolidada do pet (tarefas + aulas)")
+    @DisplayName("Deve calcular pontuacao total consolidada do pet via Stored Procedure Oracle (tarefas + aulas)")
     void deveCalcularPontuacaoTotal() {
         Raca raca = Raca.builder().id(1L).nome("SRD").build();
         Pet pet = Pet.builder().id(10L).nome("Luna").raca(raca).dataNasc(LocalDate.now().minusYears(1)).build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(tarefaRepository.calcularPontosTarefasPorPet(10L, EnumStatus.CONCLUIDO)).thenReturn(50);
-        when(aulaRepository.calcularPontosAulasConcluidasPorPet(10L)).thenReturn(30);
+        when(petRepository.calcularPontuacaoPetNoBanco(10L)).thenReturn(Map.of(
+                "p_pontos_tarefas", 50,
+                "p_pontos_aulas", 30,
+                "p_pontos_totais", 80
+        ));
 
         PetPontuacaoResponse response = petService.calcularPontuacaoTotalPet(10L);
 
@@ -145,6 +146,29 @@ class PetServiceTest {
         assertEquals(50, response.pontosTarefas());
         assertEquals(30, response.pontosAulas());
         assertEquals(80, response.pontosTotais());
+    }
+
+    @Test
+    @DisplayName("Deve calcular pontuacao agregada dos pets do usuario via Stored Procedure Oracle")
+    void deveCalcularPontuacaoAgregadaPetsUsuario() {
+        Usuario usuario = Usuario.builder().id(1L).email("tutor@fiap.com.br").nome("Tutor").build();
+        Map<String, Object> out = Map.of(
+                "p_total_tarefas", 50,
+                "p_total_aulas", 30,
+                "p_total_geral", 80
+        );
+
+        when(usuarioRepository.findByEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(petRepository.calcularPontuacaoUsuarioNoBanco(1L)).thenReturn(out);
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(List.of());
+
+        PetPontuacaoAgregadaResponse response = petService.calcularPontuacaoAgregadaPetsUsuario("tutor@fiap.com.br");
+
+        assertNotNull(response);
+        assertEquals(50, response.pontosTarefas());
+        assertEquals(30, response.pontosAulas());
+        assertEquals(80, response.pontosTotais());
+        assertEquals(0, response.detalhePets().size());
     }
 
     @Test
@@ -196,14 +220,18 @@ class PetServiceTest {
     @DisplayName("Deve listar pets associados a um email de usuario")
     void deveListarPetsPorEmail() {
         Pageable pageable = PageRequest.of(0, 10);
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
 
-        when(petRepository.findByUsuarioEmail("enzo@fiap.com.br", pageable)).thenReturn(new PageImpl<>(List.of(pet)));
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
 
         Page<Pet> resultado = petService.findByEmail("enzo@fiap.com.br", pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
         assertEquals("Thor", resultado.getContent().get(0).getNome());
+        verify(petRepository).findByUsuarioId(1L, pageable);
     }
 }

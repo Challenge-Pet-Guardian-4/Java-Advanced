@@ -87,7 +87,7 @@ class HistoricoServiceTest {
         Historico hist = Historico.builder().id(1L).pet(pet).build();
 
         when(historicoRepository.findById(1L)).thenReturn(Optional.of(hist));
-        when(usuarioPetRepository.existsByUsuarioEmailAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
 
         assertTrue(historicoService.isCuidadorDoHistorico(1L, "enzo@fiap.com.br"));
     }

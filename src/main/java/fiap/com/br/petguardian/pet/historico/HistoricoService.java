@@ -23,7 +23,7 @@ public class HistoricoService {
 
     public boolean isCuidadorDoHistorico(Long historicoId, String email) {
         Historico historico = findHistoricoById(historicoId);
-        return usuarioPetRepository.existsByUsuarioEmailAndPetId(email.trim(), historico.getPet().getId());
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), historico.getPet().getId());
     }
 
     public Page<Historico> findAll(Pageable pageable) {
