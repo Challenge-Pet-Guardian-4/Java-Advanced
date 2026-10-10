@@ -99,6 +99,7 @@ public class TarefaService {
 
     @Transactional
     public Tarefa concluir(Long id, String authEmail) {
+        expirarTarefasPendentesAtrasadas();
         Tarefa tarefa = findTarefaById(id);
         validarPendenteParaConclusao(tarefa);
         validarCuidadorDoPet(authEmail, tarefa.getPet().getId());

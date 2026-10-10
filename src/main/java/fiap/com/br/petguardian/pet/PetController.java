@@ -35,7 +35,7 @@ public class PetController {
     @Operation(summary = "Listar pets associados ao usuário autenticado (como tutor principal ou co-cuidador)")
     public Page<PetResponse> findMyPets(
             Authentication authentication,
-            @PageableDefault(size = 20, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 4, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return petService.findByEmail(authentication.getName(), pageable)
                 .map(PetResponse::fromEntity);

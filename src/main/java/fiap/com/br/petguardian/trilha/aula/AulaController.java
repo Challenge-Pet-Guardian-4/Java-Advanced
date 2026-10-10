@@ -12,6 +12,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -73,17 +74,17 @@ public class AulaController {
     @PatchMapping("/{id}/concluir")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Concluir aula")
-    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public AulaResponse concluir(@PathVariable Long id) {
-        return AulaResponse.fromEntity(aulaService.concluir(id));
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('PREMIUM') and @aulaService.isCuidadorDaAula(#id, authentication.name))")
+    public AulaResponse concluir(@PathVariable Long id, Authentication authentication) {
+        return AulaResponse.fromEntity(aulaService.concluir(id, authentication.getName()));
     }
 
     @PatchMapping("/{id}/desmarcar")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Desmarcar aula concluida retornando ao estado nao concluido")
-    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public AulaResponse desmarcar(@PathVariable Long id) {
-        return AulaResponse.fromEntity(aulaService.desmarcar(id));
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('PREMIUM') and @aulaService.isCuidadorDaAula(#id, authentication.name))")
+    public AulaResponse desmarcar(@PathVariable Long id, Authentication authentication) {
+        return AulaResponse.fromEntity(aulaService.desmarcar(id, authentication.getName()));
     }
 
     @DeleteMapping("/{id}")

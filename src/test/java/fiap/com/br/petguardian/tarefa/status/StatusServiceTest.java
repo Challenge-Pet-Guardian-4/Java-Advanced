@@ -35,18 +35,6 @@ class StatusServiceTest {
     }
 
     @Test
-    @DisplayName("Deve encontrar status por nome String")
-    void deveEncontrarStatusPorNomeString() {
-        Status status = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
-        when(statusRepository.findByNomeStatus(EnumStatus.PENDENTE)).thenReturn(Optional.of(status));
-
-        Status resultado = statusService.findStatusByNome("PENDENTE");
-
-        assertNotNull(resultado);
-        assertEquals(EnumStatus.PENDENTE, resultado.getNomeStatus());
-    }
-
-    @Test
     @DisplayName("Deve lançar exceção se o status não for encontrado")
     void deveLancarExcecaoStatusNaoEncontrado() {
         when(statusRepository.findByNomeStatus(EnumStatus.PENDENTE)).thenReturn(Optional.empty());

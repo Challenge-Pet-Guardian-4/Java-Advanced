@@ -14,8 +14,4 @@ public interface AulaRepository extends JpaRepository<Aula, Long> {
 
     @EntityGraph(attributePaths = {"modulo"})
     List<Aula> findAllByModuloId(Long moduloId);
-
-    boolean existsByNomeIgnoreCaseAndModuloId(String nome, Long moduloId);
-
-    boolean existsByNomeIgnoreCaseAndModuloIdAndIdNot(String nome, Long moduloId, Long id);
 }

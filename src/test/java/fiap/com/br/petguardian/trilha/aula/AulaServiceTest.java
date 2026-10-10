@@ -13,6 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Optional;
 
+import fiap.com.br.petguardian.usuario.Usuario;
+import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuario.UsuarioRole;
+import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
+import fiap.com.br.petguardian.pet.Pet;
+import fiap.com.br.petguardian.trilha.Trilha;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -26,6 +33,12 @@ class AulaServiceTest {
 
     @Mock
     private ModuloRepository moduloRepository;
+
+    @Mock
+    private UsuarioPetRepository usuarioPetRepository;
+
+    @Mock
+    private UsuarioRepository usuarioRepository;
 
     @InjectMocks
     private AulaService aulaService;
@@ -85,5 +98,89 @@ class AulaServiceTest {
         aulaService.delete(100L);
 
         verify(aulaRepository).deleteById(100L);
+    }
+
+    @Test
+    @DisplayName("Deve concluir aula quando usuario autenticado for cuidador do pet da trilha")
+    void deveConcluirAulaComCuidadorValido() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(100L).concluida(false).modulo(modulo).build();
+        Usuario tutor = Usuario.builder().id(1L).email("carolina@petguardian.com").role(UsuarioRole.PREMIUM).build();
+
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
+        when(usuarioRepository.findByEmailIgnoreCase("carolina@petguardian.com")).thenReturn(Optional.of(tutor));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("carolina@petguardian.com", 10L)).thenReturn(true);
+        when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Aula resultado = aulaService.concluir(100L, "carolina@petguardian.com");
+
+        assertTrue(resultado.isConcluida());
+        verify(aulaRepository).save(aula);
+    }
+
+    @Test
+    @DisplayName("Deve lancar excecao ao tentar concluir aula quando usuario nao for cuidador do pet da trilha")
+    void deveLancarExcecaoAoConcluirAulaUsuarioNaoCuidador() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(100L).concluida(false).modulo(modulo).build();
+        Usuario invasor = Usuario.builder().id(99L).email("invasor@petguardian.com").role(UsuarioRole.PREMIUM).build();
+
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
+        when(usuarioRepository.findByEmailIgnoreCase("invasor@petguardian.com")).thenReturn(Optional.of(invasor));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("invasor@petguardian.com", 10L)).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> aulaService.concluir(100L, "invasor@petguardian.com"));
+    }
+
+    @Test
+    @DisplayName("Deve desmarcar aula quando usuario autenticado for cuidador do pet da trilha")
+    void deveDesmarcarAulaComCuidadorValido() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(100L).concluida(true).modulo(modulo).build();
+        Usuario tutor = Usuario.builder().id(1L).email("carolina@petguardian.com").role(UsuarioRole.PREMIUM).build();
+
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
+        when(usuarioRepository.findByEmailIgnoreCase("carolina@petguardian.com")).thenReturn(Optional.of(tutor));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("carolina@petguardian.com", 10L)).thenReturn(true);
+        when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Aula resultado = aulaService.desmarcar(100L, "carolina@petguardian.com");
+
+        assertFalse(resultado.isConcluida());
+        verify(aulaRepository).save(aula);
+    }
+
+    @Test
+    @DisplayName("isCuidadorDaAula deve retornar true quando email pertence a cuidador do pet")
+    void isCuidadorDaAulaDeveRetornarTrue() {
+        Pet pet = Pet.builder().id(10L).build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(100L).modulo(modulo).build();
+
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("cuidador@petguardian.com", 10L)).thenReturn(true);
+
+        assertTrue(aulaService.isCuidadorDaAula(100L, "cuidador@petguardian.com"));
+    }
+
+    @Test
+    @DisplayName("isCuidadorDaAula deve retornar false quando email nao pertence a cuidador do pet")
+    void isCuidadorDaAulaDeveRetornarFalse() {
+        Pet pet = Pet.builder().id(10L).build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(100L).modulo(modulo).build();
+
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("outro@petguardian.com", 10L)).thenReturn(false);
+
+        assertFalse(aulaService.isCuidadorDaAula(100L, "outro@petguardian.com"));
     }
 }

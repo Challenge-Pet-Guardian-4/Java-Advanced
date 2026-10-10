@@ -5,20 +5,16 @@ import fiap.com.br.petguardian.pet.dto.PetDetailResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoResponse;
 import fiap.com.br.petguardian.pet.dto.PetRequest;
-import fiap.com.br.petguardian.pet.dto.PetResponse;
 import fiap.com.br.petguardian.pet.historico.HistoricoRepository;
-import fiap.com.br.petguardian.pet.historico.dto.HistoricoResponse;
 import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.pet.raca.RacaRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
-import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetId;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
-import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -109,12 +105,12 @@ public class PetService {
     @Transactional(readOnly = true)
     public PetDetailResponse getPetDetail(Long petId) {
         Pet pet = findPetById(petId);
-        return new PetDetailResponse(
-                PetResponse.fromEntity(pet),
+        return PetDetailResponse.of(
+                pet,
                 calcularPontuacaoPet(pet),
-                usuarioPetRepository.findAllByPetId(petId).stream().map(CoCuidadorResponse::fromEntity).toList(),
-                tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List.of(petId), EnumStatus.CONCLUIDO).stream().map(TarefaResponse::fromEntity).toList(),
-                historicoRepository.findAllByPetIdOrderByDataHistDesc(petId).stream().map(HistoricoResponse::fromEntity).toList()
+                usuarioPetRepository.findAllByPetId(petId),
+                tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List.of(petId), EnumStatus.CONCLUIDO),
+                historicoRepository.findAllByPetIdOrderByDataHistDesc(petId)
         );
     }
 
@@ -128,20 +124,20 @@ public class PetService {
     }
 
     public PetPontuacaoResponse calcularPontuacaoPet(Pet pet) {
-        Score score = Score.from(petRepository.calcularPontuacaoPetNoBanco(pet.getId()));
-        return new PetPontuacaoResponse(pet.getId(), pet.getNome(), score.tarefas(), score.aulas(), score.total());
+        Map<String, Object> out = petRepository.calcularPontuacaoPetNoBanco(pet.getId());
+        return PetPontuacaoResponse.fromMap(pet.getId(), pet.getNome(), out);
     }
 
     @Transactional(readOnly = true)
     public PetPontuacaoAgregadaResponse calcularPontuacaoAgregadaPetsUsuario(String email) {
         Usuario usuario = findUsuarioByEmail(email);
-        Score score = Score.from(petRepository.calcularPontuacaoUsuarioNoBanco(usuario.getId()));
+        Map<String, Object> out = petRepository.calcularPontuacaoUsuarioNoBanco(usuario.getId());
 
         List<PetPontuacaoResponse> detalhePets = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(email.trim()).stream()
                 .map(up -> calcularPontuacaoPet(up.getPet()))
                 .toList();
 
-        return new PetPontuacaoAgregadaResponse(score.tarefas(), score.aulas(), score.total(), detalhePets);
+        return PetPontuacaoAgregadaResponse.fromMap(out, detalhePets);
     }
 
     // =========================================================================
@@ -175,19 +171,5 @@ public class PetService {
         pet.setPorte(PetPorte.valueOf(request.porte().toUpperCase()));
         pet.setSexo(Character.toUpperCase(request.sexo()));
         pet.setCastrado(request.castrado());
-    }
-
-    private record Score(int tarefas, int aulas, int total) {
-        static Score from(Map<String, Object> out) {
-            return new Score(
-                    getInt(out, "p_pontos_tarefas"),
-                    getInt(out, "p_pontos_aulas"),
-                    getInt(out, "p_pontos_totais")
-            );
-        }
-
-        private static int getInt(Map<String, Object> map, String key) {
-            return map != null && map.get(key) instanceof Number n ? n.intValue() : 0;
-        }
     }
 }

@@ -15,8 +15,4 @@ public class StatusService {
         return statusRepository.findByNomeStatus(status)
                 .orElseThrow(() -> new ResourceNotFoundException("Status '" + status + "' não encontrado."));
     }
-
-    public Status findStatusByNome(String nome) {
-        return findStatus(EnumStatus.valueOf(nome.trim().toUpperCase()));
-    }
 }

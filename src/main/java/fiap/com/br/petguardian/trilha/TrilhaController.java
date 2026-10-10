@@ -1,5 +1,6 @@
 package fiap.com.br.petguardian.trilha;
 
+import fiap.com.br.petguardian.trilha.dto.TrilhaCompletaResponse;
 import fiap.com.br.petguardian.trilha.dto.TrilhaRequest;
 import fiap.com.br.petguardian.trilha.dto.TrilhaResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,13 +28,10 @@ public class TrilhaController {
 
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar trilhas associadas aos pets do usuário autenticado")
+    @Operation(summary = "Listar árvore completa de trilhas, módulos e aulas dos pets do usuário autenticado")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public List<TrilhaResponse> findMyTrilhas(Authentication authentication) {
-        return trilhaService.findByUsuarioEmail(authentication.getName())
-                .stream()
-                .map(TrilhaResponse::fromEntity)
-                .toList();
+    public List<TrilhaCompletaResponse> findMyTrilhas(Authentication authentication) {
+        return trilhaService.findTrilhasCompletasByUsuarioEmail(authentication.getName());
     }
 
     @GetMapping
@@ -45,17 +43,6 @@ public class TrilhaController {
     ) {
         return trilhaService.findAll(pageable)
                 .map(TrilhaResponse::fromEntity);
-    }
-
-    @GetMapping("/pet/{petId}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar trilhas associadas a um pet")
-    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public List<TrilhaResponse> findByPetId(@PathVariable Long petId) {
-        return trilhaService.findAllByPetId(petId)
-                .stream()
-                .map(TrilhaResponse::fromEntity)
-                .toList();
     }
 
     @GetMapping("/{id}")

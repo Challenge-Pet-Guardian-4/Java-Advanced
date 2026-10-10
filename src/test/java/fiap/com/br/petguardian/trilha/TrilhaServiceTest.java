@@ -91,4 +91,19 @@ class TrilhaServiceTest {
         assertEquals("Trilha Nova", resultado.getNome());
         assertEquals(trilhaExistente.getModulos(), resultado.getModulos());
     }
+
+    @Test
+    @DisplayName("Deve listar trilhas completas com modulos e aulas por email do usuario")
+    void deveListarTrilhasCompletasPorUsuarioEmail() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(1L).nome("Truques").descricao("Desc").pet(pet).build();
+
+        when(trilhaRepository.findAllByUsuarioEmail("tutor@teste.com")).thenReturn(List.of(trilha));
+
+        var resultado = trilhaService.findTrilhasCompletasByUsuarioEmail("tutor@teste.com");
+
+        assertEquals(1, resultado.size());
+        assertEquals("Truques", resultado.get(0).nome());
+        assertEquals("Thor", resultado.get(0).nomePet());
+    }
 }

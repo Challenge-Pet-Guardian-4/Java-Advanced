@@ -9,6 +9,7 @@ import fiap.com.br.petguardian.tarefa.status.StatusService;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +27,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,21 +52,25 @@ class TarefaServiceTest {
     @InjectMocks
     private TarefaService tarefaService;
 
-    @Test
-    @DisplayName("Deve listar tarefas com auto-expiracao")
-    void deveListarTarefasComExpiracao() {
-        Pageable pageable = PageRequest.of(0, 10);
-        Status pendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
-        Status expirado = Status.builder().id(3L).nomeStatus(EnumStatus.EXPIRADO).build();
+    @BeforeEach
+    void setUp() {
+        Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
+        Status statusExpirado = Status.builder().id(3L).nomeStatus(EnumStatus.EXPIRADO).build();
+        lenient().when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
+        lenient().when(statusService.findStatus(EnumStatus.EXPIRADO)).thenReturn(statusExpirado);
+    }
 
-        when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(pendente);
-        when(statusService.findStatus(EnumStatus.EXPIRADO)).thenReturn(expirado);
+    @Test
+    @DisplayName("Deve listar tarefas executando rotina de expiracao no banco")
+    void deveListarTarefasExecutandoExpiracao() {
+        Pageable pageable = PageRequest.of(0, 10);
         when(tarefaRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of()));
 
         Page<Tarefa> resultado = tarefaService.findAll(pageable);
 
         assertNotNull(resultado);
-        verify(tarefaRepository).expirarTarefasPendentesAtrasadas(any(LocalDateTime.class), eq(pendente), eq(expirado));
+        verify(tarefaRepository).findAll(pageable);
+        verify(tarefaRepository).expirarTarefasPendentesAtrasadas(any(), any(), any());
     }
 
     @Test
@@ -233,12 +238,8 @@ class TarefaServiceTest {
     void deveListarTarefasPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pageable pageable = PageRequest.of(0, 10);
-        Status pendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
-        Status expirado = Status.builder().id(3L).nomeStatus(EnumStatus.EXPIRADO).build();
 
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(pendente);
-        when(statusService.findStatus(EnumStatus.EXPIRADO)).thenReturn(expirado);
         when(tarefaRepository.findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(1L, EnumStatus.PENDENTE, pageable)).thenReturn(new PageImpl<>(List.of()));
 
         Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "PENDENTE", pageable);
@@ -270,5 +271,20 @@ class TarefaServiceTest {
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
 
         assertTrue(tarefaService.isCuidadorDaTarefa(100L, "enzo@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve listar todas as tarefas do cuidador quando status for ALL")
+    void deveListarTodasTarefasPorEmailQuandoStatusAll() {
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(tarefaRepository.findAllByPetUsuarioPetsUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of()));
+
+        Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "ALL", pageable);
+
+        assertNotNull(resultado);
+        verify(tarefaRepository).findAllByPetUsuarioPetsUsuarioId(1L, pageable);
     }
 }

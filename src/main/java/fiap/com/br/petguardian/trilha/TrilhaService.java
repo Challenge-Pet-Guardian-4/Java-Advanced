@@ -3,6 +3,7 @@ package fiap.com.br.petguardian.trilha;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.trilha.dto.TrilhaCompletaResponse;
 import fiap.com.br.petguardian.trilha.dto.TrilhaRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +31,14 @@ public class TrilhaService {
 
     public List<Trilha> findByUsuarioEmail(String email) {
         return trilhaRepository.findAllByUsuarioEmail(email.trim());
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<TrilhaCompletaResponse> findTrilhasCompletasByUsuarioEmail(String email) {
+        return trilhaRepository.findAllByUsuarioEmail(email.trim()).stream()
+                .map(TrilhaCompletaResponse::fromEntity)
+                .toList();
     }
 
     public Trilha findById(Long id) {

@@ -60,12 +60,6 @@ public class UsuarioPetService {
     // =========================================================================
 
     @Transactional
-    public UsuarioPet vincularPrimeiroResponsavelPrincipal(Usuario usuario, Pet pet) {
-        UsuarioPet vinculo = new UsuarioPet(new UsuarioPetId(usuario.getId(), pet.getId()), usuario, pet, true);
-        return usuarioPetRepository.save(vinculo);
-    }
-
-    @Transactional
     public CoCuidadorResponse convidarCoCuidador(Long petId, CoCuidadorRequest request) {
         Pet pet = findPetById(petId);
         validarUsuarioNaoVinculadoPorEmail(request.email(), petId);
@@ -114,15 +108,7 @@ public class UsuarioPetService {
 
         Map<String, Object> resumoDb = usuarioPetRepository.obterResumoRedeCuidadoNoBanco(usuario.getId());
 
-        return new RedeCuidadoResponse(
-                usuario.getEmail(),
-                usuario.getNome(),
-                pets,
-                cuidadores,
-                getInt(resumoDb, "p_tarefas_pendentes"),
-                getInt(resumoDb, "p_tarefas_concluidas"),
-                getInt(resumoDb, "p_pontos_acumulados")
-        );
+        return RedeCuidadoResponse.from(usuario.getEmail(), usuario.getNome(), pets, cuidadores, resumoDb);
     }
 
     @Transactional(readOnly = true)
@@ -180,9 +166,5 @@ public class UsuarioPetService {
         if (!isProprioUsuario && !isResponsavel) {
             throw new IllegalArgumentException("Apenas o proprio cuidador ou o responsavel principal podem remover este vinculo.");
         }
-    }
-
-    private static int getInt(Map<String, Object> map, String key) {
-        return map != null && map.get(key) instanceof Number n ? n.intValue() : 0;
     }
 }

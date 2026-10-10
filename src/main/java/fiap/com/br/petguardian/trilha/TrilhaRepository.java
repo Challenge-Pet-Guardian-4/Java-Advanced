@@ -14,8 +14,4 @@ public interface TrilhaRepository extends JpaRepository<Trilha, Long> {
     @EntityGraph(attributePaths = {"pet"})
     @Query("select t from Trilha t join t.pet p join p.usuarioPets up where lower(up.usuario.email) = lower(:email) order by t.nome asc")
     List<Trilha> findAllByUsuarioEmail(@Param("email") String email);
-    
-    boolean existsByNomeIgnoreCaseAndPetId(String nome, Long petId);
-
-    boolean existsByNomeIgnoreCaseAndPetIdAndIdNot(String nome, Long petId, Long id);
 }
