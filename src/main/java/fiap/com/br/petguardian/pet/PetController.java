@@ -1,11 +1,10 @@
 package fiap.com.br.petguardian.pet;
 
-import fiap.com.br.petguardian.pet.dto.PetHistoryResponse;
+import fiap.com.br.petguardian.pet.dto.PetDetailResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoResponse;
 import fiap.com.br.petguardian.pet.dto.PetRequest;
 import fiap.com.br.petguardian.pet.dto.PetResponse;
-import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,8 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/pets")
@@ -51,13 +48,6 @@ public class PetController {
         return petService.calcularPontuacaoAgregadaPetsUsuario(authentication.getName());
     }
 
-    @GetMapping("/me/historico")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Obter histórico consolidado de cuidados de todos os pets do usuário autenticado (tarefas concluídas)")
-    public List<TarefaResponse> getMyHistoricoTarefas(Authentication authentication) {
-        return petService.getConsolidatedHistoryMe(authentication.getName());
-    }
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar pet associado ao usuário autenticado como responsável principal")
@@ -85,12 +75,12 @@ public class PetController {
         return petService.calcularPontuacaoTotalPet(id);
     }
 
-    @GetMapping("/{id}/historico")
+    @GetMapping("/{id}/detalhe")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Obter histórico consolidado de cuidados do pet (tarefas concluídas)")
+    @Operation(summary = "Obter ficha consolidada do pet com pontuação, cuidadores, tarefas concluídas e prontuário")
     @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
-    public PetHistoryResponse getHistorico(@PathVariable Long id) {
-        return petService.getConsolidatedHistory(id);
+    public PetDetailResponse getPetDetail(@PathVariable Long id) {
+        return petService.getPetDetail(id);
     }
 
     @PutMapping("/{id}")

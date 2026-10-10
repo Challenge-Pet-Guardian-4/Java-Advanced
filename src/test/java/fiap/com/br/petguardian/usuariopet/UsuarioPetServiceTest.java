@@ -17,6 +17,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -205,5 +206,46 @@ class UsuarioPetServiceTest {
 
         assertNotNull(resultado);
         assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
+    }
+
+    @Test
+    @DisplayName("Deve montar rede de cuidado com vinculos utilizando Stored Procedure Oracle")
+    void deveMontarRedeDeCuidadoComVinculosEProcedureOracle() {
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        UsuarioPet vinculo = UsuarioPet.builder()
+                .id(new UsuarioPetId(1L, 10L))
+                .usuario(usuario)
+                .pet(pet)
+                .responsavelPrincipal(true)
+                .build();
+
+        var petResumo = new RedeCuidadoResponse.PetResumo(10L, "Thor", "Golden", true, List.of(100L));
+        Map<String, Object> resumoDb = Map.of(
+                "p_tarefas_pendentes", 3,
+                "p_tarefas_concluidas", 7,
+                "p_pontos_acumulados", 150
+        );
+
+        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vinculo));
+        when(tarefaRepository.findTarefaIdsByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 100L}));
+        when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vinculo));
+        when(redeCuidadoMapper.toPetResumoList(any(), any())).thenReturn(List.of(petResumo));
+        when(redeCuidadoMapper.toCuidadorResumoList(any(), any())).thenReturn(List.of());
+        when(usuarioPetRepository.obterResumoRedeCuidadoNoBanco(1L)).thenReturn(resumoDb);
+
+        RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
+        assertEquals("Enzo", resultado.nomeUsuario());
+        assertEquals(1, resultado.pets().size());
+        assertEquals("Thor", resultado.pets().get(0).nome());
+        assertEquals(3, resultado.totalTarefasPendentes());
+        assertEquals(7, resultado.totalTarefasConcluidas());
+        assertEquals(150, resultado.pontosAcumulados());
+
+        verify(usuarioPetRepository).obterResumoRedeCuidadoNoBanco(1L);
     }
 }

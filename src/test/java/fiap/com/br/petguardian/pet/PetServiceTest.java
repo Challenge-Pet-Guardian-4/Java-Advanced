@@ -1,14 +1,13 @@
 package fiap.com.br.petguardian.pet;
 
-import fiap.com.br.petguardian.pet.dto.PetHistoryResponse;
+import fiap.com.br.petguardian.pet.dto.PetDetailResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoResponse;
 import fiap.com.br.petguardian.pet.dto.PetRequest;
+import fiap.com.br.petguardian.pet.historico.HistoricoRepository;
 import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.pet.raca.RacaRepository;
-import fiap.com.br.petguardian.tarefa.Tarefa;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
-import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
@@ -26,7 +25,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -54,6 +52,9 @@ class PetServiceTest {
 
     @Mock
     private TarefaRepository tarefaRepository;
+
+    @Mock
+    private HistoricoRepository historicoRepository;
 
     @InjectMocks
     private PetService petService;
@@ -94,37 +95,32 @@ class PetServiceTest {
         verify(usuarioPetRepository).save(any(UsuarioPet.class));
     }
 
-    @Test
-    @DisplayName("Deve retornar historico consolidado do pet")
-    void deveRetornarHistoricoConsolidado() {
-        Raca raca = Raca.builder().id(1L).nome("Golden").build();
-        Pet pet = Pet.builder().id(10L).nome("Thor").raca(raca).dataNasc(LocalDate.now().minusYears(1)).build();
-        Usuario usuario = Usuario.builder().id(1L).build();
-        Status statusConcluido = Status.builder().id(2L).nomeStatus(EnumStatus.CONCLUIDO).build();
 
-        Tarefa tarefa = Tarefa.builder()
-                .id(100L)
-                .titulo("Passeio")
-                .pontosTarefa(20)
-                .descricao("Passeio matinal")
-                .criacao(LocalDateTime.now().minusDays(1))
-                .prazo(LocalDateTime.now().plusDays(1))
-                .conclusao(LocalDateTime.now())
-                .status(statusConcluido)
-                .usuario(usuario)
-                .pet(pet)
-                .build();
+    @Test
+    @DisplayName("Deve buscar ficha consolidada do pet com pontuacao, cuidadores, tarefas e historicos")
+    void deveBuscarFichaConsolidadaDoPet() {
+        Raca raca = Raca.builder().id(1L).nome("SRD").build();
+        Pet pet = Pet.builder().id(10L).nome("Thor").raca(raca).dataNasc(LocalDate.now().minusYears(2)).build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List.of(10L), EnumStatus.CONCLUIDO)).thenReturn(List.of(tarefa));
+        when(petRepository.calcularPontuacaoPetNoBanco(10L)).thenReturn(Map.of(
+                "p_pontos_tarefas", 50,
+                "p_pontos_aulas", 30,
+                "p_pontos_totais", 80
+        ));
+        when(usuarioPetRepository.findAllByPetId(10L)).thenReturn(List.of());
+        when(tarefaRepository.findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List.of(10L), EnumStatus.CONCLUIDO)).thenReturn(List.of());
+        when(historicoRepository.findAllByPetIdOrderByDataHistDesc(10L)).thenReturn(List.of());
 
-        PetHistoryResponse response = petService.getConsolidatedHistory(10L);
+        PetDetailResponse response = petService.getPetDetail(10L);
 
         assertNotNull(response);
-        assertEquals(10L, response.petId());
-        assertEquals("Thor", response.nomePet());
-        assertEquals(1, response.tarefasConcluidas().size());
-        assertEquals("Passeio", response.tarefasConcluidas().get(0).titulo());
+        assertEquals(10L, response.pet().id());
+        assertEquals("Thor", response.pet().nome());
+        assertEquals(80, response.pontos().pontosTotais());
+        assertNotNull(response.cuidadores());
+        assertNotNull(response.tarefasConcluidas());
+        assertNotNull(response.historicos());
     }
 
     @Test
@@ -153,9 +149,9 @@ class PetServiceTest {
     void deveCalcularPontuacaoAgregadaPetsUsuario() {
         Usuario usuario = Usuario.builder().id(1L).email("tutor@fiap.com.br").nome("Tutor").build();
         Map<String, Object> out = Map.of(
-                "p_total_tarefas", 50,
-                "p_total_aulas", 30,
-                "p_total_geral", 80
+                "p_pontos_tarefas", 50,
+                "p_pontos_aulas", 30,
+                "p_pontos_totais", 80
         );
 
         when(usuarioRepository.findByEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
@@ -169,6 +165,58 @@ class PetServiceTest {
         assertEquals(30, response.pontosAulas());
         assertEquals(80, response.pontosTotais());
         assertEquals(0, response.detalhePets().size());
+    }
+
+    @Test
+    @DisplayName("Deve calcular pontuacao agregada com detalhe dos pets")
+    void deveCalcularPontuacaoAgregadaPetsUsuarioComDetalhe() {
+        Usuario usuario = Usuario.builder().id(1L).email("tutor@fiap.com.br").nome("Tutor").build();
+        Map<String, Object> out = Map.of(
+                "p_pontos_tarefas", 50,
+                "p_pontos_aulas", 30,
+                "p_pontos_totais", 80
+        );
+
+        Pet pet1 = Pet.builder().id(10L).nome("Thor").build();
+        Pet pet2 = Pet.builder().id(11L).nome("Luna").build();
+        UsuarioPet up1 = UsuarioPet.builder().pet(pet1).build();
+        UsuarioPet up2 = UsuarioPet.builder().pet(pet2).build();
+
+        when(usuarioRepository.findByEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(petRepository.calcularPontuacaoUsuarioNoBanco(1L)).thenReturn(out);
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(List.of(up1, up2));
+        when(petRepository.calcularPontuacaoPetNoBanco(10L)).thenReturn(Map.of(
+                "p_pontos_tarefas", 20,
+                "p_pontos_aulas", 10,
+                "p_pontos_totais", 30
+        ));
+        when(petRepository.calcularPontuacaoPetNoBanco(11L)).thenReturn(Map.of(
+                "p_pontos_tarefas", 30,
+                "p_pontos_aulas", 20,
+                "p_pontos_totais", 50
+        ));
+
+        PetPontuacaoAgregadaResponse response = petService.calcularPontuacaoAgregadaPetsUsuario("tutor@fiap.com.br");
+
+        assertNotNull(response);
+        assertEquals(50, response.pontosTarefas());
+        assertEquals(30, response.pontosAulas());
+        assertEquals(80, response.pontosTotais());
+        assertEquals(2, response.detalhePets().size());
+
+        PetPontuacaoResponse thor = response.detalhePets().get(0);
+        assertEquals(10L, thor.petId());
+        assertEquals("Thor", thor.nomePet());
+        assertEquals(20, thor.pontosTarefas());
+        assertEquals(10, thor.pontosAulas());
+        assertEquals(30, thor.pontosTotais());
+
+        PetPontuacaoResponse luna = response.detalhePets().get(1);
+        assertEquals(11L, luna.petId());
+        assertEquals("Luna", luna.nomePet());
+        assertEquals(30, luna.pontosTarefas());
+        assertEquals(20, luna.pontosAulas());
+        assertEquals(50, luna.pontosTotais());
     }
 
     @Test

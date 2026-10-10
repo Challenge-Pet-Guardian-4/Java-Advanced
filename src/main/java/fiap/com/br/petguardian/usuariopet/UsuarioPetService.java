@@ -4,7 +4,6 @@ import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
-import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
@@ -14,8 +13,6 @@ import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -115,13 +112,17 @@ public class UsuarioPetService {
                 usuario.getEmail()
         );
 
-        int pendentes = tarefaRepository.countByPetIdInAndStatusNomeStatusAndPrazoGreaterThanEqual(petIds, EnumStatus.PENDENTE, LocalDateTime.now());
-        int concluidas = tarefaRepository.countByPetIdInAndStatusNomeStatus(petIds, EnumStatus.CONCLUIDO);
-        Map<String, Object> outPontos = petRepository.calcularPontuacaoUsuarioNoBanco(usuario.getId());
-        Object valPontos = outPontos != null ? outPontos.getOrDefault("p_total_geral", outPontos.get("P_TOTAL_GERAL")) : null;
-        int pontos = valPontos instanceof Number n ? n.intValue() : 0;
+        Map<String, Object> resumoDb = usuarioPetRepository.obterResumoRedeCuidadoNoBanco(usuario.getId());
 
-        return new RedeCuidadoResponse(usuario.getEmail(), usuario.getNome(), pets, cuidadores, pendentes, concluidas, pontos);
+        return new RedeCuidadoResponse(
+                usuario.getEmail(),
+                usuario.getNome(),
+                pets,
+                cuidadores,
+                getInt(resumoDb, "p_tarefas_pendentes"),
+                getInt(resumoDb, "p_tarefas_concluidas"),
+                getInt(resumoDb, "p_pontos_acumulados")
+        );
     }
 
     @Transactional(readOnly = true)
@@ -179,5 +180,9 @@ public class UsuarioPetService {
         if (!isProprioUsuario && !isResponsavel) {
             throw new IllegalArgumentException("Apenas o proprio cuidador ou o responsavel principal podem remover este vinculo.");
         }
+    }
+
+    private static int getInt(Map<String, Object> map, String key) {
+        return map != null && map.get(key) instanceof Number n ? n.intValue() : 0;
     }
 }

@@ -43,10 +43,6 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @Query("select t.pet.id, t.id from Tarefa t where t.pet.id in :petIds")
     List<Object[]> findTarefaIdsByPetIdIn(@Param("petIds") List<Long> petIds);
 
-    int countByPetIdInAndStatusNomeStatus(List<Long> petIds, EnumStatus status);
-
-    int countByPetIdInAndStatusNomeStatusAndPrazoGreaterThanEqual(List<Long> petIds, EnumStatus status, LocalDateTime agora);
-
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional
     @Query("update Tarefa t set t.status = :expirada where t.status = :pendente and t.prazo < :agora")
