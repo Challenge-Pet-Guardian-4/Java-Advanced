@@ -212,7 +212,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 2. **Normalização Automática de Entidades:** O `EnderecoService` decompõe a resposta, garantindo a normalização e reaproveitamento de `Bairro`, `Cidade` e `Estado` no Oracle Database sem duplicidades.
 
 ### 5. Fluxo de Processamento PL/SQL no Oracle Database (Stored Procedures)
-1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos`, `/pets/{id}/pontos`, `/pets/{petId}/cuidadores/me/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet`, `pr_calcular_pontuacao_usuario`, `pr_calcular_pontuacao_usuario_pet`) calculando os pontos de tarefas e aulas concluídas diretamente no banco de dados.
+1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos` e `/pets/{id}/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet` e `pr_calcular_pontuacao_usuario`) calculando os pontos de tarefas e aulas concluídas diretamente no banco de dados.
 2. **Transferência Atômica de Titularidade:** Disparado por `PATCH /pets/{petId}/responsavel-principal`, executa `pkg_petguardian.pr_transferir_responsavel_principal` garantindo consistência na troca do titular principal do animal.
 
 ---
