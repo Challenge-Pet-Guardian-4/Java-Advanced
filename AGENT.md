@@ -56,7 +56,7 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
 - `GET /usuarios` | `GET /usuarios/by-email` | `PATCH /usuarios/{id}/role`: Ações administrativas (`ADMIN`).
 
 ### Pets & Care Circle (`/pets`)
-- `GET /pets/me`: Pets vinculados ao usuário logado (tutor principal ou co-cuidador).
+- `GET /pets/me`: Pets vinculados ao usuário logado (tutor principal ou co-cuidador, com paginação padrão de 4 pets por página via Spring Data).
 - `GET /pets/me/pontos`: Pontuação agregada dos pets do usuário via Stored Procedure.
 - `GET /pets/me/historico`: Tarefas concluídas de todos os pets do usuário logado.
 - `GET /pets/{id}` | `POST /pets` | `PUT /pets/{id}` | `DELETE /pets/{id}`: Gestão do animal (criador torna-se responsável principal).
@@ -68,7 +68,7 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
 - `PATCH /pets/{petId}/responsavel-principal`: Transferência atômica de titularidade via Stored Procedure.
 
 ### Tarefas da Rotina (`/tarefas`)
-- `GET /tarefas/me`: Tarefas do cuidador logado com auto-expiração dinâmica de vencidas.
+- `GET /tarefas/me`: Tarefas do cuidador logado com auto-expiração de tarefas pendentes vencidas no banco via Spring Data.
 - `GET /tarefas/me/pontos`: Pontos acumulados de rotina do cuidador autenticado.
 - `GET /tarefas/by-pet/{petId}`: Lista tarefas de rotina de um pet.
 - `GET /tarefas/{id}` | `POST /tarefas` | `PUT /tarefas/{id}` | `DELETE /tarefas/{id}`: CRUD da rotina.
@@ -81,7 +81,8 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
 - `GET /historicos/{id}` | `POST /historicos` | `PUT /historicos/{id}` | `DELETE /historicos/{id}`: Gestão de eventos de saúde.
 
 ### Trilhas Educativas, Módulos & Aulas (`/trilhas`, `/modulos`, `/aulas`) — *PREMIUM & ADMIN*
-- `GET /trilhas/me` | `GET /trilhas/pet/{petId}` | `GET /trilhas/{id}`: Trilhas de adestramento do animal.
+- `GET /trilhas/me`: Trilhas de adestramento dos pets do usuário autenticado consolidadas com módulos e aulas em árvore única.
+- `GET /trilhas` | `GET /trilhas/pet/{petId}` | `GET /trilhas/{id}`: Trilhas de adestramento do animal.
 - `GET /modulos/trilha/{trilhaId}` | `GET /modulos/{id}`: Módulos pedagógicos.
 - `GET /aulas/modulo/{moduloId}` | `GET /aulas/{id}`: Metadados relacionais da aula no Oracle.
 - `PATCH /aulas/{id}/concluir` | `PATCH /aulas/{id}/desmarcar`: Conclusão ou estorno de lição somando pontos ao pet.

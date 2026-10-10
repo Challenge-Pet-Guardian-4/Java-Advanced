@@ -192,7 +192,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 
 ### 1. Fluxo de Gamificação e Ciclo de Vida da Rotina
 1. **Criação de Tarefa:** O tutor cria uma rotina (`/tarefas`) vinculando pet e responsável. O sistema valida se o usuário pertence à rede de cuidado do animal e inicializa com status `PENDENTE`.
-2. **Auto-Expiração Inteligente:** Ao listar tarefas, o método `expirarTarefasPendentesAtrasadas()` avalia o `prazo` contra o relógio do servidor (`LocalDateTime.now()`) e transiciona tarefas atrasadas para `EXPIRADO` de forma automática.
+2. **Auto-Expiração Inteligente:** Ao listar ou buscar tarefas, o método `expirarTarefasPendentesAtrasadas()` avalia o `prazo` contra o relógio do servidor (`LocalDateTime.now()`) e transiciona tarefas pendentes atrasadas para `EXPIRADO` diretamente no banco de dados via Spring Data JPA.
 3. **Conclusão e Gamificação:** O cuidador conclui a tarefa via `PATCH /tarefas/{id}/concluir` autenticado via JWT. O sistema credita imediatamente os pontos ao cuidador (`calcularPontosTotaisUsuario`) e soma ao score de bem-estar do pet.
 4. **Desmarcação Resiliente:** Se houver necessidade de cancelamento ou correção operacional, o endpoint `PATCH /tarefas/{id}/desmarcar` (autenticado via JWT) valida a titularidade do cuidador no Care Circle, remove os pontos acumulados e retorna a tarefa para `PENDENTE`.
 
@@ -272,7 +272,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 ### 3. Pets (`/pets`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/pets/me` | Listar pets associados ao usuário logado como tutor ou co-cuidador | Autenticado |
+| `GET` | `/pets/me` | Listar pets associados ao usuário logado como tutor ou co-cuidador (paginação padrão de 4 pets por página via Spring Data) | Autenticado |
 | `GET` | `/pets` | Listar todos os pets do sistema com paginação | `ADMIN` |
 | `GET` | `/pets/by-usuario` | Listar todos os pets vinculados ao usuário (`?usuarioId=1`) como titular ou co-cuidador | `ADMIN` |
 | `GET` | `/pets/{id}` | Buscar pet por ID | Autenticado |
@@ -328,6 +328,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 ### 7. Trilhas Educativas (`/trilhas`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
+| `GET` | `/trilhas/me` | Listar todas as trilhas, módulos e aulas completas dos pets do usuário logado via JWT em árvore consolidada | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas` | Listar todas as trilhas disponíveis | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/pet/{petId}` | Listar trilhas atribuídas a um pet | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/{id}` | Buscar trilha por ID | `PREMIUM`, `ADMIN` |
