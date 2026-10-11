@@ -151,7 +151,6 @@ CREATE TABLE aula (
     descricao        VARCHAR2(100) NOT NULL,
     pontos_aula      NUMBER(10) NOT NULL,
     dificuldade      VARCHAR2(20) NOT NULL,
-    conteudo         VARCHAR2(1000) NOT NULL,
     concluida        NUMBER(1) NOT NULL,
     modulo_id_modulo NUMBER(19) NOT NULL,
     CONSTRAINT aula_pk PRIMARY KEY (id_aula),

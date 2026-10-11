@@ -56,3 +56,15 @@ tasks.named('test') {
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.add('-parameters')
 }
+
+tasks.named('bootRun') {
+    if (file('.env').exists()) {
+        file('.env').eachLine { line ->
+            def trimmed = line.trim()
+            if (trimmed && !trimmed.startsWith('#') && trimmed.contains('=')) {
+                def parts = trimmed.split('=', 2)
+                environment parts[0].trim(), parts[1].trim()
+            }
+        }
+    }
+}

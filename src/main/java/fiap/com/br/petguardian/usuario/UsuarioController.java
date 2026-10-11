@@ -35,13 +35,13 @@ public class UsuarioController {
 
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar perfil do usuário autenticado")
+    @Operation(summary = "[AUTENTICADO] Buscar perfil do usuário autenticado")
     public UsuarioResponse getMe(Authentication authentication) {
         return UsuarioResponse.fromEntity(usuarioService.findByEmail(authentication.getName()));
     }
 
     @PutMapping("/me")
-    @Operation(summary = "Atualizar perfil do usuário autenticado")
+    @Operation(summary = "[AUTENTICADO] Atualizar perfil do usuário autenticado")
     public ResponseEntity<UsuarioResponse> updateMe(Authentication authentication, @Valid @RequestBody UsuarioRequest usuarioRequest) {
         Usuario usuario = usuarioService.update(authentication.getName(), usuarioRequest);
         return ResponseEntity.ok()
@@ -51,14 +51,14 @@ public class UsuarioController {
 
     @DeleteMapping("/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Deletar perfil do usuário autenticado")
+    @Operation(summary = "[AUTENTICADO] Deletar perfil do usuário autenticado")
     public void deleteMe(Authentication authentication) {
         usuarioService.delete(authentication.getName());
     }
 
     @GetMapping("/me/rede-cuidado")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Visualizar rede de cuidado do usuário autenticado")
+    @Operation(summary = "[AUTENTICADO] Visualizar rede de cuidado do usuário autenticado")
     @Tag(name = "Care Circle", description = "Gestão colaborativa de tutores e co-cuidadores do pet")
     public RedeCuidadoResponse getMyRedeCuidado(Authentication authentication) {
         return usuarioPetService.montarRedeCuidado(authentication.getName());
@@ -66,7 +66,7 @@ public class UsuarioController {
 
     @PatchMapping("/me/upgrade-premium")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Realizar upgrade do perfil do usuário autenticado para PREMIUM")
+    @Operation(summary = "[AUTENTICADO] Realizar upgrade do perfil do usuário autenticado para PREMIUM")
     public UsuarioResponse upgradeMyPremium(Authentication authentication) {
         return UsuarioResponse.fromEntity(usuarioService.upgradePremium(authentication.getName()));
     }
@@ -77,14 +77,14 @@ public class UsuarioController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar usuário (cadastro público de tutor)")
+    @Operation(summary = "[PÚBLICO] Criar usuário (cadastro público de tutor)")
     public UsuarioResponse create(@Valid @RequestBody UsuarioRequest usuarioRequest) {
         return UsuarioResponse.fromEntity(usuarioService.create(usuarioRequest));
     }
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar usuário por ID")
+    @Operation(summary = "[DONO / ADMIN] Buscar usuário por ID")
     @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public UsuarioResponse findById(@PathVariable Long id) {
         return UsuarioResponse.fromEntity(usuarioService.findById(id));
@@ -92,7 +92,7 @@ public class UsuarioController {
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar usuário")
+    @Operation(summary = "[DONO / ADMIN] Atualizar usuário por ID")
     @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public UsuarioResponse update(@PathVariable Long id, @Valid @RequestBody UsuarioRequest usuarioRequest) {
         return UsuarioResponse.fromEntity(usuarioService.update(id, usuarioRequest));
@@ -100,7 +100,7 @@ public class UsuarioController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Deletar usuário")
+    @Operation(summary = "[DONO / ADMIN] Deletar usuário por ID")
     @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public void delete(@PathVariable Long id) {
         usuarioService.delete(id);
@@ -108,7 +108,7 @@ public class UsuarioController {
 
     @PatchMapping("/{id}/upgrade-premium")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Realizar upgrade do perfil COMUM para PREMIUM (simulação de adesão ao plano)")
+    @Operation(summary = "[DONO / ADMIN] Realizar upgrade do perfil COMUM para PREMIUM")
     @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public UsuarioResponse upgradePremium(@PathVariable Long id) {
         return UsuarioResponse.fromEntity(usuarioService.upgradePremium(usuarioService.findById(id).getEmail()));
@@ -120,7 +120,7 @@ public class UsuarioController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todos os usuários com paginação e ordenação (somente ADMIN)")
+    @Operation(summary = "[ADMIN] Listar todos os usuários com paginação e ordenação")
     @PreAuthorize("hasRole('ADMIN')")
     public Page<UsuarioResponse> findAll(@PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable) {
         return usuarioService.findAll(pageable)
@@ -129,7 +129,7 @@ public class UsuarioController {
 
     @GetMapping("/by-email")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar usuário por e-mail (somente ADMIN)")
+    @Operation(summary = "[ADMIN] Buscar usuário por e-mail")
     @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse findByEmail(@RequestParam String email) {
         return UsuarioResponse.fromEntity(usuarioService.findByEmail(email));
@@ -137,7 +137,7 @@ public class UsuarioController {
 
     @GetMapping("/{id}/rede-cuidado")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Visualizar rede de cuidado do usuário por ID (somente ADMIN)")
+    @Operation(summary = "[ADMIN] Visualizar rede de cuidado do usuário por ID")
     @Tag(name = "Care Circle", description = "Gestão colaborativa de tutores e co-cuidadores do pet")
     @Tag(name = "Usuário", description = "Gerenciamento de usuários")
     @PreAuthorize("hasRole('ADMIN')")
@@ -147,7 +147,7 @@ public class UsuarioController {
 
     @PatchMapping("/{id}/role")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Alterar role do usuário (somente ADMIN)")
+    @Operation(summary = "[ADMIN] Alterar role do usuário")
     @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse updateRole(@PathVariable Long id, @Valid @RequestBody RoleUpdateRequest request) {
         return UsuarioResponse.fromEntity(usuarioService.updateRole(id, request.role()));

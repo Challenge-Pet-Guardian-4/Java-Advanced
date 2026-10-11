@@ -13,14 +13,14 @@ public record AulaResponse(
         Long moduloId,
         String nomeModulo
 ) {
-    public static AulaResponse fromEntity(Aula a) {
+    public static AulaResponse fromEntity(Aula a, String conteudo) {
         return new AulaResponse(
                 a.getId(),
                 a.getNome(),
                 a.getDescricao(),
                 a.getPontosAula(),
                 a.getDificuldade(),
-                a.getConteudo(),
+                conteudo,
                 a.isConcluida(),
                 a.getModulo().getId(),
                 a.getModulo().getNome()

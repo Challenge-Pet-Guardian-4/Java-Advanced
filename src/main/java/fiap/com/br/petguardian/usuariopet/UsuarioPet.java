@@ -7,6 +7,18 @@ import lombok.*;
 
 @Entity
 @Table(name = "usuario_pet")
+@NamedStoredProcedureQuery(
+        name = "UsuarioPet.obterResumoRedeCuidado",
+        procedureName = "pkg_petguardian.pr_obter_resumo_rede_cuidado",
+        parameters = {
+                @StoredProcedureParameter(mode = ParameterMode.IN, name = "p_id_usuario", type = Long.class),
+                @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_total_pets", type = Integer.class),
+                @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_total_cuidadores", type = Integer.class),
+                @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_tarefas_pendentes", type = Integer.class),
+                @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_tarefas_concluidas", type = Integer.class),
+                @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_acumulados", type = Integer.class)
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor

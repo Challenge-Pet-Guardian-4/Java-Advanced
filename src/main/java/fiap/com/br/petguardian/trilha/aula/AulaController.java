@@ -31,32 +31,28 @@ public class AulaController {
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar aula por ID")
+    @Operation(summary = "[PREMIUM / ADMIN] Buscar aula por ID")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public AulaResponse findById(@PathVariable Long id) {
-        return AulaResponse.fromEntity(aulaService.findById(id));
+        return aulaService.findById(id);
     }
 
     @GetMapping("/modulo/{moduloId}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar aulas associadas a um modulo")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar aulas associadas a um modulo")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<AulaResponse> findByModuloId(@PathVariable Long moduloId) {
-        return aulaService.findAllByModuloId(moduloId)
-                .stream()
-                .map(AulaResponse::fromEntity)
-                .toList();
+        return aulaService.findAllByModuloId(moduloId);
     }
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todas as aulas com paginação e ordenação")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar todas as aulas com paginação e ordenação")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public Page<AulaResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
-        return aulaService.findAll(pageable)
-                .map(AulaResponse::fromEntity);
+        return aulaService.findAll(pageable);
     }
 
     // =========================================================================
@@ -65,18 +61,18 @@ public class AulaController {
 
     @PatchMapping("/{id}/concluir")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Concluir aula")
+    @Operation(summary = "[PREMIUM / ADMIN] Concluir aula")
     @PreAuthorize("hasRole('ADMIN') or (hasRole('PREMIUM') and @aulaService.isCuidadorDaAula(#id, authentication.name))")
     public AulaResponse concluir(@PathVariable Long id, Authentication authentication) {
-        return AulaResponse.fromEntity(aulaService.concluir(id, authentication.getName()));
+        return aulaService.concluir(id, authentication.getName());
     }
 
     @PatchMapping("/{id}/desmarcar")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Desmarcar aula concluida retornando ao estado nao concluido")
+    @Operation(summary = "[PREMIUM / ADMIN] Desmarcar aula concluida retornando ao estado nao concluido")
     @PreAuthorize("hasRole('ADMIN') or (hasRole('PREMIUM') and @aulaService.isCuidadorDaAula(#id, authentication.name))")
     public AulaResponse desmarcar(@PathVariable Long id, Authentication authentication) {
-        return AulaResponse.fromEntity(aulaService.desmarcar(id, authentication.getName()));
+        return aulaService.desmarcar(id, authentication.getName());
     }
 
     // =========================================================================
@@ -85,23 +81,23 @@ public class AulaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar nova aula para um modulo")
+    @Operation(summary = "[ADMIN] Criar nova aula para um modulo")
     @PreAuthorize("hasRole('ADMIN')")
     public AulaResponse create(@Valid @RequestBody AulaRequest request) {
-        return AulaResponse.fromEntity(aulaService.create(request));
+        return aulaService.create(request);
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar aula")
+    @Operation(summary = "[ADMIN] Atualizar aula")
     @PreAuthorize("hasRole('ADMIN')")
     public AulaResponse update(@PathVariable Long id, @Valid @RequestBody AulaRequest request) {
-        return AulaResponse.fromEntity(aulaService.update(id, request));
+        return aulaService.update(id, request);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Deletar aula")
+    @Operation(summary = "[ADMIN] Deletar aula")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         aulaService.delete(id);

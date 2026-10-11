@@ -49,7 +49,7 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
 - `POST /login`: Autenticação e geração de token JWT.
 - `POST /usuarios`: Cadastro público de tutor (perfil inicial `COMUM`).
 - `GET /usuarios/me`: Perfil do usuário logado via JWT.
-- `PUT /usuarios/me`: Atualização cadastral própria.
+- `PUT /usuarios/me`: Atualização cadastral própria. Caso o e-mail seja alterado, emite novo token JWT no header `X-Novo-Token` (exposto pelo `CorsConfig`).
 - `DELETE /usuarios/me`: Encerramento da própria conta.
 - `GET /usuarios/me/rede-cuidado`: Visão consolidada da rede (pets, co-cuidadores, tarefas da semana e pontuação via procedure).
 - `PATCH /usuarios/me/upgrade-premium`: Upgrade de perfil de `COMUM` para `PREMIUM`.
@@ -119,3 +119,17 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
    - `401`: `AuthenticationException`.
    - `403`: `AccessDeniedException`.
    - `404`: `ResourceNotFoundException`.
+   - `409`: `DataIntegrityViolationException` (violações de chave única/integridade relacional como `ORA-00001`).
+
+8. **Migrações Flyway Idempotentes:**
+   - Scripts em `src/main/resources/db/migration/` (`V1__...` a `V4__...`).
+   - `V1__criar_tabelas.sql`: DDL 100% alinhado com o Oracle corporativo da FIAP (tabela `aula` sem coluna `conteudo`).
+   - `V2__carga_inicial_status.sql`: Status de domínio fixos (`PENDENTE=1`, `CONCLUIDO=2`, `EXPIRADO=3`).
+   - `V3__admin_inicial.sql`: Usuário administrador inicial (`enzo.admin@petguardian.com`) parametrizado com `${ADMIN_BCRYPT_HASH}` e guardas de idempotência.
+   - `V4__indice_tarefa_status_prazo.sql`: Índice com tratamento de erros `ORA-00955` e `ORA-01408`.
+
+9. **Arquitetura Poliglota (Aulas Oracle + MongoDB NoSQL):**
+   - A tabela relacional `aula` no Oracle armazena metadados relacionais e vínculo com `modulo`.
+   - O conteúdo pedagógico rico (Markdown e links) é persistido no MongoDB (`conteudos_aula`).
+   - Ao consultar aulas (`GET /aulas/{id}`, `GET /aulas` e `GET /trilhas/me`), `AulaService` e `TrilhaService` agregam os dados do Oracle com o documento do MongoDB de forma resiliente (fallback seguro caso o Mongo esteja inacessível).
+   - Operações de escrita em conteúdos de aula (`POST`, `PUT`, `DELETE`) são exclusivas de `ADMIN`. Usuários `PREMIUM` podem apenas consumir e marcar/desmarcar conclusão da aula no pet.

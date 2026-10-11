@@ -171,7 +171,7 @@ O schema relacional completo do ecossistema é mantido diretamente no **Oracle D
 A modelagem contempla 15 tabelas relacionais (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`), além de tabelas de auditoria:
 
 - **Script DDL & Packages:** Disponível em [`Database-Advanced/sprint4_pkg_petguardian.sql`](../Database-Advanced/sprint4_pkg_petguardian.sql), com criação idempotente de tabelas, triggers de auditoria, constraints e procedures.
-- **Suporte ao Flyway:** A aplicação inclui a biblioteca `org.flywaydb:flyway-database-oracle` no `build.gradle`. Por padrão, na base gerenciada da FIAP onde o schema já se encontra provisionado pela equipe, a execução automática permanece desabilitada (`spring.flyway.enabled=false`), com validação e sincronização das entidades via JPA (`spring.jpa.hibernate.ddl-auto=update`).
+- **Suporte ao Flyway:** A aplicação inclui a biblioteca `org.flywaydb:flyway-database-oracle` no `build.gradle` com migrações versionadas (`V1__...` a `V4__...`). Por padrão, a execução automática é habilitada com suporte a baseline seguro (`spring.flyway.baseline-on-migrate=true`, baseline 1), permitindo tanto evolução em bases limpas quanto coexistência com schemas já provisionados, e DDL gerenciado (`spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:none}`).
 
 Configurações ativas no `application.properties`:
 ```properties
@@ -180,8 +180,11 @@ spring.datasource.username=${ORACLE_USER}
 spring.datasource.password=${ORACLE_PASSWORD}
 spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
 spring.jpa.database-platform=org.hibernate.dialect.OracleDialect
-spring.jpa.hibernate.ddl-auto=update
-spring.flyway.enabled=${SPRING_FLYWAY_ENABLED:false}
+spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:none}
+spring.flyway.enabled=${SPRING_FLYWAY_ENABLED:true}
+spring.flyway.baseline-on-migrate=true
+spring.flyway.baseline-version=1
+spring.flyway.placeholders.ADMIN_BCRYPT_HASH=${ADMIN_BCRYPT_HASH:}
 ```
 
 ---
@@ -411,6 +414,11 @@ Parâmetros ativos no `.env`:
 ORACLE_URL=jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl
 ORACLE_USER=RM561432
 ORACLE_PASSWORD=sua_senha_aqui
+JPA_DDL_AUTO=none
+
+# Flyway Migrations (Oracle 19c)
+SPRING_FLYWAY_ENABLED=true
+ADMIN_BCRYPT_HASH=$2a$10$wE99o7qgE7P/fH8uL5l79uSgQxS2W3rB7t0Z8bY9c0D1e2F3g4H5i
 
 # MongoDB NoSQL
 MONGOHOST=localhost

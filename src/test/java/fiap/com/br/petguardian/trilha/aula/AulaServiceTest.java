@@ -1,6 +1,8 @@
 package fiap.com.br.petguardian.trilha.aula;
 
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.aula.dto.AulaRequest;
+import fiap.com.br.petguardian.trilha.aula.dto.AulaResponse;
 import fiap.com.br.petguardian.trilha.modulo.Modulo;
 import fiap.com.br.petguardian.trilha.modulo.ModuloRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +42,9 @@ class AulaServiceTest {
     @Mock
     private UsuarioRepository usuarioRepository;
 
+    @Mock
+    private ConteudoAulaRepository conteudoRepository;
+
     @InjectMocks
     private AulaService aulaService;
 
@@ -47,17 +52,18 @@ class AulaServiceTest {
     @DisplayName("Deve criar aula associada a um modulo")
     void deveCriarAula() {
         Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
-        var request = new AulaRequest("Comando Senta!", "Ensine o pet a sentar", 25, "FACIL", "Passo 1: petisco", false, 10L);
-        Aula aulaSalva = Aula.builder().id(100L).nome("Comando Senta!").descricao("Ensine o pet a sentar").pontosAula(25).dificuldade("FACIL").conteudo("Passo 1: petisco").concluida(false).modulo(modulo).build();
+        var request = new AulaRequest("Comando Senta!", "Ensine o pet a sentar", 25, "FACIL", false, 10L);
+        Aula aulaSalva = Aula.builder().id(100L).nome("Comando Senta!").descricao("Ensine o pet a sentar").pontosAula(25).dificuldade("FACIL").concluida(false).modulo(modulo).build();
 
         when(moduloRepository.findById(10L)).thenReturn(Optional.of(modulo));
         when(aulaRepository.save(any(Aula.class))).thenReturn(aulaSalva);
 
-        Aula resultado = aulaService.create(request);
+        AulaResponse resultado = aulaService.create(request);
 
         assertNotNull(resultado);
-        assertEquals("Comando Senta!", resultado.getNome());
-        assertEquals(25, resultado.getPontosAula());
+        assertEquals("Comando Senta!", resultado.nome());
+        assertEquals(25, resultado.pontosAula());
+        assertNull(resultado.conteudo());
         verify(aulaRepository).save(any(Aula.class));
     }
 
@@ -70,10 +76,10 @@ class AulaServiceTest {
         when(moduloRepository.findById(10L)).thenReturn(Optional.of(modulo));
         when(aulaRepository.findAllByModuloId(10L)).thenReturn(List.of(aula));
 
-        List<Aula> resultado = aulaService.findAllByModuloId(10L);
+        List<AulaResponse> resultado = aulaService.findAllByModuloId(10L);
 
         assertEquals(1, resultado.size());
-        assertEquals("Comando Senta!", resultado.get(0).getNome());
+        assertEquals("Comando Senta!", resultado.get(0).nome());
     }
 
 
@@ -86,6 +92,7 @@ class AulaServiceTest {
         aulaService.delete(100L);
 
         verify(aulaRepository).deleteById(100L);
+        verify(conteudoRepository).deleteByAulaId(100L);
     }
 
     @Test
@@ -102,9 +109,9 @@ class AulaServiceTest {
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("carolina@petguardian.com", 10L)).thenReturn(true);
         when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Aula resultado = aulaService.concluir(100L, "carolina@petguardian.com");
+        AulaResponse resultado = aulaService.concluir(100L, "carolina@petguardian.com");
 
-        assertTrue(resultado.isConcluida());
+        assertTrue(resultado.concluida());
         verify(aulaRepository).save(aula);
     }
 
@@ -138,9 +145,9 @@ class AulaServiceTest {
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("carolina@petguardian.com", 10L)).thenReturn(true);
         when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Aula resultado = aulaService.desmarcar(100L, "carolina@petguardian.com");
+        AulaResponse resultado = aulaService.desmarcar(100L, "carolina@petguardian.com");
 
-        assertFalse(resultado.isConcluida());
+        assertFalse(resultado.concluida());
         verify(aulaRepository).save(aula);
     }
 

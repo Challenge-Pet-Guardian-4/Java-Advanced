@@ -6,6 +6,7 @@ import fiap.com.br.petguardian.trilha.modulo.Modulo;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 
 public record TrilhaCompletaResponse(
         Long id,
@@ -15,11 +16,11 @@ public record TrilhaCompletaResponse(
         String nomePet,
         List<ModuloCompletoResponse> modulos
 ) {
-    public static TrilhaCompletaResponse fromEntity(Trilha t) {
+    public static TrilhaCompletaResponse fromEntity(Trilha t, Function<Long, String> conteudoResolver) {
         List<ModuloCompletoResponse> modulos = t.getModulos() == null ? List.of() :
                 t.getModulos().stream()
                         .sorted(Comparator.comparing(Modulo::getId))
-                        .map(ModuloCompletoResponse::fromEntity)
+                        .map(m -> ModuloCompletoResponse.fromEntity(m, conteudoResolver))
                         .toList();
 
         return new TrilhaCompletaResponse(
@@ -32,6 +33,10 @@ public record TrilhaCompletaResponse(
         );
     }
 
+    public static TrilhaCompletaResponse fromEntity(Trilha t) {
+        return fromEntity(t, id -> null);
+    }
+
     public record ModuloCompletoResponse(
             Long id,
             String nome,
@@ -39,11 +44,11 @@ public record TrilhaCompletaResponse(
             String descricao,
             List<AulaCompletaResponse> aulas
     ) {
-        public static ModuloCompletoResponse fromEntity(Modulo m) {
+        public static ModuloCompletoResponse fromEntity(Modulo m, Function<Long, String> conteudoResolver) {
             List<AulaCompletaResponse> aulas = m.getAulas() == null ? List.of() :
                     m.getAulas().stream()
                             .sorted(Comparator.comparing(Aula::getId))
-                            .map(AulaCompletaResponse::fromEntity)
+                            .map(a -> AulaCompletaResponse.fromEntity(a, conteudoResolver.apply(a.getId())))
                             .toList();
 
             return new ModuloCompletoResponse(
@@ -65,14 +70,14 @@ public record TrilhaCompletaResponse(
             String conteudo,
             boolean concluida
     ) {
-        public static AulaCompletaResponse fromEntity(Aula a) {
+        public static AulaCompletaResponse fromEntity(Aula a, String conteudo) {
             return new AulaCompletaResponse(
                     a.getId(),
                     a.getNome(),
                     a.getDescricao(),
                     a.getPontosAula(),
                     a.getDificuldade(),
-                    a.getConteudo(),
+                    conteudo,
                     a.isConcluida()
             );
         }

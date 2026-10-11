@@ -3,6 +3,9 @@ package fiap.com.br.petguardian.trilha;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAula;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.dto.TrilhaCompletaResponse;
 import fiap.com.br.petguardian.trilha.dto.TrilhaRequest;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +14,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +25,7 @@ public class TrilhaService {
 
     private final TrilhaRepository trilhaRepository;
     private final PetRepository petRepository;
+    private final ConteudoAulaRepository conteudoRepository;
 
     public Page<Trilha> findAll(Pageable pageable) {
         return trilhaRepository.findAll(pageable);
@@ -36,9 +43,32 @@ public class TrilhaService {
 
     @Transactional(readOnly = true)
     public List<TrilhaCompletaResponse> findTrilhasCompletasByUsuarioEmail(String email) {
-        return trilhaRepository.findAllByUsuarioEmail(email.trim()).stream()
-                .map(TrilhaCompletaResponse::fromEntity)
+        List<Trilha> trilhas = trilhaRepository.findAllByUsuarioEmail(email.trim());
+        List<Long> aulaIds = trilhas.stream()
+                .filter(t -> t.getModulos() != null)
+                .flatMap(t -> t.getModulos().stream())
+                .filter(m -> m.getAulas() != null)
+                .flatMap(m -> m.getAulas().stream())
+                .map(Aula::getId)
                 .toList();
+
+        Map<Long, String> conteudos = buscarConteudosEmLote(aulaIds);
+        return trilhas.stream()
+                .map(t -> TrilhaCompletaResponse.fromEntity(t, conteudos::get))
+                .toList();
+    }
+
+    private Map<Long, String> buscarConteudosEmLote(Collection<Long> aulaIds) {
+        if (aulaIds == null || aulaIds.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return conteudoRepository.findByAulaIdIn(aulaIds).stream()
+                    .filter(c -> c.getCorpoMarkdown() != null)
+                    .collect(Collectors.toMap(ConteudoAula::getAulaId, ConteudoAula::getCorpoMarkdown, (a, b) -> a));
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 
     public Trilha findById(Long id) {

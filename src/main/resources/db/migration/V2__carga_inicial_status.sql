@@ -2,11 +2,6 @@
 -- V2: Carga Inicial Idempotente da Tabela STATUS (Oracle 19c)
 -- =========================================================================
 
-MERGE INTO status s
-USING (
-    SELECT 'PENDENTE' AS nome_status FROM dual UNION ALL
-    SELECT 'CONCLUIDO' AS nome_status FROM dual UNION ALL
-    SELECT 'EXPIRADO' AS nome_status FROM dual
-) d ON (s.nome_status = d.nome_status)
-WHEN NOT MATCHED THEN
-    INSERT (nome_status) VALUES (d.nome_status);
+INSERT INTO status (nome_status) SELECT 'PENDENTE' FROM dual WHERE NOT EXISTS (SELECT 1 FROM status WHERE nome_status = 'PENDENTE');
+INSERT INTO status (nome_status) SELECT 'CONCLUIDO' FROM dual WHERE NOT EXISTS (SELECT 1 FROM status WHERE nome_status = 'CONCLUIDO');
+INSERT INTO status (nome_status) SELECT 'EXPIRADO' FROM dual WHERE NOT EXISTS (SELECT 1 FROM status WHERE nome_status = 'EXPIRADO');

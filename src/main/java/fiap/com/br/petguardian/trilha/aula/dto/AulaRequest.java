@@ -24,10 +24,6 @@ public record AulaRequest(
         @Size(max = 20)
         String dificuldade,
 
-        @NotBlank
-        @Size(max = 1000)
-        String conteudo,
-
         @NotNull
         Boolean concluida,
 
@@ -40,7 +36,6 @@ public record AulaRequest(
                 .descricao(descricao)
                 .pontosAula(pontosAula)
                 .dificuldade(dificuldade)
-                .conteudo(conteudo)
                 .concluida(concluida)
                 .modulo(modulo)
                 .build();

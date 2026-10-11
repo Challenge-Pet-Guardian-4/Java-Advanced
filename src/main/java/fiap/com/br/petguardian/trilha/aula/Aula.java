@@ -30,9 +30,6 @@ public class Aula {
     @Column(nullable = false, length = 20)
     private String dificuldade;
 
-    @Column(nullable = false, length = 1000)
-    private String conteudo;
-
     @Column(nullable = false)
     @Builder.Default
     private boolean concluida = false;

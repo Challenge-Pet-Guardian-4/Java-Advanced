@@ -1,7 +1,10 @@
 package fiap.com.br.petguardian.trilha.aula;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAula;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.aula.dto.AulaRequest;
+import fiap.com.br.petguardian.trilha.aula.dto.AulaResponse;
 import fiap.com.br.petguardian.trilha.modulo.Modulo;
 import fiap.com.br.petguardian.trilha.modulo.ModuloRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
@@ -14,7 +17,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,6 +30,7 @@ public class AulaService {
     private final ModuloRepository moduloRepository;
     private final UsuarioPetRepository usuarioPetRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ConteudoAulaRepository conteudoRepository;
 
     public boolean isCuidadorDaAula(Long aulaId, String email) {
         Aula aula = findAulaById(aulaId);
@@ -31,53 +38,95 @@ public class AulaService {
         return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId);
     }
 
-    public Page<Aula> findAll(Pageable pageable) {
-        return aulaRepository.findAll(pageable);
+    public Page<AulaResponse> findAll(Pageable pageable) {
+        Page<Aula> aulas = aulaRepository.findAll(pageable);
+        Map<Long, String> conteudos = buscarConteudosEmLote(aulas.map(Aula::getId).toList());
+        return aulas.map(aula -> AulaResponse.fromEntity(aula, conteudos.get(aula.getId())));
     }
 
-    public List<Aula> findAllByModuloId(Long moduloId) {
+    public List<AulaResponse> findAllByModuloId(Long moduloId) {
         findModuloById(moduloId);
-        return aulaRepository.findAllByModuloId(moduloId);
+        List<Aula> aulas = aulaRepository.findAllByModuloId(moduloId);
+        Map<Long, String> conteudos = buscarConteudosEmLote(aulas.stream().map(Aula::getId).toList());
+        return aulas.stream()
+                .map(aula -> AulaResponse.fromEntity(aula, conteudos.get(aula.getId())))
+                .toList();
     }
 
-    public Aula findById(Long id) {
-        return findAulaById(id);
+    public AulaResponse findById(Long id) {
+        Aula aula = findAulaById(id);
+        return AulaResponse.fromEntity(aula, buscarConteudoMarkdown(id));
     }
 
     @Transactional
-    public Aula create(AulaRequest request) {
+    public AulaResponse create(AulaRequest request) {
         Modulo modulo = findModuloById(request.moduloId());
-        return aulaRepository.save(request.toEntity(modulo));
+        Aula aulaSalva = aulaRepository.save(request.toEntity(modulo));
+        return AulaResponse.fromEntity(aulaSalva, null);
     }
 
     @Transactional
-    public Aula update(Long id, AulaRequest request) {
+    public AulaResponse update(Long id, AulaRequest request) {
         Aula aula = findAulaById(id);
         Modulo modulo = findModuloById(request.moduloId());
         aplicarEm(aula, request, modulo);
-        return aulaRepository.save(aula);
+        Aula aulaAtualizada = aulaRepository.save(aula);
+        return AulaResponse.fromEntity(aulaAtualizada, buscarConteudoMarkdown(id));
     }
 
     @Transactional
     public void delete(Long id) {
         findAulaById(id);
         aulaRepository.deleteById(id);
+        removerConteudoDoMongo(id);
     }
 
     @Transactional
-    public Aula concluir(Long id, String authEmail) {
+    public AulaResponse concluir(Long id, String authEmail) {
         Aula aula = findAulaById(id);
         validarCuidadorDaAula(aula, authEmail);
         aula.setConcluida(true);
-        return aulaRepository.save(aula);
+        Aula salva = aulaRepository.save(aula);
+        return AulaResponse.fromEntity(salva, buscarConteudoMarkdown(id));
     }
 
     @Transactional
-    public Aula desmarcar(Long id, String authEmail) {
+    public AulaResponse desmarcar(Long id, String authEmail) {
         Aula aula = findAulaById(id);
         validarCuidadorDaAula(aula, authEmail);
         aula.setConcluida(false);
-        return aulaRepository.save(aula);
+        Aula salva = aulaRepository.save(aula);
+        return AulaResponse.fromEntity(salva, buscarConteudoMarkdown(id));
+    }
+
+    public String buscarConteudoMarkdown(Long aulaId) {
+        try {
+            return conteudoRepository.findByAulaId(aulaId)
+                    .map(ConteudoAula::getCorpoMarkdown)
+                    .orElse(null);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public Map<Long, String> buscarConteudosEmLote(Collection<Long> aulaIds) {
+        if (aulaIds == null || aulaIds.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return conteudoRepository.findByAulaIdIn(aulaIds).stream()
+                    .filter(c -> c.getCorpoMarkdown() != null)
+                    .collect(Collectors.toMap(ConteudoAula::getAulaId, ConteudoAula::getCorpoMarkdown, (a, b) -> a));
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    private void removerConteudoDoMongo(Long aulaId) {
+        try {
+            conteudoRepository.deleteByAulaId(aulaId);
+        } catch (Exception ignored) {
+        }
     }
 
     private Aula findAulaById(Long id) {
@@ -95,7 +144,6 @@ public class AulaService {
         aula.setDescricao(request.descricao());
         aula.setPontosAula(request.pontosAula());
         aula.setDificuldade(request.dificuldade());
-        aula.setConteudo(request.conteudo());
         aula.setConcluida(request.concluida());
         aula.setModulo(modulo);
     }

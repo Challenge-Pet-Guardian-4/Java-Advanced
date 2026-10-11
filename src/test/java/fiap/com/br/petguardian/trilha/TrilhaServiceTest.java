@@ -2,6 +2,7 @@ package fiap.com.br.petguardian.trilha;
 
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.dto.TrilhaRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class TrilhaServiceTest {
 
     @Mock
     private PetRepository petRepository;
+
+    @Mock
+    private ConteudoAulaRepository conteudoRepository;
 
     @InjectMocks
     private TrilhaService trilhaService;

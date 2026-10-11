@@ -12,9 +12,9 @@ public interface PetRepository extends JpaRepository<Pet, Long> {
 
     Page<Pet> findByUsuarioPetsUsuarioId(Long usuarioId, Pageable pageable);
 
-    @Procedure(procedureName = "pkg_petguardian.pr_calcular_pontuacao_pet")
+    @Procedure(name = "Pet.calcularPontuacaoPet")
     Map<String, Object> calcularPontuacaoPetNoBanco(@Param("p_id_pet") Long petId);
 
-    @Procedure(procedureName = "pkg_petguardian.pr_calcular_pontuacao_usuario")
+    @Procedure(name = "Pet.calcularPontuacaoUsuario")
     Map<String, Object> calcularPontuacaoUsuarioNoBanco(@Param("p_id_usuario") Long usuarioId);
 }

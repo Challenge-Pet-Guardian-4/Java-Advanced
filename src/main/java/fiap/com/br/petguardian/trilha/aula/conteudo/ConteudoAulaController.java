@@ -36,7 +36,7 @@ public class ConteudoAulaController {
 
     @GetMapping("/{aulaId}/conteudo")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar conteúdo rico de uma aula por ID da aula no MongoDB")
+    @Operation(summary = "[PREMIUM / ADMIN] Buscar conteúdo rico de uma aula por ID da aula no MongoDB")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public ConteudoAulaResponse findByAulaId(@PathVariable Long aulaId) {
         return ConteudoAulaResponse.fromEntity(conteudoService.findByAulaId(aulaId));
@@ -44,7 +44,7 @@ public class ConteudoAulaController {
 
     @GetMapping("/conteudos")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todos os conteúdos das aulas no MongoDB com paginação e ordenação")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar todos os conteúdos das aulas no MongoDB com paginação e ordenação")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public Page<ConteudoAulaResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "aulaId", direction = Sort.Direction.ASC) Pageable pageable
@@ -59,7 +59,7 @@ public class ConteudoAulaController {
 
     @PostMapping("/{aulaId}/conteudo")
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar novo conteúdo rico para uma aula no MongoDB")
+    @Operation(summary = "[ADMIN] Criar novo conteúdo rico para uma aula no MongoDB")
     @PreAuthorize("hasRole('ADMIN')")
     public ConteudoAulaResponse create(
             @PathVariable Long aulaId,
@@ -70,7 +70,7 @@ public class ConteudoAulaController {
 
     @PutMapping("/{aulaId}/conteudo")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar conteúdo rico existente de uma aula no MongoDB")
+    @Operation(summary = "[ADMIN] Atualizar conteúdo rico existente de uma aula no MongoDB")
     @PreAuthorize("hasRole('ADMIN')")
     public ConteudoAulaResponse update(
             @PathVariable Long aulaId,
@@ -81,7 +81,7 @@ public class ConteudoAulaController {
 
     @DeleteMapping("/{aulaId}/conteudo")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Excluir conteúdo rico de uma aula no MongoDB")
+    @Operation(summary = "[ADMIN] Excluir conteúdo rico de uma aula no MongoDB")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long aulaId) {
         conteudoService.deleteByAulaId(aulaId);

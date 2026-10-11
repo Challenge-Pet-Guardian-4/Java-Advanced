@@ -14,6 +14,28 @@ import java.util.Set;
 
 @Entity
 @Table(name = "pet")
+@NamedStoredProcedureQueries({
+        @NamedStoredProcedureQuery(
+                name = "Pet.calcularPontuacaoPet",
+                procedureName = "pkg_petguardian.pr_calcular_pontuacao_pet",
+                parameters = {
+                        @StoredProcedureParameter(mode = ParameterMode.IN, name = "p_id_pet", type = Long.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_tarefas", type = Integer.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_aulas", type = Integer.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_totais", type = Integer.class)
+                }
+        ),
+        @NamedStoredProcedureQuery(
+                name = "Pet.calcularPontuacaoUsuario",
+                procedureName = "pkg_petguardian.pr_calcular_pontuacao_usuario",
+                parameters = {
+                        @StoredProcedureParameter(mode = ParameterMode.IN, name = "p_id_usuario", type = Long.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_tarefas", type = Integer.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_aulas", type = Integer.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_totais", type = Integer.class)
+                }
+        )
+})
 @Getter
 @Setter
 @NoArgsConstructor

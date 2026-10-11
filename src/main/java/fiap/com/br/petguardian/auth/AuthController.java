@@ -39,7 +39,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Autenticar usuario e retornar token Bearer JWT com dados do perfil")
+    @Operation(summary = "[PÚBLICO] Autenticar usuário e retornar token Bearer JWT com dados do perfil")
     public LoginResponse login(@RequestBody @Valid LoginRequest request) {
 
         var auth = authenticationManager.authenticate(

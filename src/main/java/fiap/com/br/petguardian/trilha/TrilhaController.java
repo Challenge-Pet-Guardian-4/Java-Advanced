@@ -32,7 +32,7 @@ public class TrilhaController {
 
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar árvore completa de trilhas, módulos e aulas dos pets do usuário autenticado")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar árvore completa de trilhas, módulos e aulas dos pets do usuário autenticado")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<TrilhaCompletaResponse> findMyTrilhas(Authentication authentication) {
         return trilhaService.findTrilhasCompletasByUsuarioEmail(authentication.getName());
@@ -44,7 +44,7 @@ public class TrilhaController {
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar trilha por ID")
+    @Operation(summary = "[PREMIUM / ADMIN] Buscar trilha por ID")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public TrilhaResponse findById(@PathVariable Long id) {
         return TrilhaResponse.fromEntity(trilhaService.findById(id));
@@ -52,7 +52,7 @@ public class TrilhaController {
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todas as trilhas com paginação e ordenação")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar todas as trilhas com paginação e ordenação")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public Page<TrilhaResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
@@ -67,7 +67,7 @@ public class TrilhaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar nova trilha para um pet")
+    @Operation(summary = "[ADMIN] Criar nova trilha para um pet")
     @PreAuthorize("hasRole('ADMIN')")
     public TrilhaResponse create(@Valid @RequestBody TrilhaRequest request) {
         return TrilhaResponse.fromEntity(trilhaService.create(request));
@@ -75,7 +75,7 @@ public class TrilhaController {
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar trilha")
+    @Operation(summary = "[ADMIN] Atualizar trilha")
     @PreAuthorize("hasRole('ADMIN')")
     public TrilhaResponse update(@PathVariable Long id, @Valid @RequestBody TrilhaRequest request) {
         return TrilhaResponse.fromEntity(trilhaService.update(id, request));
@@ -83,7 +83,7 @@ public class TrilhaController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Deletar trilha")
+    @Operation(summary = "[ADMIN] Deletar trilha")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         trilhaService.delete(id);

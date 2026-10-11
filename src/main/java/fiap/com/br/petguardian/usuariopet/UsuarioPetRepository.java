@@ -30,6 +30,6 @@ public interface UsuarioPetRepository extends JpaRepository<UsuarioPet, UsuarioP
     @Procedure(procedureName = "pkg_petguardian.pr_transferir_responsavel_principal")
     void transferirResponsavelPrincipalNoBanco(@Param("p_id_pet") Long petId, @Param("p_novo_id_usuario") Long novoIdUsuario);
 
-    @Procedure(procedureName = "pkg_petguardian.pr_obter_resumo_rede_cuidado")
+    @Procedure(name = "UsuarioPet.obterResumoRedeCuidado")
     Map<String, Object> obterResumoRedeCuidadoNoBanco(@Param("p_id_usuario") Long usuarioId);
 }
