@@ -94,7 +94,6 @@ class TarefaServiceTest {
                 .build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
@@ -105,18 +104,6 @@ class TarefaServiceTest {
         assertEquals("Remédio", resultado.getTitulo());
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
         verify(tarefaRepository).save(any(Tarefa.class));
-    }
-
-    @Test
-    @DisplayName("Deve lancar excecao ao criar tarefa quando usuario nao for cuidador do pet")
-    void deveLancarExcecaoAoCriarTarefaQuandoNaoForCuidador() {
-        var request = new TarefaRequest("Remédio", 15, "Dar antibiótico", LocalDateTime.now().plusDays(1), 10L, "PENDENTE", null);
-        Pet pet = Pet.builder().id(10L).nome("Thor").build();
-
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("outro@fiap.com.br", 10L)).thenReturn(false);
-
-        assertThrows(IllegalArgumentException.class, () -> tarefaService.create(request, "outro@fiap.com.br"));
     }
 
     @Test
@@ -142,7 +129,6 @@ class TarefaServiceTest {
                 .build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("concluinte@fiap.com.br", 10L)).thenReturn(true);
         when(usuarioRepository.findByEmailIgnoreCase("concluinte@fiap.com.br")).thenReturn(Optional.of(concluinte));
         when(statusService.findStatus(EnumStatus.CONCLUIDO)).thenReturn(statusConcluido);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -186,7 +172,6 @@ class TarefaServiceTest {
                 .build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(true);
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -205,7 +190,6 @@ class TarefaServiceTest {
         Tarefa tarefa = Tarefa.builder().id(100L).pet(pet).status(statusPendente).build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("cuidador@fiap.com.br", 10L)).thenReturn(true);
 
         assertThrows(IllegalArgumentException.class, () -> tarefaService.desmarcar(100L, "cuidador@fiap.com.br"));
     }

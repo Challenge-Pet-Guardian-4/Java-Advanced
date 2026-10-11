@@ -45,12 +45,12 @@ public class PetService {
 
     public Page<Pet> findByUsuario(Long usuarioId, Pageable pageable) {
         findUsuarioById(usuarioId);
-        return petRepository.findByUsuarioId(usuarioId, pageable);
+        return petRepository.findByUsuarioPetsUsuarioId(usuarioId, pageable);
     }
 
     public Page<Pet> findByEmail(String email, Pageable pageable) {
         Usuario usuario = findUsuarioByEmail(email);
-        return petRepository.findByUsuarioId(usuario.getId(), pageable);
+        return petRepository.findByUsuarioPetsUsuarioId(usuario.getId(), pageable);
     }
 
     public Pet findById(Long id) {

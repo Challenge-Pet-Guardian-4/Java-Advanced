@@ -32,12 +32,11 @@ public class UsuarioPetController {
     @DeleteMapping("/cuidadores/me")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Desvincular o próprio cuidador autenticado do Care Circle deste pet via JWT")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
     public void sairDoCareCircle(
             @PathVariable Long petId,
             Authentication authentication
     ) {
-        usuarioPetService.desvincularCuidador(petId, authentication.getName(), authentication.getName());
+        usuarioPetService.desvincularCuidador(petId, authentication.getName());
     }
 
     // =========================================================================
@@ -66,13 +65,12 @@ public class UsuarioPetController {
     @DeleteMapping("/cuidadores")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Desvincular um co-cuidador do pet por e-mail")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#petId, authentication.name) or #email.equalsIgnoreCase(authentication.name)")
     public void desvincularCuidador(
             @PathVariable Long petId,
-            @RequestParam @NotBlank @Email String email,
-            Authentication authentication
+            @RequestParam @NotBlank @Email String email
     ) {
-        usuarioPetService.desvincularCuidador(petId, email, authentication.getName());
+        usuarioPetService.desvincularCuidador(petId, email);
     }
 
     @PatchMapping("/responsavel-principal")
@@ -81,9 +79,8 @@ public class UsuarioPetController {
     @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#petId, authentication.name)")
     public void transferirResponsavelPrincipal(
             @PathVariable Long petId,
-            @Valid @RequestBody TransferirResponsabilidadeRequest request,
-            Authentication authentication
+            @Valid @RequestBody TransferirResponsabilidadeRequest request
     ) {
-        usuarioPetService.transferirResponsabilidadePrincipal(petId, request, authentication.getName());
+        usuarioPetService.transferirResponsabilidadePrincipal(petId, request);
     }
 }

@@ -1,5 +1,6 @@
 package fiap.com.br.petguardian.usuario;
 
+import fiap.com.br.petguardian.auth.TokenService;
 import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuario.dto.RoleUpdateRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
@@ -14,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class UsuarioController {
     private final UsuarioService usuarioService;
     private final UsuarioPetService usuarioPetService;
+    private final TokenService tokenService;
 
     // =========================================================================
     // 1. FLUXO DO USUÁRIO LOGADO (/me)
@@ -38,10 +41,12 @@ public class UsuarioController {
     }
 
     @PutMapping("/me")
-    @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar perfil do usuário autenticado")
-    public UsuarioResponse updateMe(Authentication authentication, @Valid @RequestBody UsuarioRequest usuarioRequest) {
-        return UsuarioResponse.fromEntity(usuarioService.update(authentication.getName(), usuarioRequest));
+    public ResponseEntity<UsuarioResponse> updateMe(Authentication authentication, @Valid @RequestBody UsuarioRequest usuarioRequest) {
+        Usuario usuario = usuarioService.update(authentication.getName(), usuarioRequest);
+        return ResponseEntity.ok()
+                .header("X-Novo-Token", tokenService.generateToken(usuario.getEmail()))
+                .body(UsuarioResponse.fromEntity(usuario));
     }
 
     @DeleteMapping("/me")

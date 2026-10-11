@@ -255,7 +255,7 @@ class PetServiceTest {
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
+        when(petRepository.findByUsuarioPetsUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
 
         Page<Pet> resultado = petService.findByUsuario(1L, pageable);
 
@@ -272,13 +272,13 @@ class PetServiceTest {
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
 
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(petRepository.findByUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
+        when(petRepository.findByUsuarioPetsUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
 
         Page<Pet> resultado = petService.findByEmail("enzo@fiap.com.br", pageable);
 
         assertNotNull(resultado);
         assertEquals(1, resultado.getTotalElements());
         assertEquals("Thor", resultado.getContent().get(0).getNome());
-        verify(petRepository).findByUsuarioId(1L, pageable);
+        verify(petRepository).findByUsuarioPetsUsuarioId(1L, pageable);
     }
 }

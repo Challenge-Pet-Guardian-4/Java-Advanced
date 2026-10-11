@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -253,5 +254,23 @@ class UsuarioSecurityIntegrationTest {
         mockMvc.perform(patch("/usuarios/2/upgrade-premium")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("invasor@fiap.com.br").claim("role", "COMUM"))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PUT /usuarios/me deve permitir usuario autenticado atualizar seu perfil e retornar header X-Novo-Token")
+    void devePermitirAtualizarProprioPerfilComHeaderXNovoToken() throws Exception {
+        var request = criarRequest("novo_email@fiap.com.br");
+        Usuario usuarioSalvo = criarUsuarioMock(1L, "novo_email@fiap.com.br", UsuarioRole.COMUM);
+
+        when(usuarioService.update(eq("me@fiap.com.br"), any(UsuarioRequest.class))).thenReturn(usuarioSalvo);
+        when(tokenService.generateToken(any())).thenReturn("novo-token");
+
+        mockMvc.perform(put("/usuarios/me")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("me@fiap.com.br").claim("role", "COMUM")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Novo-Token", "novo-token"))
+                .andExpect(jsonPath("$.email").value("novo_email@fiap.com.br"));
     }
 }

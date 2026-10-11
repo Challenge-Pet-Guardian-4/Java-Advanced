@@ -15,14 +15,16 @@ import jakarta.validation.constraints.Size;
 
 public record UsuarioRequest(
         @NotBlank
+        @Size(max = 100)
         String nome,
 
         @NotBlank
         @Email
+        @Size(max = 50)
         String email,
 
         @NotBlank
-        @Size(min = 6)
+        @Size(min = 6, max = 72)
         String senha,
 
         @NotBlank

@@ -70,7 +70,6 @@ public class TarefaService {
     @Transactional
     public Tarefa create(TarefaRequest request, String authEmail) {
         Pet pet = findPetById(request.petId());
-        validarCuidadorDoPet(authEmail, pet.getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
 
         Tarefa tarefa = request.toEntity(usuario, pet, LocalDateTime.now());
@@ -82,7 +81,6 @@ public class TarefaService {
     public Tarefa update(Long id, TarefaRequest request, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
         Pet pet = findPetById(request.petId());
-        validarCuidadorDoPet(authEmail, pet.getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
         EnumStatus status = EnumStatus.valueOf(request.status().trim().toUpperCase());
 
@@ -102,7 +100,6 @@ public class TarefaService {
         expirarTarefasPendentesAtrasadas();
         Tarefa tarefa = findTarefaById(id);
         validarPendenteParaConclusao(tarefa);
-        validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
         Usuario usuario = findUsuarioByEmail(authEmail);
 
         aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
@@ -112,7 +109,6 @@ public class TarefaService {
     @Transactional
     public Tarefa desmarcar(Long id, String authEmail) {
         Tarefa tarefa = findTarefaById(id);
-        validarCuidadorDoPet(authEmail, tarefa.getPet().getId());
         validarConcluidaParaDesmarcar(tarefa);
 
         tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
@@ -172,12 +168,6 @@ public class TarefaService {
         tarefa.setUsuario(usuario);
         tarefa.setStatus(statusConcluido);
         tarefa.setConclusao(LocalDateTime.now());
-    }
-
-    private void validarCuidadorDoPet(String email, Long petId) {
-        if (!usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {
-            throw new IllegalArgumentException("Usuario informado nao esta vinculado ao pet da tarefa.");
-        }
     }
 
     private void validarPendenteParaConclusao(Tarefa tarefa) {

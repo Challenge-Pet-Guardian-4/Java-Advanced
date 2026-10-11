@@ -121,6 +121,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, HttpServletRequest request) {
         log.error("Erro de consistencia/integridade no banco de dados", exception);
+        String msg = exception.getMostSpecificCause().getMessage();
+        if (msg != null && msg.contains("ORA-00001")) {
+            return error(HttpStatus.CONFLICT,
+                    "Registro duplicado. Verifique se o e-mail ou outro dado único já está cadastrado.", request);
+        }
         return error(HttpStatus.BAD_REQUEST,
                 "Erro de integridade de dados. Verifique os valores e chaves unicas.", request);
     }

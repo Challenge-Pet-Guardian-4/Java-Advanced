@@ -68,19 +68,20 @@ public class UsuarioPetService {
     }
 
     @Transactional
-    public void transferirResponsabilidadePrincipal(Long petId, TransferirResponsabilidadeRequest request, String authEmail) {
-        if (authEmail.trim().equalsIgnoreCase(request.novoResponsavelEmail().trim())) {
-            throw new IllegalArgumentException("O novo responsavel nao pode ser o mesmo que o responsavel atual.");
-        }
-
+    public void transferirResponsabilidadePrincipal(Long petId, TransferirResponsabilidadeRequest request) {
         UsuarioPet novoResponsavel = findVinculoPorEmail(request.novoResponsavelEmail(), petId);
+        if (novoResponsavel.isResponsavelPrincipal()) {
+            throw new IllegalArgumentException("O novo responsavel ja e o responsavel principal do pet.");
+        }
         usuarioPetRepository.transferirResponsavelPrincipalNoBanco(petId, novoResponsavel.getUsuario().getId());
     }
 
     @Transactional
-    public void desvincularCuidador(Long petId, String cuidadorEmail, String solicitanteEmail) {
+    public void desvincularCuidador(Long petId, String cuidadorEmail) {
         UsuarioPet vinculo = findVinculoPorEmail(cuidadorEmail, petId);
-        validarPermissaoDesvinculacao(vinculo, solicitanteEmail);
+        if (vinculo.isResponsavelPrincipal()) {
+            throw new IllegalArgumentException("Nao e permitido desvincular o responsavel principal do pet sem antes transferir a titularidade.");
+        }
         usuarioPetRepository.delete(vinculo);
     }
 
@@ -154,20 +155,6 @@ public class UsuarioPetService {
     private void validarUsuarioNaoVinculadoPorEmail(String email, Long petId) {
         if (usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {
             throw new IllegalArgumentException("Usuario informado ja possui vinculo com este pet.");
-        }
-    }
-
-    private void validarPermissaoDesvinculacao(UsuarioPet vinculo, String solicitanteEmail) {
-        if (vinculo.isResponsavelPrincipal()) {
-            throw new IllegalArgumentException("Nao e permitido desvincular o responsavel principal do pet sem antes transferir a titularidade.");
-        }
-
-        Long petId = vinculo.getPet().getId();
-        boolean isProprioUsuario = vinculo.getUsuario().getEmail().equalsIgnoreCase(solicitanteEmail.trim());
-        boolean isResponsavel = usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue(solicitanteEmail.trim(), petId);
-
-        if (!isProprioUsuario && !isResponsavel) {
-            throw new IllegalArgumentException("Apenas o proprio cuidador ou o responsavel principal podem remover este vinculo.");
         }
     }
 }

@@ -10,7 +10,7 @@ import java.util.Map;
 
 public interface PetRepository extends JpaRepository<Pet, Long> {
 
-    Page<Pet> findByUsuarioId(Long usuarioId, Pageable pageable);
+    Page<Pet> findByUsuarioPetsUsuarioId(Long usuarioId, Pageable pageable);
 
     @Procedure(procedureName = "pkg_petguardian.pr_calcular_pontuacao_pet")
     Map<String, Object> calcularPontuacaoPetNoBanco(@Param("p_id_pet") Long petId);

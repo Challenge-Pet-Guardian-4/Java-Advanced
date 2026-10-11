@@ -78,7 +78,7 @@ public class TarefaController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar tarefa")
-    @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or (@tarefaService.isCuidadorDaTarefa(#id, authentication.name) and @usuarioPetService.isCuidadorDoPet(#tarefaRequest.petId(), authentication.name))")
     public TarefaResponse update(@PathVariable Long id, @Valid @RequestBody TarefaRequest tarefaRequest, Authentication authentication) {
         return TarefaResponse.fromEntity(tarefaService.update(id, tarefaRequest, authentication.getName()));
     }
