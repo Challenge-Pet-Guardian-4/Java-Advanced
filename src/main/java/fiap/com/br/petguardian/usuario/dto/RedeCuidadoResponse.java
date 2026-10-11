@@ -37,7 +37,7 @@ public record RedeCuidadoResponse(
             String nome,
             String raca,
             boolean responsavelPrincipal,
-            List<Long> tarefaIds
+            int totalTarefas
     ) {}
 
     public record CuidadorResumo(

@@ -181,7 +181,6 @@ class UsuarioPetServiceTest {
         var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0);
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
         when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
 
@@ -220,7 +219,7 @@ class UsuarioPetServiceTest {
                 .responsavelPrincipal(true)
                 .build();
 
-        var petResumo = new RedeCuidadoResponse.PetResumo(10L, "Thor", "Golden", true, List.of(100L));
+        var petResumo = new RedeCuidadoResponse.PetResumo(10L, "Thor", "Golden", true, 1);
         Map<String, Object> resumoDb = Map.of(
                 "p_tarefas_pendentes", 3,
                 "p_tarefas_concluidas", 7,
@@ -229,7 +228,7 @@ class UsuarioPetServiceTest {
 
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vinculo));
-        when(tarefaRepository.findTarefaIdsByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 100L}));
+        when(tarefaRepository.countTarefasByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 1L}));
         when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vinculo));
         when(redeCuidadoMapper.toPetResumoList(any(), any())).thenReturn(List.of(petResumo));
         when(redeCuidadoMapper.toCuidadorResumoList(any(), any())).thenReturn(List.of());

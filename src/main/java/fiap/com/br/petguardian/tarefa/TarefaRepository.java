@@ -40,8 +40,8 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @EntityGraph(attributePaths = {"pet"})
     List<Tarefa> findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List<Long> petIds, EnumStatus status);
 
-    @Query("select t.pet.id, t.id from Tarefa t where t.pet.id in :petIds")
-    List<Object[]> findTarefaIdsByPetIdIn(@Param("petIds") List<Long> petIds);
+    @Query("select t.pet.id, count(t) from Tarefa t where t.pet.id in :petIds group by t.pet.id")
+    List<Object[]> countTarefasByPetIdIn(@Param("petIds") List<Long> petIds);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Transactional

@@ -27,18 +27,18 @@ public class RedeCuidadoMapper {
 
     public List<PetResumo> toPetResumoList(
             List<UsuarioPet> vinculos,
-            Map<Long, List<Long>> tarefasPorPet
+            Map<Long, Integer> totalTarefasPorPet
     ) {
         return vinculos.stream()
                 .map(vinculo -> {
                     Long petId = vinculo.getPet().getId();
-                    List<Long> tarefaIds = tarefasPorPet.getOrDefault(petId, List.of());
+                    int totalTarefas = totalTarefasPorPet.getOrDefault(petId, 0);
                     return new PetResumo(
                             petId,
                             vinculo.getPet().getNome(),
                             vinculo.getPet().getRaca().getNome(),
                             vinculo.isResponsavelPrincipal(),
-                            tarefaIds
+                            totalTarefas
                     );
                 })
                 .toList();

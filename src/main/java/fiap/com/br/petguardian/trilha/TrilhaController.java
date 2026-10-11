@@ -26,12 +26,28 @@ public class TrilhaController {
 
     private final TrilhaService trilhaService;
 
+    // =========================================================================
+    // 1. FLUXO DO USUÁRIO LOGADO (/me)
+    // =========================================================================
+
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar árvore completa de trilhas, módulos e aulas dos pets do usuário autenticado")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<TrilhaCompletaResponse> findMyTrilhas(Authentication authentication) {
         return trilhaService.findTrilhasCompletasByUsuarioEmail(authentication.getName());
+    }
+
+    // =========================================================================
+    // 2. CONSULTAS DE TRILHAS (PREMIUM / ADMIN)
+    // =========================================================================
+
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Buscar trilha por ID")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
+    public TrilhaResponse findById(@PathVariable Long id) {
+        return TrilhaResponse.fromEntity(trilhaService.findById(id));
     }
 
     @GetMapping
@@ -45,13 +61,9 @@ public class TrilhaController {
                 .map(TrilhaResponse::fromEntity);
     }
 
-    @GetMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar trilha por ID")
-    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public TrilhaResponse findById(@PathVariable Long id) {
-        return TrilhaResponse.fromEntity(trilhaService.findById(id));
-    }
+    // =========================================================================
+    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

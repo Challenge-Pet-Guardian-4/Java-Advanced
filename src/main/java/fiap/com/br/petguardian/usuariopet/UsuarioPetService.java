@@ -13,7 +13,6 @@ import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,8 +90,16 @@ public class UsuarioPetService {
 
     @Transactional(readOnly = true)
     public RedeCuidadoResponse montarRedeCuidado(String email) {
-        Usuario usuario = findUsuarioByEmail(email);
-        List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(email.trim());
+        return processarRedeCuidado(findUsuarioByEmail(email));
+    }
+
+    @Transactional(readOnly = true)
+    public RedeCuidadoResponse montarRedeCuidado(Long usuarioId) {
+        return processarRedeCuidado(findUsuarioById(usuarioId));
+    }
+
+    private RedeCuidadoResponse processarRedeCuidado(Usuario usuario) {
+        List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(usuario.getEmail().trim());
 
         if (vinculos.isEmpty()) {
             return redeCuidadoMapper.toEmptyResponse(usuario);
@@ -100,7 +107,7 @@ public class UsuarioPetService {
 
         List<Long> petIds = vinculos.stream().map(up -> up.getPet().getId()).toList();
 
-        var pets = redeCuidadoMapper.toPetResumoList(vinculos, carregarMapaTarefasPorPet(petIds));
+        var pets = redeCuidadoMapper.toPetResumoList(vinculos, carregarMapaTotalTarefasPorPet(petIds));
         var cuidadores = redeCuidadoMapper.toCuidadorResumoList(
                 usuarioPetRepository.findAllByPetIdIn(petIds),
                 usuario.getEmail()
@@ -111,20 +118,16 @@ public class UsuarioPetService {
         return RedeCuidadoResponse.from(usuario.getEmail(), usuario.getNome(), pets, cuidadores, resumoDb);
     }
 
-    @Transactional(readOnly = true)
-    public RedeCuidadoResponse montarRedeCuidado(Long usuarioId) {
-        Usuario usuario = findUsuarioById(usuarioId);
-        return montarRedeCuidado(usuario.getEmail());
-    }
-
     // =========================================================================
     // 5. HELPERS PRIVADOS DE VALIDAÇÃO E BUSCA
     // =========================================================================
 
-    private Map<Long, List<Long>> carregarMapaTarefasPorPet(List<Long> petIds) {
-        Map<Long, List<Long>> mapa = new HashMap<>();
-        petIds.forEach(id -> mapa.put(id, new ArrayList<>()));
-        tarefaRepository.findTarefaIdsByPetIdIn(petIds).forEach(row -> mapa.get((Long) row[0]).add((Long) row[1]));
+    private Map<Long, Integer> carregarMapaTotalTarefasPorPet(List<Long> petIds) {
+        Map<Long, Integer> mapa = new HashMap<>();
+        petIds.forEach(id -> mapa.put(id, 0));
+        tarefaRepository.countTarefasByPetIdIn(petIds).forEach(row ->
+                mapa.put((Long) row[0], ((Number) row[1]).intValue())
+        );
         return mapa;
     }
 

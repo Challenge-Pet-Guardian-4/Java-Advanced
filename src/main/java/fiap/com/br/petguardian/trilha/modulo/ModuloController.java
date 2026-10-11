@@ -24,15 +24,16 @@ public class ModuloController {
 
     private final ModuloService moduloService;
 
-    @GetMapping
+    // =========================================================================
+    // 1. CONSULTAS DE MÓDULOS (PREMIUM / ADMIN)
+    // =========================================================================
+
+    @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todos os módulos com paginação e ordenação")
+    @Operation(summary = "Buscar modulo por ID")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public Page<ModuloResponse> findAll(
-            @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
-    ) {
-        return moduloService.findAll(pageable)
-                .map(ModuloResponse::fromEntity);
+    public ModuloResponse findById(@PathVariable Long id) {
+        return ModuloResponse.fromEntity(moduloService.findById(id));
     }
 
     @GetMapping("/trilha/{trilhaId}")
@@ -46,13 +47,20 @@ public class ModuloController {
                 .toList();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar modulo por ID")
+    @Operation(summary = "Listar todos os módulos com paginação e ordenação")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public ModuloResponse findById(@PathVariable Long id) {
-        return ModuloResponse.fromEntity(moduloService.findById(id));
+    public Page<ModuloResponse> findAll(
+            @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return moduloService.findAll(pageable)
+                .map(ModuloResponse::fromEntity);
     }
+
+    // =========================================================================
+    // 2. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)

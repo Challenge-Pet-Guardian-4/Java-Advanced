@@ -106,7 +106,7 @@ public class UsuarioController {
     @Operation(summary = "Realizar upgrade do perfil COMUM para PREMIUM (simulação de adesão ao plano)")
     @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
     public UsuarioResponse upgradePremium(@PathVariable Long id) {
-        return UsuarioResponse.fromEntity(usuarioService.upgradePremium(id));
+        return UsuarioResponse.fromEntity(usuarioService.upgradePremium(usuarioService.findById(id).getEmail()));
     }
 
     // =========================================================================

@@ -53,7 +53,7 @@ public class TarefaService {
     @Transactional(readOnly = true)
     public Integer calcularPontosTotaisEmail(String email) {
         Usuario usuario = findUsuarioByEmail(email);
-        return calcularPontosTotaisUsuario(usuario.getId());
+        return tarefaRepository.calcularPontosTotaisUsuario(usuario.getId(), EnumStatus.CONCLUIDO);
     }
 
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {

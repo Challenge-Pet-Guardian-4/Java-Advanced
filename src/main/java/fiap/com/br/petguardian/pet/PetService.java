@@ -36,19 +36,7 @@ public class PetService {
     private final HistoricoRepository historicoRepository;
 
     // =========================================================================
-    // 1. CHECAGEM DE AUTORIZAÇÃO E SEGURANÇA (SpEL)
-    // =========================================================================
-
-    public boolean isResponsavelPrincipal(Long petId, String email) {
-        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue(email.trim(), petId);
-    }
-
-    public boolean isCuidadorDoPet(Long petId, String email) {
-        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId);
-    }
-
-    // =========================================================================
-    // 2. CONSULTAS GERAIS E POR USUÁRIO
+    // 1. CONSULTAS GERAIS E POR USUÁRIO
     // =========================================================================
 
     public Page<Pet> findAll(Pageable pageable) {
@@ -62,7 +50,7 @@ public class PetService {
 
     public Page<Pet> findByEmail(String email, Pageable pageable) {
         Usuario usuario = findUsuarioByEmail(email);
-        return findByUsuario(usuario.getId(), pageable);
+        return petRepository.findByUsuarioId(usuario.getId(), pageable);
     }
 
     public Pet findById(Long id) {
@@ -70,7 +58,7 @@ public class PetService {
     }
 
     // =========================================================================
-    // 3. CICLO DE VIDA DO PET (CRIAÇÃO, ATUALIZAÇÃO, EXCLUSÃO)
+    // 2. CICLO DE VIDA DO PET (CRIAÇÃO, ATUALIZAÇÃO, EXCLUSÃO)
     // =========================================================================
 
     @Transactional

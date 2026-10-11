@@ -253,7 +253,6 @@ class TarefaServiceTest {
     void deveConsultarPontosPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(tarefaRepository.calcularPontosTotaisUsuario(1L, EnumStatus.CONCLUIDO)).thenReturn(150);
 
         Integer pontos = tarefaService.calcularPontosTotaisEmail("enzo@fiap.com.br");

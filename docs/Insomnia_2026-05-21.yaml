@@ -763,7 +763,7 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/tarefas/by-usuario"
+      - url: "{{ _.base_url }}/tarefas/by-usuario/1"
         name: Listar Tarefas por Cuidador e Status
         meta:
           id: req_tar_by_usr_status
@@ -780,8 +780,6 @@ collection:
           type: bearer
           token: "{{ _.token }}"
         parameters:
-          - name: usuarioId
-            value: "1"
           - name: status
             value: ALL
           - name: page
@@ -875,7 +873,7 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/tarefas/by-usuario/pontos"
+      - url: "{{ _.base_url }}/tarefas/by-usuario/1/pontos"
         name: Consultar Pontos Totais do Cuidador
         meta:
           id: req_tar_pontos_usr
@@ -891,9 +889,6 @@ collection:
         authentication:
           type: bearer
           token: "{{ _.token }}"
-        parameters:
-          - name: usuarioId
-            value: "1"
         settings:
           renderRequestBody: true
           encodeUrl: true

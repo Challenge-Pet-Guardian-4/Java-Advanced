@@ -56,10 +56,10 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
 - `GET /usuarios` | `GET /usuarios/by-email` | `PATCH /usuarios/{id}/role`: Ações administrativas (`ADMIN`).
 
 ### Pets & Care Circle (`/pets`)
-- `GET /pets/me`: Pets vinculados ao usuário logado (tutor principal ou co-cuidador, com paginação padrão de 4 pets por página via Spring Data).
+- `GET /pets/me`: Pets vinculados ao usuário logado (tutor principal ou co-cuidador, com paginação padrão de 20 pets por página via Spring Data).
 - `GET /pets/me/pontos`: Pontuação agregada dos pets do usuário via Stored Procedure.
-- `GET /pets/me/historico`: Tarefas concluídas de todos os pets do usuário logado.
-- `GET /pets/{id}` | `POST /pets` | `PUT /pets/{id}` | `DELETE /pets/{id}`: Gestão do animal (criador torna-se responsável principal).
+- `GET /pets/{id}/detalhe`: Ficha consolidada do pet com pontuação, cuidadores, tarefas concluídas e prontuário clínico.
+- `GET /pets/{id}` | `POST /pets` | `PUT /pets/{id}` | `DELETE /pets/{id}`: Gestão do animal (edição e exclusão restritas ao responsável principal ou `ADMIN`).
 - `GET /pets/{id}/pontos`: Pontuação individual do pet via Stored Procedure.
 - `GET /pets/{petId}/cuidadores`: Lista co-cuidadores vinculados ao animal.
 - `POST /pets/{petId}/cuidadores`: Convite de co-cuidador por e-mail.
@@ -82,7 +82,7 @@ A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/S
 
 ### Trilhas Educativas, Módulos & Aulas (`/trilhas`, `/modulos`, `/aulas`) — *PREMIUM & ADMIN*
 - `GET /trilhas/me`: Trilhas de adestramento dos pets do usuário autenticado consolidadas com módulos e aulas em árvore única.
-- `GET /trilhas` | `GET /trilhas/pet/{petId}` | `GET /trilhas/{id}`: Trilhas de adestramento do animal.
+- `GET /trilhas` | `GET /trilhas/{id}`: Trilhas de adestramento do animal.
 - `GET /modulos/trilha/{trilhaId}` | `GET /modulos/{id}`: Módulos pedagógicos.
 - `GET /aulas/modulo/{moduloId}` | `GET /aulas/{id}`: Metadados relacionais da aula no Oracle.
 - `PATCH /aulas/{id}/concluir` | `PATCH /aulas/{id}/desmarcar`: Conclusão ou estorno de lição somando pontos ao pet.

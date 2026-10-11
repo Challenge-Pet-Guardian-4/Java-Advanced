@@ -26,13 +26,7 @@ public class AulaService {
     private final UsuarioRepository usuarioRepository;
 
     public boolean isCuidadorDaAula(Long aulaId, String email) {
-        if (email == null || email.isBlank()) {
-            return false;
-        }
         Aula aula = findAulaById(aulaId);
-        if (aula.getModulo() == null || aula.getModulo().getTrilha() == null || aula.getModulo().getTrilha().getPet() == null) {
-            return false;
-        }
         Long petId = aula.getModulo().getTrilha().getPet().getId();
         return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId);
     }
@@ -71,31 +65,17 @@ public class AulaService {
     }
 
     @Transactional
-    public Aula concluir(Long id) {
-        return concluir(id, null);
-    }
-
-    @Transactional
     public Aula concluir(Long id, String authEmail) {
         Aula aula = findAulaById(id);
-        if (authEmail != null && !authEmail.isBlank()) {
-            validarCuidadorDaAula(aula, authEmail);
-        }
+        validarCuidadorDaAula(aula, authEmail);
         aula.setConcluida(true);
         return aulaRepository.save(aula);
     }
 
     @Transactional
-    public Aula desmarcar(Long id) {
-        return desmarcar(id, null);
-    }
-
-    @Transactional
     public Aula desmarcar(Long id, String authEmail) {
         Aula aula = findAulaById(id);
-        if (authEmail != null && !authEmail.isBlank()) {
-            validarCuidadorDaAula(aula, authEmail);
-        }
+        validarCuidadorDaAula(aula, authEmail);
         aula.setConcluida(false);
         return aulaRepository.save(aula);
     }
@@ -125,9 +105,6 @@ public class AulaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
         if (usuario.getRole() == UsuarioRole.ADMIN) {
             return;
-        }
-        if (aula.getModulo() == null || aula.getModulo().getTrilha() == null || aula.getModulo().getTrilha().getPet() == null) {
-            throw new IllegalArgumentException("Aula nao possui vinculo valido com pet dono da trilha.");
         }
         Long petId = aula.getModulo().getTrilha().getPet().getId();
         if (!usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {

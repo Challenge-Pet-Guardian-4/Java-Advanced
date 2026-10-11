@@ -76,18 +76,6 @@ class AulaServiceTest {
         assertEquals("Comando Senta!", resultado.get(0).getNome());
     }
 
-    @Test
-    @DisplayName("Deve concluir aula marcando concluida como true")
-    void deveConcluirAula() {
-        Aula aula = Aula.builder().id(100L).concluida(false).build();
-        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
-        when(aulaRepository.save(any(Aula.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        Aula resultado = aulaService.concluir(100L);
-
-        assertTrue(resultado.isConcluida());
-        verify(aulaRepository).save(aula);
-    }
 
     @Test
     @DisplayName("Deve deletar aula")

@@ -30,6 +30,18 @@ public class ConteudoAulaController {
 
     private final ConteudoAulaService conteudoService;
 
+    // =========================================================================
+    // 1. CONSULTAS DE CONTEÚDO NOSQL (PREMIUM / ADMIN)
+    // =========================================================================
+
+    @GetMapping("/{aulaId}/conteudo")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Buscar conteúdo rico de uma aula por ID da aula no MongoDB")
+    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
+    public ConteudoAulaResponse findByAulaId(@PathVariable Long aulaId) {
+        return ConteudoAulaResponse.fromEntity(conteudoService.findByAulaId(aulaId));
+    }
+
     @GetMapping("/conteudos")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todos os conteúdos das aulas no MongoDB com paginação e ordenação")
@@ -41,13 +53,9 @@ public class ConteudoAulaController {
                 .map(ConteudoAulaResponse::fromEntity);
     }
 
-    @GetMapping("/{aulaId}/conteudo")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar conteúdo rico de uma aula por ID da aula no MongoDB")
-    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public ConteudoAulaResponse findByAulaId(@PathVariable Long aulaId) {
-        return ConteudoAulaResponse.fromEntity(conteudoService.findByAulaId(aulaId));
-    }
+    // =========================================================================
+    // 2. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
 
     @PostMapping("/{aulaId}/conteudo")
     @ResponseStatus(HttpStatus.CREATED)

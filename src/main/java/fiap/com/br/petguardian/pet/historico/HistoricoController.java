@@ -25,6 +25,10 @@ public class HistoricoController {
 
     private final HistoricoService historicoService;
 
+    // =========================================================================
+    // 1. FLUXO DO USUÁRIO LOGADO (/me)
+    // =========================================================================
+
     @GetMapping("/me")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar histórico agregado de todos os pets do cuidador autenticado")
@@ -35,21 +39,14 @@ public class HistoricoController {
                 .toList();
     }
 
-    @GetMapping
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todos os registros de histórico com paginação e ordenação (somente ADMIN)")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Page<HistoricoResponse> findAll(
-            @PageableDefault(size = 10, page = 0, sort = "dataHist", direction = Sort.Direction.DESC) Pageable pageable
-    ) {
-        return historicoService.findAll(pageable)
-                .map(HistoricoResponse::fromEntity);
-    }
+    // =========================================================================
+    // 2. OPERAÇÕES DE GESTÃO DO HISTÓRICO POR PET E ID (CUIDADOR / ADMIN)
+    // =========================================================================
 
     @GetMapping("/pet/{petId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar historico de eventos/saude de um pet ordenado por data mais recente")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
     public List<HistoricoResponse> findByPetId(@PathVariable Long petId) {
         return historicoService.findAllByPetId(petId)
                 .stream()
@@ -68,7 +65,7 @@ public class HistoricoController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar novo registro de historico para um pet")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#request.petId(), authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#request.petId(), authentication.name)")
     public HistoricoResponse create(@Valid @RequestBody HistoricoRequest request) {
         return HistoricoResponse.fromEntity(historicoService.create(request));
     }
@@ -76,7 +73,7 @@ public class HistoricoController {
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Atualizar registro de historico por ID")
-    @PreAuthorize("hasRole('ADMIN') or (@historicoService.isCuidadorDoHistorico(#id, authentication.name) and @petService.isCuidadorDoPet(#request.petId(), authentication.name))")
+    @PreAuthorize("hasRole('ADMIN') or (@historicoService.isCuidadorDoHistorico(#id, authentication.name) and @usuarioPetService.isCuidadorDoPet(#request.petId(), authentication.name))")
     public HistoricoResponse update(@PathVariable Long id, @Valid @RequestBody HistoricoRequest request) {
         return HistoricoResponse.fromEntity(historicoService.update(id, request));
     }
@@ -87,5 +84,20 @@ public class HistoricoController {
     @PreAuthorize("hasRole('ADMIN') or @historicoService.isCuidadorDoHistorico(#id, authentication.name)")
     public void delete(@PathVariable Long id) {
         historicoService.delete(id);
+    }
+
+    // =========================================================================
+    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
+
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Listar todos os registros de histórico com paginação e ordenação (somente ADMIN)")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Page<HistoricoResponse> findAll(
+            @PageableDefault(size = 10, page = 0, sort = "dataHist", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return historicoService.findAll(pageable)
+                .map(HistoricoResponse::fromEntity);
     }
 }

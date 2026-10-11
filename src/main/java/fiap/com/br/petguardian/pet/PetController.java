@@ -35,7 +35,7 @@ public class PetController {
     @Operation(summary = "Listar pets associados ao usuário autenticado (como tutor principal ou co-cuidador)")
     public Page<PetResponse> findMyPets(
             Authentication authentication,
-            @PageableDefault(size = 4, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 20, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return petService.findByEmail(authentication.getName(), pageable)
                 .map(PetResponse::fromEntity);
@@ -62,7 +62,7 @@ public class PetController {
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Buscar pet por ID")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#id, authentication.name)")
     public PetResponse findById(@PathVariable Long id) {
         return PetResponse.fromEntity(petService.findById(id));
     }
@@ -70,7 +70,7 @@ public class PetController {
     @GetMapping("/{id}/pontos")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Consultar pontuação total acumulada pelo pet via Stored Procedure Oracle (tarefas + aulas concluídas)")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#id, authentication.name)")
     public PetPontuacaoResponse getPontosTotais(@PathVariable Long id) {
         return petService.calcularPontuacaoTotalPet(id);
     }
@@ -78,15 +78,15 @@ public class PetController {
     @GetMapping("/{id}/detalhe")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Obter ficha consolidada do pet com pontuação, cuidadores, tarefas concluídas e prontuário")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#id, authentication.name)")
     public PetDetailResponse getPetDetail(@PathVariable Long id) {
         return petService.getPetDetail(id);
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar pet")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#id, authentication.name)")
+    @Operation(summary = "Atualizar pet (somente o responsável principal tem permissão)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#id, authentication.name)")
     public PetResponse update(@PathVariable Long id, @Valid @RequestBody PetRequest petRequest) {
         return PetResponse.fromEntity(petService.update(id, petRequest));
     }
@@ -94,7 +94,7 @@ public class PetController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Deletar pet (somente o responsável principal tem permissão)")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isResponsavelPrincipal(#id, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#id, authentication.name)")
     public void delete(@PathVariable Long id) {
         petService.delete(id);
     }
@@ -114,12 +114,12 @@ public class PetController {
                 .map(PetResponse::fromEntity);
     }
 
-    @GetMapping("/by-usuario")
+    @GetMapping("/by-usuario/{usuarioId}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar pets associados a um usuário logado (somente ADMIN)")
+    @Operation(summary = "Buscar pets associados a um usuário (somente ADMIN)")
     @PreAuthorize("hasRole('ADMIN')")
     public Page<PetResponse> findByUsuario(
-            @RequestParam Long usuarioId,
+            @PathVariable Long usuarioId,
             @PageableDefault(size = 20, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return petService.findByUsuario(usuarioId, pageable)

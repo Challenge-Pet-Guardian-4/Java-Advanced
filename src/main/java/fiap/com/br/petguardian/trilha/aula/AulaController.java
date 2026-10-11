@@ -25,15 +25,16 @@ public class AulaController {
 
     private final AulaService aulaService;
 
-    @GetMapping
+    // =========================================================================
+    // 1. CONSULTAS DE AULAS (PREMIUM / ADMIN)
+    // =========================================================================
+
+    @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Listar todas as aulas com paginação e ordenação")
+    @Operation(summary = "Buscar aula por ID")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public Page<AulaResponse> findAll(
-            @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
-    ) {
-        return aulaService.findAll(pageable)
-                .map(AulaResponse::fromEntity);
+    public AulaResponse findById(@PathVariable Long id) {
+        return AulaResponse.fromEntity(aulaService.findById(id));
     }
 
     @GetMapping("/modulo/{moduloId}")
@@ -47,29 +48,20 @@ public class AulaController {
                 .toList();
     }
 
-    @GetMapping("/{id}")
+    @GetMapping
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Buscar aula por ID")
+    @Operation(summary = "Listar todas as aulas com paginação e ordenação")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
-    public AulaResponse findById(@PathVariable Long id) {
-        return AulaResponse.fromEntity(aulaService.findById(id));
+    public Page<AulaResponse> findAll(
+            @PageableDefault(size = 10, page = 0, sort = "nome", direction = Sort.Direction.ASC) Pageable pageable
+    ) {
+        return aulaService.findAll(pageable)
+                .map(AulaResponse::fromEntity);
     }
 
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Criar nova aula para um modulo")
-    @PreAuthorize("hasRole('ADMIN')")
-    public AulaResponse create(@Valid @RequestBody AulaRequest request) {
-        return AulaResponse.fromEntity(aulaService.create(request));
-    }
-
-    @PutMapping("/{id}")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "Atualizar aula")
-    @PreAuthorize("hasRole('ADMIN')")
-    public AulaResponse update(@PathVariable Long id, @Valid @RequestBody AulaRequest request) {
-        return AulaResponse.fromEntity(aulaService.update(id, request));
-    }
+    // =========================================================================
+    // 2. INTERAÇÃO E PROGRESSO DO CUIDADOR (PREMIUM / ADMIN)
+    // =========================================================================
 
     @PatchMapping("/{id}/concluir")
     @ResponseStatus(HttpStatus.OK)
@@ -85,6 +77,26 @@ public class AulaController {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('PREMIUM') and @aulaService.isCuidadorDaAula(#id, authentication.name))")
     public AulaResponse desmarcar(@PathVariable Long id, Authentication authentication) {
         return AulaResponse.fromEntity(aulaService.desmarcar(id, authentication.getName()));
+    }
+
+    // =========================================================================
+    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Criar nova aula para um modulo")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AulaResponse create(@Valid @RequestBody AulaRequest request) {
+        return AulaResponse.fromEntity(aulaService.create(request));
+    }
+
+    @PutMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    @Operation(summary = "Atualizar aula")
+    @PreAuthorize("hasRole('ADMIN')")
+    public AulaResponse update(@PathVariable Long id, @Valid @RequestBody AulaRequest request) {
+        return AulaResponse.fromEntity(aulaService.update(id, request));
     }
 
     @DeleteMapping("/{id}")

@@ -171,7 +171,7 @@ O schema relacional completo do ecossistema é mantido diretamente no **Oracle D
 A modelagem contempla 15 tabelas relacionais (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`), além de tabelas de auditoria:
 
 - **Script DDL & Packages:** Disponível em [`Database-Advanced/sprint4_pkg_petguardian.sql`](../Database-Advanced/sprint4_pkg_petguardian.sql), com criação idempotente de tabelas, triggers de auditoria, constraints e procedures.
-- **Suporte ao Flyway:** A aplicação inclui a biblioteca `org.flywaydb:flyway-database-oracle` no `build.gradle`. Por padrão, na base gerenciada da FIAP onde o schema já se encontra provisionado pela equipe, a execução automática permanece desabilitada (`spring.flyway.enabled=false`), permitindo validação das entidades via JPA (`spring.jpa.hibernate.ddl-auto=none`).
+- **Suporte ao Flyway:** A aplicação inclui a biblioteca `org.flywaydb:flyway-database-oracle` no `build.gradle`. Por padrão, na base gerenciada da FIAP onde o schema já se encontra provisionado pela equipe, a execução automática permanece desabilitada (`spring.flyway.enabled=false`), com validação e sincronização das entidades via JPA (`spring.jpa.hibernate.ddl-auto=update`).
 
 Configurações ativas no `application.properties`:
 ```properties
@@ -180,7 +180,7 @@ spring.datasource.username=${ORACLE_USER}
 spring.datasource.password=${ORACLE_PASSWORD}
 spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
 spring.jpa.database-platform=org.hibernate.dialect.OracleDialect
-spring.jpa.hibernate.ddl-auto=none
+spring.jpa.hibernate.ddl-auto=update
 spring.flyway.enabled=${SPRING_FLYWAY_ENABLED:false}
 ```
 
@@ -199,7 +199,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 ### 2. Fluxo de Governança Familiar Pet-Centric (Care Circle)
 1. **Titularidade Automática no Nascimento do Pet:** Ao cadastrar um pet (`POST /pets`), o tutor criador é registrado imediatamente na tabela `usuario_pet` com a flag `responsavel_principal = true`.
 2. **Convite de Co-cuidadores:** O responsável principal convida familiares ou cuidadores (`POST /pets/{petId}/cuidadores`) informando o e-mail do convidado.
-3. **Visão Agregada da Família:** O endpoint `GET /usuarios/{id}/rede-cuidado` consolida todos os animais sob responsabilidade do usuário, a lista completa de co-cuidadores de cada animal e as tarefas pendentes/concluídas da semana.
+3. **Visão Agregada da Família:** O endpoint `GET /usuarios/me/rede-cuidado` (ou `GET /usuarios/{id}/rede-cuidado` para `ADMIN`) consolida todos os animais sob responsabilidade do usuário, a lista completa de co-cuidadores de cada animal e as tarefas pendentes/concluídas da semana.
 4. **Transferência de Responsabilidade Principal:** Caso a guarda ou tutela principal mude, o endpoint `PATCH /pets/{petId}/responsavel-principal` valida se a solicitação partiu do titular atual e transfere atomicamente os privilégios administrativos para o novo cuidador.
 
 ### 3. Fluxo de Trilhas Educativas com Restrição RBAC
@@ -272,11 +272,11 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 ### 3. Pets (`/pets`)
 | Método | Endpoint | Descrição | Permissão |
 |---|---|---|---|
-| `GET` | `/pets/me` | Listar pets associados ao usuário logado como tutor ou co-cuidador (paginação padrão de 4 pets por página via Spring Data) | Autenticado |
+| `GET` | `/pets/me` | Listar pets associados ao usuário logado como tutor ou co-cuidador (paginação padrão de 20 pets por página, configurável pelo cliente) | Autenticado |
 | `GET` | `/pets` | Listar todos os pets do sistema com paginação | `ADMIN` |
-| `GET` | `/pets/by-usuario` | Listar todos os pets vinculados ao usuário (`?usuarioId=1`) como titular ou co-cuidador | `ADMIN` |
+| `GET` | `/pets/by-usuario/{usuarioId}` | Listar todos os pets vinculados ao usuário especificado como titular ou co-cuidador | `ADMIN` |
 | `GET` | `/pets/{id}` | Buscar pet por ID | Autenticado |
-| `GET` | `/pets/{id}/historico` | Histórico compartilhado consolidado de tarefas concluídas de um pet | Cuidador do pet ou `ADMIN` |
+| `GET` | `/pets/{id}/detalhe` | Ficha consolidada do pet com pontuação, cuidadores, tarefas concluídas e prontuário clínico | Cuidador do pet ou `ADMIN` |
 | `GET` | `/pets/{id}/pontos` | Score total consolidado (Tarefas de rotina + Aulas educativas) | Cuidador do pet ou `ADMIN` |
 | `POST` | `/pets` | Cadastrar pet e vincular criador automaticamente como responsável principal | Autenticado |
 | `PUT` | `/pets/{id}` | Atualizar dados do pet (autorizado apenas para o responsável principal ou `ADMIN`) | Responsável principal ou `ADMIN` |
@@ -301,10 +301,10 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 | `GET` | `/tarefas/me` | Listar tarefas do cuidador autenticado via JWT com auto-expiração dinâmica | Autenticado |
 | `GET` | `/tarefas/me/pontos` | Consultar pontos totais de tarefas do cuidador logado via JWT | Autenticado |
 | `GET` | `/tarefas` | Listar todas as tarefas com auto-expiração automática de atrasadas | `ADMIN` |
-| `GET` | `/tarefas/by-usuario` | Listar tarefas do cuidador com filtro opcional (`?usuarioId=1&status=ALL\|PENDENTE...`) | `ADMIN` |
+| `GET` | `/tarefas/by-usuario/{usuarioId}` | Listar tarefas do cuidador com filtro opcional (`?status=ALL\|PENDENTE...`) | `ADMIN` |
 | `GET` | `/tarefas/by-pet/{petId}` | Listar todas as tarefas da rotina de um pet | Cuidador do pet ou `ADMIN` |
 | `GET` | `/tarefas/{id}` | Buscar tarefa por ID | Cuidador da tarefa ou `ADMIN` |
-| `GET` | `/tarefas/by-usuario/pontos` | Obter total de pontos acumulados pelo cuidador (`?usuarioId=1`) | `ADMIN` |
+| `GET` | `/tarefas/by-usuario/{usuarioId}/pontos` | Obter total de pontos acumulados pelo cuidador por ID | `ADMIN` |
 | `POST` | `/tarefas` | Criar nova rotina de cuidado vinculada ao cuidador autenticado no JWT | Cuidador do pet ou `ADMIN` |
 | `PUT` | `/tarefas/{id}` | Atualizar dados e status da tarefa | Cuidador da tarefa ou `ADMIN` |
 | `PATCH` | `/tarefas/{id}/concluir` | Concluir tarefa via JWT (marca executor logado e credita pontos de bem-estar) | Cuidador da tarefa ou `ADMIN` |
@@ -330,7 +330,6 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 |---|---|---|---|
 | `GET` | `/trilhas/me` | Listar todas as trilhas, módulos e aulas completas dos pets do usuário logado via JWT em árvore consolidada | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas` | Listar todas as trilhas disponíveis | `PREMIUM`, `ADMIN` |
-| `GET` | `/trilhas/pet/{petId}` | Listar trilhas atribuídas a um pet | `PREMIUM`, `ADMIN` |
 | `GET` | `/trilhas/{id}` | Buscar trilha por ID | `PREMIUM`, `ADMIN` |
 | `POST` | `/trilhas` | Criar nova trilha educativa | `ADMIN` |
 | `PUT` | `/trilhas/{id}` | Atualizar trilha existente | `ADMIN` |

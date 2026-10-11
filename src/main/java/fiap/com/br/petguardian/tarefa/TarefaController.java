@@ -51,7 +51,7 @@ public class TarefaController {
     @GetMapping("/by-pet/{petId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar todas as tarefas de um pet específico com paginação")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#petId, authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#petId, authentication.name)")
     public Page<TarefaResponse> findAllByPet(
             @PathVariable Long petId,
             @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
@@ -70,7 +70,7 @@ public class TarefaController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Criar tarefa")
-    @PreAuthorize("hasRole('ADMIN') or @petService.isCuidadorDoPet(#tarefaRequest.petId(), authentication.name)")
+    @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isCuidadorDoPet(#tarefaRequest.petId(), authentication.name)")
     public TarefaResponse create(@Valid @RequestBody TarefaRequest tarefaRequest, Authentication authentication) {
         return TarefaResponse.fromEntity(tarefaService.create(tarefaRequest, authentication.getName()));
     }
@@ -120,23 +120,23 @@ public class TarefaController {
             .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/by-usuario")
+    @GetMapping("/by-usuario/{usuarioId}")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Listar tarefas do cuidador com filtro opcional de status e paginação (somente ADMIN)")
     @PreAuthorize("hasRole('ADMIN')")
     public Page<TarefaResponse> findByUsuario(
-            @RequestParam Long usuarioId,
+            @PathVariable Long usuarioId,
             @RequestParam(defaultValue = "ALL") String status,
             @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
         return tarefaService.findAllByUsuario(usuarioId, status, pageable)
             .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/by-usuario/pontos")
+    @GetMapping("/by-usuario/{usuarioId}/pontos")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "Consultar pontos totais acumulados pelo cuidador (somente ADMIN)")
     @PreAuthorize("hasRole('ADMIN')")
-    public Integer calcularPontosTotaisUsuario(@RequestParam Long usuarioId) {
+    public Integer calcularPontosTotaisUsuario(@PathVariable Long usuarioId) {
         return tarefaService.calcularPontosTotaisUsuario(usuarioId);
     }
 }

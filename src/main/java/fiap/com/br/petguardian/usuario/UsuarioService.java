@@ -56,13 +56,13 @@ public class UsuarioService {
     }
 
     @Transactional
-    public Usuario upgradePremium(Long id) {
-        return executarUpgradePremium(findUsuarioById(id));
-    }
-
-    @Transactional
     public Usuario upgradePremium(String email) {
-        return executarUpgradePremium(findByEmail(email));
+        Usuario usuario = findByEmail(email);
+        if (usuario.getRole() != UsuarioRole.COMUM) {
+            throw new IllegalArgumentException("Somente usuários com perfil COMUM podem realizar upgrade para PREMIUM.");
+        }
+        usuario.setRole(UsuarioRole.PREMIUM);
+        return usuarioRepository.save(usuario);
     }
 
     @Transactional
@@ -108,14 +108,6 @@ public class UsuarioService {
         usuario.getTelefone().setDdd(request.ddd().trim());
         usuario.getTelefone().setNumero(request.numeroTelefone().trim());
         usuario.setEndereco(enderecoService.findOrCreateByCepAndNumero(request.endereco()));
-        return usuarioRepository.save(usuario);
-    }
-
-    private Usuario executarUpgradePremium(Usuario usuario) {
-        if (usuario.getRole() != UsuarioRole.COMUM) {
-            throw new IllegalArgumentException("Somente usuários com perfil COMUM podem realizar upgrade para PREMIUM.");
-        }
-        usuario.setRole(UsuarioRole.PREMIUM);
         return usuarioRepository.save(usuario);
     }
 }

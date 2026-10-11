@@ -11,7 +11,7 @@ public interface TrilhaRepository extends JpaRepository<Trilha, Long> {
     @EntityGraph(attributePaths = {"pet"})
     List<Trilha> findAllByPetId(Long petId);
 
-    @EntityGraph(attributePaths = {"pet"})
+    @EntityGraph(attributePaths = {"pet", "modulos", "modulos.aulas"})
     @Query("select t from Trilha t join t.pet p join p.usuarioPets up where lower(up.usuario.email) = lower(:email) order by t.nome asc")
     List<Trilha> findAllByUsuarioEmail(@Param("email") String email);
 }

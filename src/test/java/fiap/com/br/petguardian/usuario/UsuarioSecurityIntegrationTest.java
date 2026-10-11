@@ -236,7 +236,8 @@ class UsuarioSecurityIntegrationTest {
     void devePermitirDonoRealizarUpgradePremium() throws Exception {
         Usuario usuarioSalvo = criarUsuarioMock(1L, "dono@fiap.com.br", UsuarioRole.PREMIUM);
         when(usuarioService.isOwner(1L, "dono@fiap.com.br")).thenReturn(true);
-        when(usuarioService.upgradePremium(1L)).thenReturn(usuarioSalvo);
+        when(usuarioService.findById(1L)).thenReturn(usuarioSalvo);
+        when(usuarioService.upgradePremium("dono@fiap.com.br")).thenReturn(usuarioSalvo);
 
         mockMvc.perform(patch("/usuarios/1/upgrade-premium")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("dono@fiap.com.br").claim("role", "COMUM"))))

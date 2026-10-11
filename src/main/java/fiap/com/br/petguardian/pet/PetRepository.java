@@ -7,13 +7,8 @@ import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Map;
-import java.util.Optional;
 
 public interface PetRepository extends JpaRepository<Pet, Long> {
-
-    Page<Pet> findAll(Pageable pageable);
-
-    Optional<Pet> findById(Long id);
 
     Page<Pet> findByUsuarioId(Long usuarioId, Pageable pageable);
 
