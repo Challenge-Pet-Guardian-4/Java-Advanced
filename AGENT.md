@@ -1,135 +1,182 @@
 # 🐾 AGENT.md — PetGuardian API (Java-Advanced)
 
-Guia técnico de referência da arquitetura, convenções de código, segurança e rotinas de banco da **PetGuardian API** (`Java-Advanced`).
+Guia técnico definitivo da arquitetura, convenções de código, segurança, persistência poliglota e rotinas analíticas corporativas da **PetGuardian API** (`Java-Advanced`).
 
 ---
 
 ## 🏛️ 1. Arquitetura & Stack Técnica
 
 - **Java Version:** Java 17 LTS | **Framework:** Spring Boot 4.1.1 | **Build:** Gradle 8.x
-- **Persistência Relacional:** Spring Data JPA + Hibernate (`OracleDialect`), conectado ao **Oracle Database 19c** corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`).
-- **Persistência NoSQL:** Spring Data MongoDB (`spring.mongodb.*`) para conteúdo pedagógico rico de aulas em Markdown (`conteudos_aula`).
-- **Segurança:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas RSA 2048-bit (PKCS#8).
-- **HTTP Client Declarativo:** `@HttpExchange` e `@GetExchange` com `RestClient` via `@ImportHttpServices` para integração com ViaCEP.
-- **Cache:** Spring Cache em memória para resolução estática de `Status`.
-- **Validação:** Bean Validation declarativo em DTOs (Records) com validadores customizados (`@DddValidation`, `@EnumValidation`).
+- **Persistência Relacional:** Spring Data JPA + Hibernate 7, conectado ao **Oracle Database 19c** corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`). Dialeto autodetectado (`OracleDialect`), `spring.jpa.hibernate.ddl-auto=none` e migrações Flyway ativas.
+- **Persistência NoSQL em Nuvem:** Spring Data MongoDB via `spring.data.mongodb.uri=${MONGODB_URI}` apontando para o cluster **MongoDB Atlas na Nuvem** (`petguardian.agoderb.mongodb.net`), armazenando conteúdo didático rico em Markdown e vídeos (`conteudos_aula`).
+- **Segurança Stateless:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas **RSA 2048-bit** (PKCS#8).
+- **HTTP Client Declarativo:** `@HttpExchange` e `@GetExchange` com `RestClient` via `@ImportHttpServices` para integração de CEPs com o ViaCEP.
+- **Cache:** Spring Cache em memória para resolução estática de domínios como `Status`.
+- **Validação Declarativa:** Bean Validation em DTOs Records puros/imutáveis com anotações de domínio customizadas (`@DddValidation`, `@EnumValidation`).
+- **Documentação de API:** SpringDoc OpenAPI 3 / Swagger UI 2.8.5 com prefixos visuais padronizados por autoridade (`[PÚBLICO]`, `[AUTENTICADO]`, `[CUIDADOR]`, `[PREMIUM / ADMIN]`, `[RESPONSÁVEL / ADMIN]`, `[ADMIN]`).
 
 ---
 
-## 👥 2. Perfis de Acesso (RBAC) & Segurança
+## 👥 2. Perfis de Acesso (RBAC) & Credenciais Oficiais
+
+A autorização é governada por **Role-Based Access Control (RBAC)** em 3 níveis:
 
 | Perfil (`UsuarioRole`) | Escopo Autorizado | Restrições |
 | :--- | :--- | :--- |
-| **`COMUM`** | Cadastro gratuito padrão. Acesso a Pets, Care Circle, Tarefas, Histórico e Perfil próprio. | Bloqueado para Trilhas, Módulos e Aulas (`403 Forbidden`). |
-| **`PREMIUM`** | Tutores pagantes. Todo o escopo de `COMUM` + visualização e conclusão de Trilhas, Módulos e Aulas. | Bloqueado para criação/edição/deleção de conteúdos pedagógicos. |
-| **`ADMIN`** | Acesso irrestrito a todas as entidades, relatórios e CRUD completo de Trilhas/Módulos/Aulas. | Nenhuma. |
+| **`COMUM`** | Cadastro gratuito padrão. Gestão dos próprios Pets, Care Circle, Tarefas diárias, Histórico Clínico e Perfil próprio. | Bloqueado para Trilhas, Módulos, Aulas, Conteúdos NoSQL, Endereços e relatórios globais (`403 Forbidden`). |
+| **`PREMIUM`** | Tutores assinantes. Todo o escopo de `COMUM` + visualização de Trilhas, Módulos, Aulas didáticas e conclusão de lições somando pontos ao pet. | Bloqueado para criação, edição ou deleção de conteúdos pedagógicos e infraestrutura (`403 Forbidden`). |
+| **`ADMIN`** | Acesso irrestrito a todo o ecossistema: bypass de tutor em pets/tarefas, promoção de roles, CRUD pedagógico completo, gravação NoSQL no MongoDB Atlas e gestão de endereços. | Nenhuma. |
 
-- **Tokens JWT:** Emitidos via `POST /login`, válidos por 1 hora, transportando as claims `sub` (e-mail) e `role` (`ROLE_COMUM`, `ROLE_PREMIUM`, `ROLE_ADMIN`).
-- **Endpoints Públicos:** `POST /login`, `POST /usuarios`, documentação Swagger/OpenAPI (`/v3/api-docs/**`, `/swagger-ui/**`), Actuator (`/actuator/health`).
+### 🔑 Credenciais Provisionadas para Testes & Correção
+
+| Perfil (Role) | E-mail Oficial | Senha Padrão | BCrypt Hash (V3 Flyway / .env) |
+|---|---|---|---|
+| **ADMIN** | `enzo.admin@petguardian.com` | `123mudar` | `$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G` |
+| **COMUM** | `enzo.teste@petguardian.com` | `Senha123` | `$2a$10$P2N5G6U8B9...` (Usuário de controle para testes negativos de RBAC) |
+
+- **Tokens JWT:** Emitidos via `POST /login`, válidos por 1 hora, transportando claim `sub` (e-mail) convertida em autoridades Spring Security (`ROLE_COMUM`, `ROLE_PREMIUM`, `ROLE_ADMIN`).
+- **Endpoints Públicos:** `POST /login`, `POST /usuarios`, documentação Swagger (`/swagger-ui/**`, `/v3/api-docs/**`) e healthcheck Actuator (`/actuator/health`).
 
 ---
 
 ## 🗄️ 3. Integração com Stored Procedures Oracle (`PKG_PETGUARDIAN`)
 
-A camada de persistência executa 3 Stored Procedures empacotadas no Oracle PL/SQL através de anotações `@Procedure` do Spring Data JPA:
+A camada de persistência integra diretamente 4 rotinas empacotadas no Oracle PL/SQL corporativo através de anotações `@Procedure` e `@NamedStoredProcedureQueries` no Spring Data JPA:
 
-| Stored Procedure | Repositório | Endpoint Acionador | Descrição de Negócio |
+| Stored Procedure | Entidade / Mapeamento | Repositório | Finalidade Corporativa |
 | :--- | :--- | :--- | :--- |
-| `pkg_petguardian.pr_calcular_pontuacao_pet` | `PetRepository` | `GET /pets/{id}/pontos` | Retorna tarefas, aulas e total de pontos do animal por ID. |
-| `pkg_petguardian.pr_calcular_pontuacao_usuario` | `PetRepository` | `GET /pets/me/pontos` e `GET /usuarios/me/rede-cuidado` | Consolida em batch único a pontuação de todos os pets sob tutela do usuário logado. |
-| `pkg_petguardian.pr_transferir_responsavel_principal` | `UsuarioPetRepository` | `PATCH /pets/{id}/responsavel-principal` | Executa a troca atômica do responsável principal no Care Circle (`USUARIO_PET`). |
+| `pkg_petguardian.pr_calcular_pontuacao_pet` | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoPet")` | `PetRepository` | Calcula em tempo real pontos de tarefas concluídas, aulas didáticas e pontuação consolidada do animal. |
+| `pkg_petguardian.pr_calcular_pontuacao_usuario` | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoUsuario")` | `PetRepository` | Consolida em batch único a pontuação acumulada de todos os pets sob tutela do usuário logado. |
+| `pkg_petguardian.pr_obter_resumo_rede_cuidado` | `@NamedStoredProcedureQuery("UsuarioPet.obterResumoRedeCuidado")` | `UsuarioPetRepository` | Retorna total de pets, cuidadores, tarefas pendentes, tarefas concluídas e pontos agregados da rede familiar. |
+| `pkg_petguardian.pr_transferir_responsavel_principal` | `@Procedure("pkg_petguardian.pr_transferir_responsavel_principal")` | `UsuarioPetRepository` | Executa a transferência atômica de tutela do tutor anterior para o novo no Care Circle (`USUARIO_PET`). |
+
+### ⚠️ Regra Crítica de Mapeamento para Hibernate 7
+No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OUT` exigem declaração explícita de tipos com `@StoredProcedureParameter(mode = ParameterMode.OUT, type = Integer.class)` via `@NamedStoredProcedureQueries` na entidade (`Pet` e `UsuarioPet`). Não invocar procedures com múltiplos parâmetros OUT sem esse mapeamento explícito para evitar `ParameterTypeException`.
 
 - **Trigger de Auditoria:** `trg_audit_tarefa` é disparada automaticamente após DML em `TAREFA`, gravando valores `:OLD` e `:NEW` em `AUDITORIA_DML_TAREFA`.
 
 ---
 
-## 🌐 4. Mapa Canônico de Endpoints da API
+## 🍃 4. Arquitetura Poliglota (Oracle 19c + MongoDB Atlas NoSQL)
 
-### Autenticação & Usuários (`/login`, `/usuarios`)
-- `POST /login`: Autenticação e geração de token JWT.
-- `POST /usuarios`: Cadastro público de tutor (perfil inicial `COMUM`).
-- `GET /usuarios/me`: Perfil do usuário logado via JWT.
-- `PUT /usuarios/me`: Atualização cadastral própria. Caso o e-mail seja alterado, emite novo token JWT no header `X-Novo-Token` (exposto pelo `CorsConfig`).
-- `DELETE /usuarios/me`: Encerramento da própria conta.
-- `GET /usuarios/me/rede-cuidado`: Visão consolidada da rede (pets, co-cuidadores, tarefas da semana e pontuação via procedure).
-- `PATCH /usuarios/me/upgrade-premium`: Upgrade de perfil de `COMUM` para `PREMIUM`.
-- `GET /usuarios` | `GET /usuarios/by-email` | `PATCH /usuarios/{id}/role`: Ações administrativas (`ADMIN`).
-
-### Pets & Care Circle (`/pets`)
-- `GET /pets/me`: Pets vinculados ao usuário logado (tutor principal ou co-cuidador, com paginação padrão de 20 pets por página via Spring Data).
-- `GET /pets/me/pontos`: Pontuação agregada dos pets do usuário via Stored Procedure.
-- `GET /pets/{id}/detalhe`: Ficha consolidada do pet com pontuação, cuidadores, tarefas concluídas e prontuário clínico.
-- `GET /pets/{id}` | `POST /pets` | `PUT /pets/{id}` | `DELETE /pets/{id}`: Gestão do animal (edição e exclusão restritas ao responsável principal ou `ADMIN`).
-- `GET /pets/{id}/pontos`: Pontuação individual do pet via Stored Procedure.
-- `GET /pets/{petId}/cuidadores`: Lista co-cuidadores vinculados ao animal.
-- `POST /pets/{petId}/cuidadores`: Convite de co-cuidador por e-mail.
-- `DELETE /pets/{petId}/cuidadores/me`: Desvinculação do próprio cuidador autenticado do Care Circle via JWT.
-- `DELETE /pets/{petId}/cuidadores?email=...`: Desvinculação de co-cuidador por e-mail (responsável principal ou o próprio cuidador).
-- `PATCH /pets/{petId}/responsavel-principal`: Transferência atômica de titularidade via Stored Procedure.
-
-### Tarefas da Rotina (`/tarefas`)
-- `GET /tarefas/me`: Tarefas do cuidador logado com auto-expiração de tarefas pendentes vencidas no banco via Spring Data.
-- `GET /tarefas/me/pontos`: Pontos acumulados de rotina do cuidador autenticado.
-- `GET /tarefas/by-pet/{petId}`: Lista tarefas de rotina de um pet.
-- `GET /tarefas/{id}` | `POST /tarefas` | `PUT /tarefas/{id}` | `DELETE /tarefas/{id}`: CRUD da rotina.
-- `PATCH /tarefas/{id}/concluir`: Conclusão de tarefa via JPA, creditando pontos e disparando trigger de auditoria.
-- `PATCH /tarefas/{id}/desmarcar`: Estorno de tarefa concluída para `PENDENTE` e reversão de pontos.
-
-### Histórico Clínico de Saúde (`/historicos`)
-- `GET /historicos/me`: Prontuário médico de todos os pets do usuário autenticado.
-- `GET /historicos/pet/{petId}`: Prontuário do animal ordenado por data.
-- `GET /historicos/{id}` | `POST /historicos` | `PUT /historicos/{id}` | `DELETE /historicos/{id}`: Gestão de eventos de saúde.
-
-### Trilhas Educativas, Módulos & Aulas (`/trilhas`, `/modulos`, `/aulas`) — *PREMIUM & ADMIN*
-- `GET /trilhas/me`: Trilhas de adestramento dos pets do usuário autenticado consolidadas com módulos e aulas em árvore única.
-- `GET /trilhas` | `GET /trilhas/{id}`: Trilhas de adestramento do animal.
-- `GET /modulos/trilha/{trilhaId}` | `GET /modulos/{id}`: Módulos pedagógicos.
-- `GET /aulas/modulo/{moduloId}` | `GET /aulas/{id}`: Metadados relacionais da aula no Oracle.
-- `PATCH /aulas/{id}/concluir` | `PATCH /aulas/{id}/desmarcar`: Conclusão ou estorno de lição somando pontos ao pet.
-- `GET /aulas/{aulaId}/conteudo`: Conteúdo rico em Markdown e links de apoio persistido no MongoDB NoSQL.
-- *Operações de escrita (`POST`, `PUT`, `DELETE` em trilhas/módulos/aulas/conteúdos): Exclusivas de `ADMIN`.*
-
-### Endereços (`/enderecos`)
-- `GET /enderecos` | `GET /enderecos/{id}` | `POST /enderecos` | `PUT /enderecos/{id}` | `DELETE /enderecos/{id}`: Resolução via ViaCEP e persistência normalizada em 3FN (`Bairro`, `Cidade`, `Estado`).
+1. **Separação de Responsabilidades:**
+   - **Oracle Database 19c:** Governa entidades relacionais normalizadas em 3FN, transações financeiras/cadastrais, integridade referencial estrita e procedures de gamificação (`usuario`, `pet`, `usuario_pet`, `tarefa`, `trilha`, `modulo`, `aula`, `historico`, `endereco`).
+   - **MongoDB Atlas (Nuvem):** Coleção `conteudos_aula` armazena documentos NoSQL com estruturas dinâmicas de textos longos em Markdown, metadados pedagógicos e arrays de links multimídia.
+2. **Resiliência e Fallback Seguro:**
+   - Os serviços `AulaService` e `TrilhaService` agregam os metadados relacionais do Oracle com o documento correspondente do MongoDB de forma tolerante a falhas (fallback gracioso caso o cluster NoSQL apresente instabilidade de rede).
+3. **Controle de Escrita NoSQL:**
+   - Operações de escrita (`POST`, `PUT`, `DELETE /aulas/{id}/conteudo`) são restritas com exclusividade a perfis `ADMIN`. Usuários `PREMIUM` têm acesso apenas de leitura (`GET`).
 
 ---
 
-## 📏 5. Convenções de Código & Diretrizes Arquiteturais
+## 🌐 5. Mapa Canônico de Endpoints da API
 
-1. **Top-Level Imports (Proibido FQCN Inline):** NUNCA usar pacotes completos no corpo do arquivo. Importar no topo via `import`.
-2. **DTOs Limpos e Imutáveis (Records):** DTOs são `record` puros contendo apenas Bean Validation formal (`@NotBlank`, `@NotNull`, `@Pattern`, `@Positive`, etc.) e método de mapeamento `toEntity()`.
-3. **Sem Null-Checks Paranoicos:** Validações de entrada em DTOs garantem integridade dos dados. Não espalhar `!= null` defensivos desnecessários em services.
-4. **Padrão de Busca por ID no Service:**
-   ```java
-   public Entity findById(Long id) {
-       return findEntityById(id);
-   }
-   private Entity findEntityById(Long id) {
-       return repository.findById(id)
-               .orElseThrow(() -> new ResourceNotFoundException("Entity com id " + id + " nao encontrada."));
-   }
-   ```
+### Autenticação & Usuários (`/login`, `/usuarios`)
+- `POST /login`: `[PÚBLICO]` Autenticação e emissão de token JWT com claims e dados cadastrais.
+- `POST /usuarios`: `[PÚBLICO]` Cadastro público de novo usuário (nasce sempre como `COMUM`).
+- `GET /usuarios/me`: `[AUTENTICADO]` Detalhes cadastrais do usuário logado via JWT.
+- `PUT /usuarios/me`: `[AUTENTICADO]` Atualização cadastral própria. Caso o e-mail seja modificado, emite novo token JWT no header `X-Novo-Token`.
+- `DELETE /usuarios/me`: `[AUTENTICADO]` Encerramento da própria conta e remoção dos vínculos.
+- `GET /usuarios/me/rede-cuidado`: `[AUTENTICADO]` Visão agregada do Care Circle do tutor (pets, co-cuidadores e resumo via Stored Procedure).
+- `PATCH /usuarios/me/upgrade-premium`: `[AUTENTICADO]` Auto-promoção de perfil de `COMUM` para `PREMIUM`.
+- `GET /usuarios`: `[ADMIN]` Listagem global de usuários com paginação e ordenação.
+- `GET /usuarios/by-email`: `[ADMIN]` Busca de usuário por parâmetro de e-mail exato.
+- `GET /usuarios/{id}`: `[AUTENTICADO]` Detalhes de um usuário (restrito ao próprio usuário ou `ADMIN`).
+- `GET /usuarios/{id}/rede-cuidado`: `[ADMIN]` Visão da rede de cuidado de qualquer usuário do sistema.
+- `PUT /usuarios/{id}`: `[AUTENTICADO]` Atualização cadastral por ID (próprio usuário ou `ADMIN`).
+- `DELETE /usuarios/{id}`: `[AUTENTICADO]` Remoção de conta por ID (próprio usuário ou `ADMIN`).
+- `PATCH /usuarios/{id}/role`: `[ADMIN]` Alteração da role de qualquer usuário (`COMUM`, `PREMIUM`, `ADMIN`).
+- `PATCH /usuarios/{id}/upgrade-premium`: `[AUTENTICADO]` Promoção para `PREMIUM` por ID (próprio usuário ou `ADMIN`).
+
+### Pets & Care Circle (`/pets`)
+- `GET /pets/me`: `[CUIDADOR]` Lista pets associados ao usuário logado (como tutor principal ou co-cuidador).
+- `GET /pets/me/pontos`: `[CUIDADOR]` Pontuação total acumulada de todos os pets do usuário via Stored Procedure Oracle.
+- `POST /pets`: `[AUTENTICADO]` Cadastro de novo pet vinculando criador como responsável principal no Care Circle.
+- `GET /pets/{id}`: `[CUIDADOR / ADMIN]` Buscar pet por ID.
+- `GET /pets/{id}/pontos`: `[CUIDADOR / ADMIN]` Consulta pontuação consolidada do pet via Stored Procedure Oracle (`pkg_petguardian.pr_calcular_pontuacao_pet`).
+- `GET /pets/{id}/detalhe`: `[CUIDADOR / ADMIN]` Ficha consolidada com pontuação, cuidadores, tarefas concluídas e prontuário.
+- `PUT /pets/{id}`: `[RESPONSÁVEL / ADMIN]` Atualizar cadastro do pet.
+- `DELETE /pets/{id}`: `[RESPONSÁVEL / ADMIN]` Deletar pet.
+- `GET /pets`: `[ADMIN]` Listagem global de todos os pets da base com paginação.
+- `GET /pets/by-usuario/{usuarioId}`: `[ADMIN]` Listar pets associados a determinado tutor.
+- `GET /pets/{petId}/cuidadores`: `[CUIDADOR / ADMIN]` Listar co-cuidadores vinculados ao animal.
+- `POST /pets/{petId}/cuidadores`: `[RESPONSÁVEL / ADMIN]` Convidar novo co-cuidador por e-mail.
+- `DELETE /pets/{petId}/cuidadores/me`: `[CUIDADOR / ADMIN]` Desvinculação voluntária do próprio cuidador logado.
+- `DELETE /pets/{petId}/cuidadores`: `[RESPONSÁVEL / ADMIN]` Desvinculação de co-cuidador por e-mail (`?email=...`).
+- `PATCH /pets/{petId}/responsavel-principal`: `[RESPONSÁVEL / ADMIN]` Transferência atômica de titularidade via Stored Procedure Oracle.
+
+### Tarefas da Rotina (`/tarefas`)
+- `GET /tarefas/me`: `[CUIDADOR]` Tarefas do usuário autenticado com filtro opcional de status e auto-expiração dinâmica.
+- `GET /tarefas/me/pontos`: `[CUIDADOR]` Pontos totais acumulados pelo cuidador autenticado.
+- `GET /tarefas/by-pet/{petId}`: `[CUIDADOR / ADMIN]` Lista tarefas de rotina de um pet.
+- `GET /tarefas/{id}`: `[CUIDADOR / ADMIN]` Buscar tarefa por ID.
+- `POST /tarefas`: `[CUIDADOR / ADMIN]` Criar nova tarefa de rotina (prazo futuro obrigatório via `@Future`).
+- `PUT /tarefas/{id}`: `[CUIDADOR / ADMIN]` Atualizar dados da tarefa.
+- `PATCH /tarefas/{id}/concluir`: `[CUIDADOR / ADMIN]` Concluir tarefa (status `CONCLUIDO`), somando pontos e disparando trigger de auditoria.
+- `PATCH /tarefas/{id}/desmarcar`: `[CUIDADOR / ADMIN]` Desmarcar tarefa concluída (retorna a `PENDENTE`), estornando pontos.
+- `DELETE /tarefas/{id}`: `[CUIDADOR / ADMIN]` Excluir tarefa.
+- `GET /tarefas`: `[ADMIN]` Listagem global de todas as tarefas cadastradas no sistema.
+- `GET /tarefas/by-usuario/{usuarioId}`: `[ADMIN]` Listar tarefas de determinado cuidador por ID.
+- `GET /tarefas/by-usuario/{usuarioId}/pontos`: `[ADMIN]` Consultar pontos acumulados de tarefas por usuário.
+
+### Histórico Clínico de Saúde (`/historicos`)
+- `GET /historicos/me`: `[CUIDADOR]` Histórico agregado de todos os pets do cuidador logado.
+- `GET /historicos/pet/{petId}`: `[CUIDADOR / ADMIN]` Prontuário médico ordenado por data mais recente.
+- `GET /historicos/{id}`: `[CUIDADOR / ADMIN]` Buscar evento de saúde por ID.
+- `POST /historicos`: `[CUIDADOR / ADMIN]` Registrar vacina, consulta, exame ou cirurgia.
+- `PUT /historicos/{id}`: `[CUIDADOR / ADMIN]` Atualizar registro médico.
+- `DELETE /historicos/{id}`: `[CUIDADOR / ADMIN]` Excluir registro clínico.
+- `GET /historicos`: `[ADMIN]` Listagem global de prontuários com paginação.
+
+### Trilhas Educativas, Módulos & Aulas (`/trilhas`, `/modulos`, `/aulas`)
+- `GET /trilhas/me`: `[PREMIUM / ADMIN]` Trilhas, módulos e aulas completas dos pets do tutor logado em árvore unificada.
+- `GET /trilhas` | `GET /trilhas/{id}`: `[PREMIUM / ADMIN]` Consulta de trilhas pedagógicas.
+- `POST /trilhas` | `PUT /trilhas/{id}` | `DELETE /trilhas/{id}`: `[ADMIN]` Gestão do ciclo de vida da trilha.
+- `GET /modulos` | `GET /modulos/{id}` | `GET /modulos/trilha/{trilhaId}`: `[PREMIUM / ADMIN]` Consulta de módulos temáticos.
+- `POST /modulos` | `PUT /modulos/{id}` | `DELETE /modulos/{id}`: `[ADMIN]` Gestão do ciclo de vida de módulos.
+- `GET /aulas` | `GET /aulas/{id}` | `GET /aulas/modulo/{moduloId}`: `[PREMIUM / ADMIN]` Consulta de aulas didáticas.
+- `PATCH /aulas/{id}/concluir`: `[PREMIUM / ADMIN]` Concluir lição e somar pontuação educacional ao score do animal.
+- `PATCH /aulas/{id}/desmarcar`: `[PREMIUM / ADMIN]` Desmarcar lição e estornar pontos do animal.
+- `POST /aulas` | `PUT /aulas/{id}` | `DELETE /aulas/{id}`: `[ADMIN]` Gestão do ciclo de vida de aulas.
+
+### Conteúdos NoSQL no MongoDB Atlas (`/aulas`)
+- `GET /aulas/{aulaId}/conteudo`: `[PREMIUM / ADMIN]` Obter texto didático rico em Markdown e vídeos do cluster MongoDB Atlas.
+- `GET /aulas/conteudos`: `[ADMIN]` Listagem de todos os conteúdos NoSQL do cluster com paginação.
+- `POST /aulas/{aulaId}/conteudo`: `[ADMIN]` Inserir documento NoSQL no cluster MongoDB Atlas para a aula.
+- `PUT /aulas/{aulaId}/conteudo`: `[ADMIN]` Atualizar documento NoSQL no MongoDB Atlas.
+- `DELETE /aulas/{aulaId}/conteudo`: `[ADMIN]` Deletar documento NoSQL do MongoDB Atlas.
+
+### Endereços com Integração ViaCEP (`/enderecos`)
+- `GET /enderecos`: `[ADMIN]` Listagem global de endereços normalizados.
+- `GET /enderecos/{id}`: `[ADMIN]` Buscar endereço por ID.
+- `POST /enderecos`: `[ADMIN]` Criar endereço com resolução automática via ViaCEP (body: `{"cep": "01310-200", "numero": "1578"}`).
+- `PUT /enderecos/{id}`: `[ADMIN]` Atualizar número ou CEP com nova resolução.
+- `DELETE /enderecos/{id}`: `[ADMIN]` Remover endereço por ID.
+
+---
+
+## 📏 6. Convenções de Código & Diretrizes Arquiteturais
+
+1. **Top-Level Imports Obrigatórios:** Proibido uso de FQCN inline. Todos os tipos devem ser importados no topo do arquivo.
+2. **Tipagem Estrita (Zero `any`):** Garantir tipagem forte em contratos de API, DTOs e entidades.
+3. **DTOs Puros (Records):** DTOs de entrada e saída devem ser `record` imutáveis contendo validações declarativas (`@NotBlank`, `@NotNull`, `@Pattern`, `@Positive`, `@Future`) e métodos de conversão estáticos ou `toEntity()`.
+4. **Sem Null-Checks Redundantes:** Confiar nas validações do Bean Validation no pipeline HTTP e nas constraints relacionais (`NOT NULL`) do Oracle. Realizar verificações apenas onde `null` for estado de negócio plausível.
 5. **Desacoplamento Horizontal:** Services injetam apenas os **Repositories** necessários das entidades vizinhas, nunca Services irmãos (prevenção de dependência circular).
-6. **Segregação Poliglota nos Repositórios:**
-   - `@EnableJpaRepositories` exclui o pacote/classe de repositórios do Mongo.
-   - `@EnableMongoRepositories` aponta estritamente para `ConteudoAulaRepository`.
-   - Propriedades do MongoDB no Spring Boot 4 utilizam o prefixo canônico `spring.mongodb.*`.
+6. **Segregação de Repositórios Poliglotas:**
+   - `@EnableJpaRepositories` gerencia as entidades relacionais Oracle (`fiap.com.br.petguardian.*`).
+   - `@EnableMongoRepositories` gerencia exclusivamente os documentos NoSQL (`fiap.com.br.petguardian.trilha.aula.conteudo`).
+   - Configuração de URI via `spring.data.mongodb.uri=${MONGODB_URI}`.
 7. **Tratamento Global de Erros (`GlobalExceptionHandler`):**
    - `400`: `MethodArgumentNotValidException`, `IllegalArgumentException`.
    - `401`: `AuthenticationException`.
-   - `403`: `AccessDeniedException`.
+   - `403`: `AccessDeniedException` / `AuthorizationDeniedException`.
    - `404`: `ResourceNotFoundException`.
    - `409`: `DataIntegrityViolationException` (violações de chave única/integridade relacional como `ORA-00001`).
-
-8. **Migrações Flyway Idempotentes:**
-   - Scripts em `src/main/resources/db/migration/` (`V1__...` a `V4__...`).
-   - `V1__criar_tabelas.sql`: DDL 100% alinhado com o Oracle corporativo da FIAP (tabela `aula` sem coluna `conteudo`).
+8. **Flyway Versionado & Idempotente:**
+   - `V1__criar_tabelas.sql`: DDL relacional em 3FN compatível com Oracle 19c.
    - `V2__carga_inicial_status.sql`: Status de domínio fixos (`PENDENTE=1`, `CONCLUIDO=2`, `EXPIRADO=3`).
-   - `V3__admin_inicial.sql`: Usuário administrador inicial (`enzo.admin@petguardian.com`) parametrizado com `${ADMIN_BCRYPT_HASH}` e guardas de idempotência.
-   - `V4__indice_tarefa_status_prazo.sql`: Índice com tratamento de erros `ORA-00955` e `ORA-01408`.
-
-9. **Arquitetura Poliglota (Aulas Oracle + MongoDB NoSQL):**
-   - A tabela relacional `aula` no Oracle armazena metadados relacionais e vínculo com `modulo`.
-   - O conteúdo pedagógico rico (Markdown e links) é persistido no MongoDB (`conteudos_aula`).
-   - Ao consultar aulas (`GET /aulas/{id}`, `GET /aulas` e `GET /trilhas/me`), `AulaService` e `TrilhaService` agregam os dados do Oracle com o documento do MongoDB de forma resiliente (fallback seguro caso o Mongo esteja inacessível).
-   - Operações de escrita em conteúdos de aula (`POST`, `PUT`, `DELETE`) são exclusivas de `ADMIN`. Usuários `PREMIUM` podem apenas consumir e marcar/desmarcar conclusão da aula no pet.
+   - `V3__admin_inicial.sql`: Usuário administrador inicial (`enzo.admin@petguardian.com`) parametrizado via `${ADMIN_BCRYPT_HASH}`.
+   - `V4__indice_tarefa_status_prazo.sql`: Índice otimizado de busca de prazos.
+   - `R__pkg_petguardian.sql`: Migração repetível que compila a package e triggers de auditoria PL/SQL.
+9. **Auditoria Automatizada RBAC:**
+   - Suíte de validação formal em `scratch/test_admin_endpoints.ps1` com 45 asserções automatizadas cobrindo CRUDs de Admin e barreiras negativas de HTTP 403 para usuários comuns.
