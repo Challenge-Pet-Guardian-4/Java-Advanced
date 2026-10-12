@@ -52,8 +52,8 @@ class AulaServiceTest {
     @DisplayName("Deve criar aula associada a um modulo")
     void deveCriarAula() {
         Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
-        var request = new AulaRequest("Comando Senta!", "Ensine o pet a sentar", 25, "FACIL", false, 10L);
-        Aula aulaSalva = Aula.builder().id(100L).nome("Comando Senta!").descricao("Ensine o pet a sentar").pontosAula(25).dificuldade("FACIL").concluida(false).modulo(modulo).build();
+        var request = new AulaRequest("Comando Senta!", "Ensine o pet a sentar", 10, "FACIL", false, 10L);
+        Aula aulaSalva = Aula.builder().id(100L).nome("Comando Senta!").descricao("Ensine o pet a sentar").pontosAula(10).dificuldade("FACIL").concluida(false).modulo(modulo).build();
 
         when(moduloRepository.findById(10L)).thenReturn(Optional.of(modulo));
         when(aulaRepository.save(any(Aula.class))).thenReturn(aulaSalva);
@@ -62,7 +62,7 @@ class AulaServiceTest {
 
         assertNotNull(resultado);
         assertEquals("Comando Senta!", resultado.nome());
-        assertEquals(25, resultado.pontosAula());
+        assertEquals(10, resultado.pontosAula());
         assertNull(resultado.conteudo());
         verify(aulaRepository).save(any(Aula.class));
     }
