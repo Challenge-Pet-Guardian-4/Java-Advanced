@@ -1,13 +1,14 @@
 package fiap.com.br.petguardian.trilha.aula.dto;
 
 import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.DificuldadeAula;
 
 public record AulaResponse(
         Long id,
         String nome,
         String descricao,
         Integer pontosAula,
-        String dificuldade,
+        DificuldadeAula dificuldade,
         String conteudo,
         boolean concluida,
         Long moduloId,

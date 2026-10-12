@@ -143,7 +143,7 @@ public class AulaService {
         aula.setNome(request.nome());
         aula.setDescricao(request.descricao());
         aula.setPontosAula(request.pontosAula());
-        aula.setDificuldade(request.dificuldade());
+        aula.setDificuldade(DificuldadeAula.valueOf(request.dificuldade().trim().toUpperCase()));
         aula.setConcluida(request.concluida());
         aula.setModulo(modulo);
     }

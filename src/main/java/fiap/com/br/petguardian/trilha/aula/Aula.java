@@ -27,8 +27,9 @@ public class Aula {
     @Column(name = "pontos_aula", nullable = false)
     private Integer pontosAula;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String dificuldade;
+    private DificuldadeAula dificuldade;
 
     @Column(nullable = false)
     @Builder.Default

@@ -2,6 +2,7 @@ package fiap.com.br.petguardian.trilha.dto;
 
 import fiap.com.br.petguardian.trilha.Trilha;
 import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.DificuldadeAula;
 import fiap.com.br.petguardian.trilha.modulo.Modulo;
 
 import java.util.Comparator;
@@ -17,11 +18,10 @@ public record TrilhaCompletaResponse(
         List<ModuloCompletoResponse> modulos
 ) {
     public static TrilhaCompletaResponse fromEntity(Trilha t, Function<Long, String> conteudoResolver) {
-        List<ModuloCompletoResponse> modulos = t.getModulos() == null ? List.of() :
-                t.getModulos().stream()
-                        .sorted(Comparator.comparing(Modulo::getId))
-                        .map(m -> ModuloCompletoResponse.fromEntity(m, conteudoResolver))
-                        .toList();
+        List<ModuloCompletoResponse> modulos = t.getModulos().stream()
+                .sorted(Comparator.comparing(Modulo::getId))
+                .map(m -> ModuloCompletoResponse.fromEntity(m, conteudoResolver))
+                .toList();
 
         return new TrilhaCompletaResponse(
                 t.getId(),
@@ -45,11 +45,10 @@ public record TrilhaCompletaResponse(
             List<AulaCompletaResponse> aulas
     ) {
         public static ModuloCompletoResponse fromEntity(Modulo m, Function<Long, String> conteudoResolver) {
-            List<AulaCompletaResponse> aulas = m.getAulas() == null ? List.of() :
-                    m.getAulas().stream()
-                            .sorted(Comparator.comparing(Aula::getId))
-                            .map(a -> AulaCompletaResponse.fromEntity(a, conteudoResolver.apply(a.getId())))
-                            .toList();
+            List<AulaCompletaResponse> aulas = m.getAulas().stream()
+                    .sorted(Comparator.comparing(Aula::getId))
+                    .map(a -> AulaCompletaResponse.fromEntity(a, conteudoResolver.apply(a.getId())))
+                    .toList();
 
             return new ModuloCompletoResponse(
                     m.getId(),
@@ -66,7 +65,7 @@ public record TrilhaCompletaResponse(
             String nome,
             String descricao,
             Integer pontosAula,
-            String dificuldade,
+            DificuldadeAula dificuldade,
             String conteudo,
             boolean concluida
     ) {

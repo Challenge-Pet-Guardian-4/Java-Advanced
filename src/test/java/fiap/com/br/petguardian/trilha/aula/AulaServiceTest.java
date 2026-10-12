@@ -53,7 +53,7 @@ class AulaServiceTest {
     void deveCriarAula() {
         Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
         var request = new AulaRequest("Comando Senta!", "Ensine o pet a sentar", 10, "FACIL", false, 10L);
-        Aula aulaSalva = Aula.builder().id(100L).nome("Comando Senta!").descricao("Ensine o pet a sentar").pontosAula(10).dificuldade("FACIL").concluida(false).modulo(modulo).build();
+        Aula aulaSalva = Aula.builder().id(100L).nome("Comando Senta!").descricao("Ensine o pet a sentar").pontosAula(10).dificuldade(DificuldadeAula.FACIL).concluida(false).modulo(modulo).build();
 
         when(moduloRepository.findById(10L)).thenReturn(Optional.of(modulo));
         when(aulaRepository.save(any(Aula.class))).thenReturn(aulaSalva);

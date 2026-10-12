@@ -1,7 +1,9 @@
 package fiap.com.br.petguardian.trilha.aula.dto;
 
 import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.DificuldadeAula;
 import fiap.com.br.petguardian.trilha.modulo.Modulo;
+import fiap.com.br.petguardian.validation.EnumValidation;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -22,8 +24,8 @@ public record AulaRequest(
         @Max(value = 10, message = "Pontos da aula devem ser no máximo 10.")
         Integer pontosAula,
 
-        @NotBlank
-        @Size(max = 20)
+        @NotBlank(message = "A dificuldade da aula é obrigatória.")
+        @EnumValidation(enumClass = DificuldadeAula.class, message = "Dificuldade inválida! Valores permitidos: FACIL, MEDIO, AVANCADO.")
         String dificuldade,
 
         @NotNull
@@ -37,7 +39,7 @@ public record AulaRequest(
                 .nome(nome)
                 .descricao(descricao)
                 .pontosAula(pontosAula)
-                .dificuldade(dificuldade)
+                .dificuldade(DificuldadeAula.valueOf(dificuldade.trim().toUpperCase()))
                 .concluida(concluida)
                 .modulo(modulo)
                 .build();
