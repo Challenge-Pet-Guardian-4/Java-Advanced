@@ -63,7 +63,7 @@ class UsuarioPetServiceTest {
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("familiar@fiap.com.br", 10L)).thenReturn(false);
-        when(usuarioRepository.findByEmailIgnoreCase("familiar@fiap.com.br")).thenReturn(Optional.of(convidado));
+        when(usuarioRepository.findByEmail("familiar@fiap.com.br")).thenReturn(Optional.of(convidado));
         when(usuarioPetRepository.save(any(UsuarioPet.class))).thenReturn(novoVinculo);
 
         CoCuidadorResponse response = usuarioPetService.convidarCoCuidador(10L, request);
@@ -185,7 +185,7 @@ class UsuarioPetServiceTest {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0, "BRONZE");
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
         when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
 
@@ -215,7 +215,7 @@ class UsuarioPetServiceTest {
                 "p_pontos_acumulados", 150
         );
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vinculo));
         when(tarefaRepository.countTarefasByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 1L}));
         when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vinculo));

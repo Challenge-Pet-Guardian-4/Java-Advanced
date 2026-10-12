@@ -84,7 +84,7 @@ class PetServiceTest {
         Raca raca = Raca.builder().id(1L).nome("Golden Retriever").build();
         Pet petSalvo = Pet.builder().id(10L).nome("Thor").raca(raca).dataNasc(LocalDate.now().minusYears(2)).porte(PetPorte.GRANDE).sexo('M').castrado(true).build();
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(racaRepository.findByNomeIgnoreCase("Golden Retriever")).thenReturn(Optional.of(raca));
         when(petRepository.save(any(Pet.class))).thenReturn(petSalvo);
 
@@ -154,7 +154,7 @@ class PetServiceTest {
                 "p_pontos_totais", 80
         );
 
-        when(usuarioRepository.findByEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(petRepository.calcularPontuacaoUsuarioNoBanco(1L)).thenReturn(out);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(List.of());
 
@@ -182,7 +182,7 @@ class PetServiceTest {
         UsuarioPet up1 = UsuarioPet.builder().pet(pet1).build();
         UsuarioPet up2 = UsuarioPet.builder().pet(pet2).build();
 
-        when(usuarioRepository.findByEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("tutor@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(petRepository.calcularPontuacaoUsuarioNoBanco(1L)).thenReturn(out);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("tutor@fiap.com.br")).thenReturn(List.of(up1, up2));
         when(petRepository.calcularPontuacaoPetNoBanco(10L)).thenReturn(Map.of(
@@ -271,7 +271,7 @@ class PetServiceTest {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(petRepository.findByUsuarioPetsUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of(pet)));
 
         Page<Pet> resultado = petService.findByEmail("enzo@fiap.com.br", pageable);

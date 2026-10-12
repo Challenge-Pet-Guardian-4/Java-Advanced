@@ -105,7 +105,7 @@ class AulaServiceTest {
         Usuario tutor = Usuario.builder().id(1L).email("carolina@petguardian.com").role(UsuarioRole.PREMIUM).build();
 
         when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
-        when(usuarioRepository.findByEmailIgnoreCase("carolina@petguardian.com")).thenReturn(Optional.of(tutor));
+        when(usuarioRepository.findByEmail("carolina@petguardian.com")).thenReturn(Optional.of(tutor));
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("carolina@petguardian.com", 10L)).thenReturn(true);
         when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -125,7 +125,7 @@ class AulaServiceTest {
         Usuario invasor = Usuario.builder().id(99L).email("invasor@petguardian.com").role(UsuarioRole.PREMIUM).build();
 
         when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
-        when(usuarioRepository.findByEmailIgnoreCase("invasor@petguardian.com")).thenReturn(Optional.of(invasor));
+        when(usuarioRepository.findByEmail("invasor@petguardian.com")).thenReturn(Optional.of(invasor));
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("invasor@petguardian.com", 10L)).thenReturn(false);
 
         assertThrows(IllegalArgumentException.class, () -> aulaService.concluir(100L, "invasor@petguardian.com"));
@@ -141,7 +141,7 @@ class AulaServiceTest {
         Usuario tutor = Usuario.builder().id(1L).email("carolina@petguardian.com").role(UsuarioRole.PREMIUM).build();
 
         when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
-        when(usuarioRepository.findByEmailIgnoreCase("carolina@petguardian.com")).thenReturn(Optional.of(tutor));
+        when(usuarioRepository.findByEmail("carolina@petguardian.com")).thenReturn(Optional.of(tutor));
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("carolina@petguardian.com", 10L)).thenReturn(true);
         when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
 

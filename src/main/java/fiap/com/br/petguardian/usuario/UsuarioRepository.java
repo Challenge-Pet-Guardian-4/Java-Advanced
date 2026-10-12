@@ -10,15 +10,15 @@ import java.util.Optional;
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @Override
-    @EntityGraph(attributePaths = {"telefone", "endereco"})
+    @EntityGraph(attributePaths = {"telefone", "endereco.bairro.cidade.estado"})
     Page<Usuario> findAll(Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"telefone", "endereco"})
+    @EntityGraph(attributePaths = {"telefone", "endereco.bairro.cidade.estado"})
     Optional<Usuario> findById(Long id);
 
-    @EntityGraph(attributePaths = {"telefone", "endereco"})
-    Optional<Usuario> findByEmailIgnoreCase(String email);
+    @EntityGraph(attributePaths = {"telefone", "endereco.bairro.cidade.estado"})
+    Optional<Usuario> findByEmail(String email);
 
     boolean existsByIdAndEmailIgnoreCase(Long id, String email);
 }

@@ -47,10 +47,10 @@ class TokenServiceTest {
                 Instant.now(),
                 Instant.now().plusSeconds(3600),
                 java.util.Map.of("alg", "RS256"),
-                java.util.Map.of("sub", "enzo@fiap.com.br", "role", "PREMIUM")
+                java.util.Map.of("sub", "enzo@fiap.com.br", "userId", 1L, "role", "PREMIUM")
         );
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(mockJwt);
 
         String token = tokenService.generateToken("enzo@fiap.com.br");
@@ -60,9 +60,35 @@ class TokenServiceTest {
     }
 
     @Test
+    @DisplayName("Deve gerar token JWT com sucesso usando findByEmail direto")
+    void deveGerarTokenUsandoFindByEmailDireto() {
+        Usuario usuario = Usuario.builder()
+                .id(2L)
+                .email("admin@fiap.com.br")
+                .role(UsuarioRole.ADMIN)
+                .build();
+
+        Jwt mockJwt = new Jwt(
+                "mocked.admin.token",
+                Instant.now(),
+                Instant.now().plusSeconds(3600),
+                java.util.Map.of("alg", "RS256"),
+                java.util.Map.of("sub", "admin@fiap.com.br", "userId", 2L, "role", "ADMIN")
+        );
+
+        when(usuarioRepository.findByEmail("admin@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(jwtEncoder.encode(any(JwtEncoderParameters.class))).thenReturn(mockJwt);
+
+        String token = tokenService.generateToken("admin@fiap.com.br");
+
+        assertNotNull(token);
+        assertEquals("mocked.admin.token", token);
+    }
+
+    @Test
     @DisplayName("Deve lançar UsernameNotFoundException ao tentar gerar token para email inexistente")
     void deveLancarExcecaoEmailInexistente() {
-        when(usuarioRepository.findByEmailIgnoreCase("naoexiste@fiap.com.br")).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmail("naoexiste@fiap.com.br")).thenReturn(Optional.empty());
 
         assertThrows(UsernameNotFoundException.class, () -> tokenService.generateToken("naoexiste@fiap.com.br"));
     }

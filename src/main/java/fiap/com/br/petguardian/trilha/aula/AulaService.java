@@ -149,7 +149,7 @@ public class AulaService {
     }
 
     private void validarCuidadorDaAula(Aula aula, String email) {
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email.trim())
+        Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
         if (usuario.getRole() == UsuarioRole.ADMIN) {
             return;

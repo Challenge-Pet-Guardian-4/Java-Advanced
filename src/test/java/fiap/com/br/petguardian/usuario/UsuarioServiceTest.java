@@ -125,7 +125,7 @@ class UsuarioServiceTest {
     @DisplayName("Deve buscar usuario por email com sucesso")
     void deveBuscarUsuarioPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
 
         Usuario resultado = usuarioService.findByEmail("enzo@fiap.com.br");
 
@@ -173,7 +173,7 @@ class UsuarioServiceTest {
     @DisplayName("Deve realizar upgrade de COMUM para PREMIUM com sucesso")
     void deveRealizarUpgradePremium() {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").role(UsuarioRole.COMUM).build();
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Usuario resultado = usuarioService.upgradePremium("enzo@fiap.com.br");
@@ -185,7 +185,7 @@ class UsuarioServiceTest {
     @DisplayName("Deve lancar excecao ao tentar upgrade de usuario que ja eh PREMIUM")
     void deveLancarExcecaoUpgradeJaPremium() {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").role(UsuarioRole.PREMIUM).build();
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
 
         assertThrows(IllegalArgumentException.class, () -> usuarioService.upgradePremium("enzo@fiap.com.br"));
     }
@@ -194,7 +194,7 @@ class UsuarioServiceTest {
     @DisplayName("Deve lancar excecao ao tentar upgrade de usuario ADMIN")
     void deveLancarExcecaoUpgradeAdmin() {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").role(UsuarioRole.ADMIN).build();
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
 
         assertThrows(IllegalArgumentException.class, () -> usuarioService.upgradePremium("enzo@fiap.com.br"));
     }

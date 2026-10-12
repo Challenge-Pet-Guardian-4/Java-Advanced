@@ -37,7 +37,7 @@ class AuthServiceTest {
                 .role(UsuarioRole.PREMIUM)
                 .build();
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
 
         UserDetails userDetails = authService.loadUserByUsername("enzo@fiap.com.br");
 
@@ -50,7 +50,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("Deve lançar UsernameNotFoundException quando usuário não existir")
     void deveLancarExcecaoUsuarioNaoEncontrado() {
-        when(usuarioRepository.findByEmailIgnoreCase("inexistente@fiap.com.br")).thenReturn(Optional.empty());
+        when(usuarioRepository.findByEmail("inexistente@fiap.com.br")).thenReturn(Optional.empty());
 
         assertThrows(UsernameNotFoundException.class, () -> authService.loadUserByUsername("inexistente@fiap.com.br"));
     }

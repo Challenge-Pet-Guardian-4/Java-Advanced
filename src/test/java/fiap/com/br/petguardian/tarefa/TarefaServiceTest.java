@@ -94,7 +94,7 @@ class TarefaServiceTest {
                 .build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
 
@@ -129,7 +129,7 @@ class TarefaServiceTest {
                 .build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioRepository.findByEmailIgnoreCase("concluinte@fiap.com.br")).thenReturn(Optional.of(concluinte));
+        when(usuarioRepository.findByEmail("concluinte@fiap.com.br")).thenReturn(Optional.of(concluinte));
         when(statusService.findStatus(EnumStatus.CONCLUIDO)).thenReturn(statusConcluido);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -223,7 +223,7 @@ class TarefaServiceTest {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(tarefaRepository.findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(1L, EnumStatus.PENDENTE, pageable)).thenReturn(new PageImpl<>(List.of()));
 
         Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "PENDENTE", pageable);
@@ -236,7 +236,7 @@ class TarefaServiceTest {
     @DisplayName("Deve consultar pontos totais acumulados pelo email do usuario")
     void deveConsultarPontosPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(tarefaRepository.calcularPontosTotaisUsuario(1L, EnumStatus.CONCLUIDO)).thenReturn(150);
 
         Integer pontos = tarefaService.calcularPontosTotaisEmail("enzo@fiap.com.br");
@@ -262,7 +262,7 @@ class TarefaServiceTest {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(tarefaRepository.findAllByPetUsuarioPetsUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of()));
 
         Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "ALL", pageable);

@@ -34,7 +34,7 @@ public class UsuarioService {
     }
 
     public Usuario findByEmail(String email) {
-        return usuarioRepository.findByEmailIgnoreCase(email.trim())
+        return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
     }
 

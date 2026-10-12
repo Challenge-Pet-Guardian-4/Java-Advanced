@@ -143,7 +143,7 @@ public class TarefaService {
     }
 
     private Usuario findUsuarioByEmail(String email) {
-        return usuarioRepository.findByEmailIgnoreCase(email)
+        return usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
     }
 

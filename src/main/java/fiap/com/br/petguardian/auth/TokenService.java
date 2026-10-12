@@ -19,9 +19,7 @@ public class TokenService {
     private final UsuarioRepository userRepository;
 
     public String generateToken(String email) {
-        var user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
-
+        var user = userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("Usuário não encontrado: " + email));
         var now = Instant.now();
 
         var claims = JwtClaimsSet.builder()
@@ -29,6 +27,7 @@ public class TokenService {
                 .issuedAt(now)
                 .expiresAt(now.plus(1, ChronoUnit.HOURS))
                 .subject(user.getEmail())
+                .claim("userId", user.getId())
                 .claim("role", user.getRole().name())
                 .build();
 
