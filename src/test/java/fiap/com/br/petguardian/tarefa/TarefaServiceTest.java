@@ -76,7 +76,7 @@ class TarefaServiceTest {
     @Test
     @DisplayName("Deve criar nova tarefa vinculada ao cuidador autenticado com status PENDENTE")
     void deveCriarTarefa() {
-        var request = new TarefaRequest("Remédio", 15, "Dar antibiótico", LocalDateTime.now().plusDays(1), 10L, "PENDENTE", null);
+        var request = new TarefaRequest("Remédio", 10, "Dar antibiótico", LocalDateTime.now().plusDays(1), 10L, "PENDENTE", null);
 
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
@@ -84,7 +84,7 @@ class TarefaServiceTest {
         Tarefa tarefaSalva = Tarefa.builder()
                 .id(100L)
                 .titulo("Remédio")
-                .pontosTarefa(15)
+                .pontosTarefa(10)
                 .descricao("Dar antibiótico")
                 .criacao(LocalDateTime.now())
                 .prazo(LocalDateTime.now().plusDays(1))

@@ -2,6 +2,7 @@ package fiap.com.br.petguardian.usuariopet;
 
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
@@ -164,7 +165,7 @@ class UsuarioPetServiceTest {
     @DisplayName("Deve montar rede de cuidado vazia quando usuario nao possui vinculos")
     void deveMontarRedeDeCuidadoVazia() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0);
+        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0, "BRONZE");
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
@@ -175,13 +176,14 @@ class UsuarioPetServiceTest {
         assertNotNull(resultado);
         assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
         assertEquals("Enzo", resultado.nomeUsuario());
+        assertEquals("BRONZE", resultado.nivelGamificacao());
     }
 
     @Test
     @DisplayName("Deve montar rede de cuidado a partir do email do usuario")
     void deveMontarRedeDeCuidadoPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0);
+        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0, "BRONZE");
 
         when(usuarioRepository.findByEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
@@ -191,6 +193,7 @@ class UsuarioPetServiceTest {
 
         assertNotNull(resultado);
         assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
+        assertEquals("BRONZE", resultado.nivelGamificacao());
     }
 
     @Test
@@ -219,6 +222,11 @@ class UsuarioPetServiceTest {
         when(redeCuidadoMapper.toPetResumoList(any(), any())).thenReturn(List.of(petResumo));
         when(redeCuidadoMapper.toCuidadorResumoList(any(), any())).thenReturn(List.of());
         when(usuarioPetRepository.obterResumoRedeCuidadoNoBanco(1L)).thenReturn(resumoDb);
+        when(usuarioPetRepository.obterNivelUsuarioNoBanco(1L)).thenReturn("PRATA");
+        var expectedResponse = new RedeCuidadoResponse(
+                "enzo@fiap.com.br", "Enzo", List.of(petResumo), List.of(), 3, 7, 150, "PRATA"
+        );
+        when(redeCuidadoMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(expectedResponse);
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
 
@@ -230,7 +238,10 @@ class UsuarioPetServiceTest {
         assertEquals(3, resultado.totalTarefasPendentes());
         assertEquals(7, resultado.totalTarefasConcluidas());
         assertEquals(150, resultado.pontosAcumulados());
+        assertEquals("PRATA", resultado.nivelGamificacao());
 
         verify(usuarioPetRepository).obterResumoRedeCuidadoNoBanco(1L);
+        verify(usuarioPetRepository).obterNivelUsuarioNoBanco(1L);
+        verify(redeCuidadoMapper).toResponse(any(), any(), any(), any(), any());
     }
 }

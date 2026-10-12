@@ -2,6 +2,7 @@ package fiap.com.br.petguardian.usuariopet;
 
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 
@@ -32,4 +33,7 @@ public interface UsuarioPetRepository extends JpaRepository<UsuarioPet, UsuarioP
 
     @Procedure(name = "UsuarioPet.obterResumoRedeCuidado")
     Map<String, Object> obterResumoRedeCuidadoNoBanco(@Param("p_id_usuario") Long usuarioId);
+
+    @Query(value = "SELECT pkg_petguardian.fn_obter_nivel_usuario(:usuarioId) FROM dual", nativeQuery = true)
+    String obterNivelUsuarioNoBanco(@Param("usuarioId") Long usuarioId);
 }

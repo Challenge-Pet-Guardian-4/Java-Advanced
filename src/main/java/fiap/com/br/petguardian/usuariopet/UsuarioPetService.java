@@ -13,9 +13,9 @@ import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -102,35 +102,35 @@ public class UsuarioPetService {
     private RedeCuidadoResponse processarRedeCuidado(Usuario usuario) {
         List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(usuario.getEmail().trim());
 
+        // Se o tutor ainda não possui pets vinculados, devolve o resumo inicial zerado
         if (vinculos.isEmpty()) {
             return redeCuidadoMapper.toEmptyResponse(usuario);
         }
 
         List<Long> petIds = vinculos.stream().map(up -> up.getPet().getId()).toList();
 
-        var pets = redeCuidadoMapper.toPetResumoList(vinculos, carregarMapaTotalTarefasPorPet(petIds));
+        // Consulta a contagem de tarefas por pet em uma única query agrupada (evita N+1 queries no banco)
+        // e transforma o resultado em um mapa [ID do Pet -> Quantidade de Tarefas]
+        Map<Long, Integer> tarefasPorPet = tarefaRepository.countTarefasByPetIdIn(petIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
+
+        // Delega o mapeamento de coleções e relacionamentos para o RedeCuidadoMapper
+        var pets = redeCuidadoMapper.toPetResumoList(vinculos, tarefasPorPet);
         var cuidadores = redeCuidadoMapper.toCuidadorResumoList(
                 usuarioPetRepository.findAllByPetIdIn(petIds),
                 usuario.getEmail()
         );
 
+        // Consulta as métricas consolidadas via Stored Procedure e Function do Oracle
         Map<String, Object> resumoDb = usuarioPetRepository.obterResumoRedeCuidadoNoBanco(usuario.getId());
+        String nivel = usuarioPetRepository.obterNivelUsuarioNoBanco(usuario.getId());
 
-        return RedeCuidadoResponse.from(usuario.getEmail(), usuario.getNome(), pets, cuidadores, resumoDb);
+        return redeCuidadoMapper.toResponse(usuario, pets, cuidadores, resumoDb, nivel);
     }
 
     // =========================================================================
     // 5. HELPERS PRIVADOS DE VALIDAÇÃO E BUSCA
     // =========================================================================
-
-    private Map<Long, Integer> carregarMapaTotalTarefasPorPet(List<Long> petIds) {
-        Map<Long, Integer> mapa = new HashMap<>();
-        petIds.forEach(id -> mapa.put(id, 0));
-        tarefaRepository.countTarefasByPetIdIn(petIds).forEach(row ->
-                mapa.put((Long) row[0], ((Number) row[1]).intValue())
-        );
-        return mapa;
-    }
 
     private Pet findPetById(Long id) {
         return petRepository.findById(id)

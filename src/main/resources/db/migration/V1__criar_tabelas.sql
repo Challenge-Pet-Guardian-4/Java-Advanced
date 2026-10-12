@@ -118,6 +118,7 @@ CREATE TABLE tarefa (
     status_id_status   NUMBER(19) NOT NULL,
     usuario_id_usuario NUMBER(19) NOT NULL,
     CONSTRAINT tarefa_pk PRIMARY KEY (id_tarefa),
+    CONSTRAINT ck_tarefa_pontos CHECK (pontos_tarefa BETWEEN 0 AND 10),
     CONSTRAINT tarefa_pet_fk FOREIGN KEY (pet_id_pet) REFERENCES pet(id_pet),
     CONSTRAINT tarefa_status_fk FOREIGN KEY (status_id_status) REFERENCES status(id_status),
     CONSTRAINT tarefa_usuario_fk FOREIGN KEY (usuario_id_usuario) REFERENCES usuario(id_usuario)

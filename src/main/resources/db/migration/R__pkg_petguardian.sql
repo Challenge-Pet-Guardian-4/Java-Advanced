@@ -50,6 +50,11 @@ CREATE OR REPLACE PACKAGE pkg_petguardian AS
         p_pontos_acumulados  OUT NUMBER
     );
 
+    -- 1.4 Classificação de gamificação do tutor baseada no XP acumulado (BRONZE, PRATA, OURO)
+    FUNCTION fn_obter_nivel_usuario (
+        p_id_usuario IN NUMBER
+    ) RETURN VARCHAR2;
+
     -- ----------------------------------------------------------------
     -- SEÇÃO 2: OPERAÇÕES TRANSACIONAIS DO APP
     -- ----------------------------------------------------------------
@@ -203,28 +208,17 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
                 WHERE up.usuario_id_usuario = p_id_usuario
             );
 
-        -- Tarefas pendentes válidas (status_id_status = 1 e prazo >= SYSTIMESTAMP)
-        SELECT NVL(COUNT(1), 0)
-          INTO p_tarefas_pendentes
+        -- Tarefas pendentes e concluídas da rede do tutor (agregação unificada condicional)
+        SELECT NVL(COUNT(CASE WHEN t.status_id_status = 1 AND t.prazo >= SYSTIMESTAMP THEN 1 END), 0),
+               NVL(COUNT(CASE WHEN t.status_id_status = 2 THEN 1 END), 0)
+          INTO p_tarefas_pendentes,
+               p_tarefas_concluidas
           FROM tarefa t
-         WHERE t.status_id_status = 1
-           AND t.prazo >= SYSTIMESTAMP
-           AND t.pet_id_pet IN (
-               SELECT up.pet_id_pet
-                 FROM usuario_pet up
-                WHERE up.usuario_id_usuario = p_id_usuario
-            );
-
-        -- Tarefas concluídas (status_id_status = 2)
-        SELECT NVL(COUNT(1), 0)
-          INTO p_tarefas_concluidas
-          FROM tarefa t
-         WHERE t.status_id_status = 2
-           AND t.pet_id_pet IN (
-               SELECT up.pet_id_pet
-                 FROM usuario_pet up
-                WHERE up.usuario_id_usuario = p_id_usuario
-            );
+         WHERE t.pet_id_pet IN (
+             SELECT up.pet_id_pet
+               FROM usuario_pet up
+              WHERE up.usuario_id_usuario = p_id_usuario
+         );
 
         -- Pontuação acumulada total somada (tarefas concluídas + aulas finalizadas)
         pr_calcular_pontuacao_usuario(p_id_usuario, v_total_tarefas, v_total_aulas, p_pontos_acumulados);
@@ -234,6 +228,32 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
         WHEN OTHERS THEN
             RAISE_APPLICATION_ERROR(-20024, 'Erro ao obter resumo da rede de cuidado: ' || SQLERRM);
     END pr_obter_resumo_rede_cuidado;
+
+    -- 1.4 Classificação de gamificação do tutor baseada no XP acumulado (BRONZE, PRATA, OURO)
+    FUNCTION fn_obter_nivel_usuario (
+        p_id_usuario IN NUMBER
+    ) RETURN VARCHAR2 IS
+        v_tar NUMBER;
+        v_aul NUMBER;
+        v_tot NUMBER;
+    BEGIN
+        IF p_id_usuario IS NULL OR p_id_usuario <= 0 THEN
+            RETURN 'BRONZE';
+        END IF;
+
+        pr_calcular_pontuacao_usuario(p_id_usuario, v_tar, v_aul, v_tot);
+
+        IF v_tot <= 50 THEN
+            RETURN 'BRONZE';
+        ELSIF v_tot <= 150 THEN
+            RETURN 'PRATA';
+        ELSE
+            RETURN 'OURO';
+        END IF;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RETURN 'BRONZE';
+    END fn_obter_nivel_usuario;
 
     -- ----------------------------------------------------------------
     -- SEÇÃO 2: OPERAÇÕES TRANSACIONAIS DO APP
@@ -260,15 +280,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
             RAISE_APPLICATION_ERROR(-20041, 'O novo responsável (id ' || p_novo_id_usuario || ') não está vinculado ao pet ' || p_id_pet || ' em USUARIO_PET.');
         END IF;
 
-        -- Transação atômica: desmarca o atual titular e promove o novo
+        -- Transação atômica otimizada em uma única operação DML (evita duplo lock e estado intermediário sem titular)
         UPDATE usuario_pet
-           SET respon_princ = 0
+           SET respon_princ = CASE 
+                                  WHEN usuario_id_usuario = p_novo_id_usuario THEN 1 
+                                  ELSE 0 
+                              END
          WHERE pet_id_pet = p_id_pet;
-
-        UPDATE usuario_pet
-           SET respon_princ = 1
-         WHERE pet_id_pet = p_id_pet
-           AND usuario_id_usuario = p_novo_id_usuario;
     EXCEPTION
         WHEN e_id_invalido OR e_vinculo_inexistente THEN
             RAISE;
@@ -290,48 +308,33 @@ DECLARE
     v_valores_old   VARCHAR2(4000) := NULL;
     v_valores_new   VARCHAR2(4000) := NULL;
 BEGIN
+    IF INSERTING OR UPDATING THEN
+        v_valores_new := 'ID_TAREFA=' || :NEW.id_tarefa || 
+                         '; TITULO=' || :NEW.titulo || 
+                         '; PONTOS=' || :NEW.pontos_tarefa || 
+                         '; STATUS=' || :NEW.status_id_status || 
+                         '; PET=' || :NEW.pet_id_pet || 
+                         '; USUARIO=' || :NEW.usuario_id_usuario;
+    END IF;
+
+    IF UPDATING OR DELETING THEN
+        v_valores_old := 'ID_TAREFA=' || :OLD.id_tarefa || 
+                         '; TITULO=' || :OLD.titulo || 
+                         '; PONTOS=' || :OLD.pontos_tarefa || 
+                         '; STATUS=' || :OLD.status_id_status || 
+                         '; PET=' || :OLD.pet_id_pet || 
+                         '; USUARIO=' || :OLD.usuario_id_usuario;
+    END IF;
+
     IF INSERTING THEN
         v_tipo_operacao := 'INSERT';
-        v_valores_new   := 'ID_TAREFA=' || :NEW.id_tarefa || 
-                           '; TITULO=' || :NEW.titulo || 
-                           '; PONTOS=' || :NEW.pontos_tarefa || 
-                           '; STATUS=' || :NEW.status_id_status || 
-                           '; PET=' || :NEW.pet_id_pet || 
-                           '; USUARIO=' || :NEW.usuario_id_usuario;
-                           
-        INSERT INTO auditoria_dml_tarefa (nome_usuario, tipo_operacao, data_hora_operacao, valores_anteriores, valores_novos)
-        VALUES (USER, v_tipo_operacao, SYSTIMESTAMP, NULL, v_valores_new);
-
     ELSIF UPDATING THEN
         v_tipo_operacao := 'UPDATE';
-        v_valores_old   := 'ID_TAREFA=' || :OLD.id_tarefa || 
-                           '; TITULO=' || :OLD.titulo || 
-                           '; PONTOS=' || :OLD.pontos_tarefa || 
-                           '; STATUS=' || :OLD.status_id_status || 
-                           '; PET=' || :OLD.pet_id_pet || 
-                           '; USUARIO=' || :OLD.usuario_id_usuario;
-
-        v_valores_new   := 'ID_TAREFA=' || :NEW.id_tarefa || 
-                           '; TITULO=' || :NEW.titulo || 
-                           '; PONTOS=' || :NEW.pontos_tarefa || 
-                           '; STATUS=' || :NEW.status_id_status || 
-                           '; PET=' || :NEW.pet_id_pet || 
-                           '; USUARIO=' || :NEW.usuario_id_usuario;
-
-        INSERT INTO auditoria_dml_tarefa (nome_usuario, tipo_operacao, data_hora_operacao, valores_anteriores, valores_novos)
-        VALUES (USER, v_tipo_operacao, SYSTIMESTAMP, v_valores_old, v_valores_new);
-
-    ELSIF DELETING THEN
+    ELSE
         v_tipo_operacao := 'DELETE';
-        v_valores_old   := 'ID_TAREFA=' || :OLD.id_tarefa || 
-                           '; TITULO=' || :OLD.titulo || 
-                           '; PONTOS=' || :OLD.pontos_tarefa || 
-                           '; STATUS=' || :OLD.status_id_status || 
-                           '; PET=' || :OLD.pet_id_pet || 
-                           '; USUARIO=' || :OLD.usuario_id_usuario;
-
-        INSERT INTO auditoria_dml_tarefa (nome_usuario, tipo_operacao, data_hora_operacao, valores_anteriores, valores_novos)
-        VALUES (USER, v_tipo_operacao, SYSTIMESTAMP, v_valores_old, NULL);
     END IF;
+
+    INSERT INTO auditoria_dml_tarefa (nome_usuario, tipo_operacao, data_hora_operacao, valores_anteriores, valores_novos)
+    VALUES (USER, v_tipo_operacao, SYSTIMESTAMP, v_valores_old, v_valores_new);
 END trg_audit_tarefa;
 /
