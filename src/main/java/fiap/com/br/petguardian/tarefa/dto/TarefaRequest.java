@@ -10,11 +10,13 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 
 public record TarefaRequest(
         @NotBlank
+        @Size(max = 30, message = "O título da tarefa deve ter no máximo 30 caracteres.")
         String titulo,
 
         @NotNull
@@ -23,6 +25,7 @@ public record TarefaRequest(
         Integer pontosTarefa,
 
         @NotBlank
+        @Size(max = 200, message = "A descrição da tarefa deve ter no máximo 200 caracteres.")
         String descricao,
 
         @NotNull(message = "O prazo da tarefa é obrigatório.")

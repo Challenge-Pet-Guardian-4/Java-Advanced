@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -121,13 +122,34 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, HttpServletRequest request) {
         log.error("Erro de consistência/integridade no banco de dados", exception);
-        String msg = exception.getMostSpecificCause().getMessage();
+        String msg = exception.getMostSpecificCause() != null ? exception.getMostSpecificCause().getMessage() : "";
         if (msg != null && msg.contains("ORA-00001")) {
             return error(HttpStatus.CONFLICT,
                     "Registro duplicado. Verifique se o e-mail ou outro dado único já está cadastrado.", request);
         }
+        if (msg != null && msg.contains("ORA-12899")) {
+            return error(HttpStatus.BAD_REQUEST,
+                    "Tamanho de texto excede o limite máximo permitido pela coluna no banco de dados.", request);
+        }
         return error(HttpStatus.BAD_REQUEST,
                 "Erro de integridade de dados. Verifique os valores e chaves únicas.", request);
+    }
+
+    @ExceptionHandler(JpaSystemException.class)
+    public ResponseEntity<ApiErrorResponse> handleJpaSystem(
+            JpaSystemException exception, HttpServletRequest request) {
+        log.error("Erro de persistência JPA no banco de dados", exception);
+        String msg = exception.getMostSpecificCause() != null ? exception.getMostSpecificCause().getMessage() : "";
+        if (msg != null && msg.contains("ORA-12899")) {
+            return error(HttpStatus.BAD_REQUEST,
+                    "Tamanho de texto excede o limite máximo permitido pela coluna no banco de dados.", request);
+        }
+        if (msg != null && msg.contains("ORA-00001")) {
+            return error(HttpStatus.CONFLICT,
+                    "Registro duplicado. Verifique se o e-mail ou outro dado único já está cadastrado.", request);
+        }
+        return error(HttpStatus.INTERNAL_SERVER_ERROR,
+                "Ocorreu um erro interno inesperado no servidor.", request);
     }
 
     @ExceptionHandler(Exception.class)

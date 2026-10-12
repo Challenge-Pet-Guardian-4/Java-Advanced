@@ -1,5 +1,7 @@
 package fiap.com.br.petguardian.pet.historico;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,6 +11,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface HistoricoRepository extends JpaRepository<Historico, Long> {
+
+    @Override
+    @EntityGraph(attributePaths = {"pet"})
+    Page<Historico> findAll(Pageable pageable);
 
     @Override
     @EntityGraph(attributePaths = {"pet"})

@@ -18,20 +18,20 @@ import java.util.Optional;
 public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
 
     @Override
-    @EntityGraph(attributePaths = {"status", "pet"})
+    @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Page<Tarefa> findAll(Pageable pageable);
 
     @Override
-    @EntityGraph(attributePaths = {"status", "pet"})
+    @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Optional<Tarefa> findById(Long id);
 
-    @EntityGraph(attributePaths = {"status", "pet"})
+    @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Page<Tarefa> findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(Long usuarioId, EnumStatus status, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"status", "pet"})
+    @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Page<Tarefa> findAllByPetUsuarioPetsUsuarioId(Long usuarioId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"status", "pet"})
+    @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Page<Tarefa> findAllByPetId(Long petId, Pageable pageable);
 
     @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t where t.usuario.id = :usuarioId and t.status.nomeStatus = :status")
@@ -43,7 +43,7 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @Query("select t.pet.id, count(t) from Tarefa t where t.pet.id in :petIds group by t.pet.id")
     List<Object[]> countTarefasByPetIdIn(@Param("petIds") List<Long> petIds);
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Modifying(clearAutomatically = false, flushAutomatically = true)
     @Transactional
     @Query("update Tarefa t set t.status = :expirada where t.status = :pendente and t.prazo < :agora")
     void expirarTarefasPendentesAtrasadas(

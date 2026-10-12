@@ -9,7 +9,7 @@ import java.util.Optional;
 public interface AulaRepository extends JpaRepository<Aula, Long> {
 
     @Override
-    @EntityGraph(attributePaths = {"modulo"})
+    @EntityGraph(attributePaths = {"modulo.trilha.pet"})
     Optional<Aula> findById(Long id);
 
     @EntityGraph(attributePaths = {"modulo"})
