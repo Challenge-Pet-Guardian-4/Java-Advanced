@@ -134,17 +134,17 @@ public class PetService {
 
     private Pet findPetById(Long id) {
         return petRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioByEmail(String email) {
         return usuarioRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
     }
 
     private Raca findOrCreateRaca(String nomeRaca) {

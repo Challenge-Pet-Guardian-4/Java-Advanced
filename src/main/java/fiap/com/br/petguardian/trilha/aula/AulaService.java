@@ -131,12 +131,12 @@ public class AulaService {
 
     private Aula findAulaById(Long id) {
         return aulaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Aula com id " + id + " nao encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Aula com id " + id + " não encontrada."));
     }
 
     private Modulo findModuloById(Long moduloId) {
         return moduloRepository.findById(moduloId)
-                .orElseThrow(() -> new ResourceNotFoundException("Modulo com id " + moduloId + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Módulo com id " + moduloId + " não encontrado."));
     }
 
     private void aplicarEm(Aula aula, AulaRequest request, Modulo modulo) {
@@ -150,13 +150,13 @@ public class AulaService {
 
     private void validarCuidadorDaAula(Aula aula, String email) {
         Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email.trim())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
         if (usuario.getRole() == UsuarioRole.ADMIN) {
             return;
         }
         Long petId = aula.getModulo().getTrilha().getPet().getId();
         if (!usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {
-            throw new IllegalArgumentException("Usuario informado nao esta vinculado ao pet da trilha.");
+            throw new IllegalArgumentException("Usuário informado não está vinculado ao pet da trilha.");
         }
     }
 }

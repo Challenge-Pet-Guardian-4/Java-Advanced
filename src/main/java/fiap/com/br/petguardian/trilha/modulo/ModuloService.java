@@ -54,12 +54,12 @@ public class ModuloService {
 
     private Modulo findModuloById(Long id) {
         return moduloRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Modulo com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Módulo com id " + id + " não encontrado."));
     }
 
     private Trilha findTrilhaById(Long trilhaId) {
         return trilhaRepository.findById(trilhaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Trilha com id " + trilhaId + " nao encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Trilha com id " + trilhaId + " não encontrada."));
     }
 
     private void aplicarEm(Modulo modulo, ModuloRequest request, Trilha trilha) {

@@ -97,12 +97,12 @@ public class TrilhaService {
 
     private Trilha findTrilhaById(Long id) {
         return trilhaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Trilha com id " + id + " nao encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Trilha com id " + id + " não encontrada."));
     }
 
     private Pet findPetById(Long petId) {
         return petRepository.findById(petId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + petId + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + petId + " não encontrado."));
     }
 
     private void aplicarEm(Trilha trilha, TrilhaRequest request, Pet pet) {

@@ -65,12 +65,12 @@ public class HistoricoService {
 
     private Historico findHistoricoById(Long id) {
         return historicoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Historico com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Histórico com id " + id + " não encontrado."));
     }
 
     private Pet findPetById(Long petId) {
         return petRepository.findById(petId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + petId + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + petId + " não encontrado."));
     }
 
     private void aplicarEm(Historico historico, HistoricoRequest request, Pet pet) {

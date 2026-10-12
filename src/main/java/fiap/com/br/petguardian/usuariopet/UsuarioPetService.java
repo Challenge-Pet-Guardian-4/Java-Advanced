@@ -71,7 +71,7 @@ public class UsuarioPetService {
     public void transferirResponsabilidadePrincipal(Long petId, TransferirResponsabilidadeRequest request) {
         UsuarioPet novoResponsavel = findVinculoPorEmail(request.novoResponsavelEmail(), petId);
         if (novoResponsavel.isResponsavelPrincipal()) {
-            throw new IllegalArgumentException("O novo responsavel ja e o responsavel principal do pet.");
+            throw new IllegalArgumentException("O novo responsável já é o responsável principal do pet.");
         }
         usuarioPetRepository.transferirResponsavelPrincipalNoBanco(petId, novoResponsavel.getUsuario().getId());
     }
@@ -80,7 +80,7 @@ public class UsuarioPetService {
     public void desvincularCuidador(Long petId, String cuidadorEmail) {
         UsuarioPet vinculo = findVinculoPorEmail(cuidadorEmail, petId);
         if (vinculo.isResponsavelPrincipal()) {
-            throw new IllegalArgumentException("Nao e permitido desvincular o responsavel principal do pet sem antes transferir a titularidade.");
+            throw new IllegalArgumentException("Não é permitido desvincular o responsável principal do pet sem antes transferir a titularidade.");
         }
         usuarioPetRepository.delete(vinculo);
     }
@@ -134,27 +134,27 @@ public class UsuarioPetService {
 
     private Pet findPetById(Long id) {
         return petRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioByEmail(String email) {
         return usuarioRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
     }
 
     private UsuarioPet findVinculoPorEmail(String email, Long petId) {
         return usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)
-                .orElseThrow(() -> new ResourceNotFoundException("Vinculo nao encontrado entre o usuario e o pet informados."));
+                .orElseThrow(() -> new ResourceNotFoundException("Vínculo não encontrado entre o usuário e o pet informados."));
     }
 
     private void validarUsuarioNaoVinculadoPorEmail(String email, Long petId) {
         if (usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)) {
-            throw new IllegalArgumentException("Usuario informado ja possui vinculo com este pet.");
+            throw new IllegalArgumentException("Usuário informado já possui vínculo com este pet.");
         }
     }
 }

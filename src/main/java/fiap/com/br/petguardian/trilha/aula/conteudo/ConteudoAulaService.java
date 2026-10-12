@@ -29,7 +29,7 @@ public class ConteudoAulaService {
         findAulaById(aulaId);
 
         if (conteudoRepository.findByAulaId(aulaId).isPresent()) {
-            throw new IllegalArgumentException("Ja existe conteudo cadastrado para a aula com id " + aulaId + ".");
+            throw new IllegalArgumentException("Já existe conteúdo cadastrado para a aula com id " + aulaId + ".");
         }
 
         return conteudoRepository.save(request.toEntity(aulaId));
@@ -53,11 +53,11 @@ public class ConteudoAulaService {
 
     private Aula findAulaById(Long aulaId) {
         return aulaRepository.findById(aulaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aula com id " + aulaId + " nao encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Aula com id " + aulaId + " não encontrada."));
     }
 
     private ConteudoAula findConteudoByAulaId(Long aulaId) {
         return conteudoRepository.findByAulaId(aulaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Conteudo da aula com id " + aulaId + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Conteúdo da aula com id " + aulaId + " não encontrado."));
     }
 }

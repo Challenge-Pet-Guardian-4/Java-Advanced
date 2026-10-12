@@ -45,7 +45,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, List<ValidationErrorDetail>>> handleValidation(
             MethodArgumentNotValidException exception) {
-        log.warn("Falha de validacao de entrada detectada: {} erro(s)", exception.getErrorCount());
+        log.warn("Falha de validação de entrada detectada: {} erro(s)", exception.getErrorCount());
 
         List<ValidationErrorDetail> errors = exception.getAllErrors().stream()
                 .map(ValidationErrorDetail::new)
@@ -57,10 +57,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Map<String, List<ValidationErrorDetail>>> handleConstraintViolation(
             ConstraintViolationException exception) {
-        log.warn("Falha de validacao de constraint: {}", exception.getMessage());
+        log.warn("Falha de validação de constraint: {}", exception.getMessage());
         List<ValidationErrorDetail> errors = exception.getConstraintViolations().stream()
                 .map(cv -> new ValidationErrorDetail(
-                        cv.getPropertyPath() != null ? cv.getPropertyPath().toString() : "parametro",
+                        cv.getPropertyPath() != null ? cv.getPropertyPath().toString() : "parâmetro",
                         cv.getMessage()
                 ))
                 .toList();
@@ -70,29 +70,29 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleResourceNotFound(
             ResourceNotFoundException exception, HttpServletRequest request) {
-        log.warn("Recurso nao encontrado: {}", exception.getMessage());
+        log.warn("Recurso não encontrado: {}", exception.getMessage());
         return error(HttpStatus.NOT_FOUND, exception.getMessage(), request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiErrorResponse> handleIllegalArgument(
             IllegalArgumentException exception, HttpServletRequest request) {
-        log.warn("Violacao de regra de negocio: {}", exception.getMessage());
+        log.warn("Violação de regra de negócio: {}", exception.getMessage());
         return error(HttpStatus.BAD_REQUEST, exception.getMessage(), request);
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiErrorResponse> handleAuthentication(
             AuthenticationException exception, HttpServletRequest request) {
-        log.warn("Falha de autenticacao para a requisicao {}", request.getRequestURI());
-        return error(HttpStatus.UNAUTHORIZED, "Credenciais invalidas.", request);
+        log.warn("Falha de autenticação para a requisição {}", request.getRequestURI());
+        return error(HttpStatus.UNAUTHORIZED, "Credenciais inválidas.", request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleAccessDenied(
             AccessDeniedException exception, HttpServletRequest request) {
-        log.warn("Acesso negado para a requisicao {}", request.getRequestURI());
-        return error(HttpStatus.FORBIDDEN, "Voce nao possui permissao para este recurso.", request);
+        log.warn("Acesso negado para a requisição {}", request.getRequestURI());
+        return error(HttpStatus.FORBIDDEN, "Você não possui permissão para este recurso.", request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -120,14 +120,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, HttpServletRequest request) {
-        log.error("Erro de consistencia/integridade no banco de dados", exception);
+        log.error("Erro de consistência/integridade no banco de dados", exception);
         String msg = exception.getMostSpecificCause().getMessage();
         if (msg != null && msg.contains("ORA-00001")) {
             return error(HttpStatus.CONFLICT,
                     "Registro duplicado. Verifique se o e-mail ou outro dado único já está cadastrado.", request);
         }
         return error(HttpStatus.BAD_REQUEST,
-                "Erro de integridade de dados. Verifique os valores e chaves unicas.", request);
+                "Erro de integridade de dados. Verifique os valores e chaves únicas.", request);
     }
 
     @ExceptionHandler(Exception.class)

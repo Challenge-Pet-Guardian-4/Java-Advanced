@@ -39,7 +39,7 @@ public class AulaController {
 
     @GetMapping("/modulo/{moduloId}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[PREMIUM / ADMIN] Listar aulas associadas a um modulo")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar aulas associadas a um módulo")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<AulaResponse> findByModuloId(@PathVariable Long moduloId) {
         return aulaService.findAllByModuloId(moduloId);
@@ -69,7 +69,7 @@ public class AulaController {
 
     @PatchMapping("/{id}/desmarcar")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[PREMIUM / ADMIN] Desmarcar aula concluida retornando ao estado nao concluido")
+    @Operation(summary = "[PREMIUM / ADMIN] Desmarcar aula concluída retornando ao estado não concluído")
     @PreAuthorize("hasRole('ADMIN') or (hasRole('PREMIUM') and @aulaService.isCuidadorDaAula(#id, authentication.name))")
     public AulaResponse desmarcar(@PathVariable Long id, Authentication authentication) {
         return aulaService.desmarcar(id, authentication.getName());
@@ -81,7 +81,7 @@ public class AulaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "[ADMIN] Criar nova aula para um modulo")
+    @Operation(summary = "[ADMIN] Criar nova aula para um módulo")
     @PreAuthorize("hasRole('ADMIN')")
     public AulaResponse create(@Valid @RequestBody AulaRequest request) {
         return aulaService.create(request);

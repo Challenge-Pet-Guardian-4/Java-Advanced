@@ -75,7 +75,7 @@ public class UsuarioPetController {
 
     @PatchMapping("/responsavel-principal")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "[RESPONSÁVEL / ADMIN] Transferir a titularidade de responsavel principal para outro co-cuidador")
+    @Operation(summary = "[RESPONSÁVEL / ADMIN] Transferir a titularidade de responsável principal para outro co-cuidador")
     @PreAuthorize("hasRole('ADMIN') or @usuarioPetService.isResponsavelPrincipal(#petId, authentication.name)")
     public void transferirResponsavelPrincipal(
             @PathVariable Long petId,

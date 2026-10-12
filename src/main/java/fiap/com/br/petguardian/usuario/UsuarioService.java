@@ -35,7 +35,7 @@ public class UsuarioService {
 
     public Usuario findByEmail(String email) {
         return usuarioRepository.findByEmailIgnoreCase(email.trim())
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
     }
 
     @Transactional
@@ -94,7 +94,7 @@ public class UsuarioService {
 
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
     }
 
     public boolean isOwner(Long id, String email) {

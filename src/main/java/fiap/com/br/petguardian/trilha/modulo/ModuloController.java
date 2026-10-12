@@ -30,7 +30,7 @@ public class ModuloController {
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[PREMIUM / ADMIN] Buscar modulo por ID")
+    @Operation(summary = "[PREMIUM / ADMIN] Buscar módulo por ID")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public ModuloResponse findById(@PathVariable Long id) {
         return ModuloResponse.fromEntity(moduloService.findById(id));
@@ -38,7 +38,7 @@ public class ModuloController {
 
     @GetMapping("/trilha/{trilhaId}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[PREMIUM / ADMIN] Listar modulos associados a uma trilha")
+    @Operation(summary = "[PREMIUM / ADMIN] Listar módulos associados a uma trilha")
     @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
     public List<ModuloResponse> findByTrilhaId(@PathVariable Long trilhaId) {
         return moduloService.findAllByTrilhaId(trilhaId)
@@ -64,7 +64,7 @@ public class ModuloController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "[ADMIN] Criar novo modulo para uma trilha")
+    @Operation(summary = "[ADMIN] Criar novo módulo para uma trilha")
     @PreAuthorize("hasRole('ADMIN')")
     public ModuloResponse create(@Valid @RequestBody ModuloRequest request) {
         return ModuloResponse.fromEntity(moduloService.create(request));
@@ -72,7 +72,7 @@ public class ModuloController {
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[ADMIN] Atualizar modulo")
+    @Operation(summary = "[ADMIN] Atualizar módulo")
     @PreAuthorize("hasRole('ADMIN')")
     public ModuloResponse update(@PathVariable Long id, @Valid @RequestBody ModuloRequest request) {
         return ModuloResponse.fromEntity(moduloService.update(id, request));
@@ -80,7 +80,7 @@ public class ModuloController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "[ADMIN] Deletar modulo")
+    @Operation(summary = "[ADMIN] Deletar módulo")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         moduloService.delete(id);

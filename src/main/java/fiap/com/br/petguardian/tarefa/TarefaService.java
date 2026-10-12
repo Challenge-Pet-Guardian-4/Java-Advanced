@@ -124,7 +124,7 @@ public class TarefaService {
 
     private Tarefa findTarefaById(Long id) {
         return tarefaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Tarefa com id " + id + " nao encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException("Tarefa com id " + id + " não encontrada."));
     }
 
     private LocalDateTime definirConclusao(Tarefa tarefa, EnumStatus status, LocalDateTime conclusaoInformada, LocalDateTime agora) {
@@ -134,17 +134,17 @@ public class TarefaService {
 
     private Pet findPetById(Long id) {
         return petRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioById(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com id " + id + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioByEmail(String email) {
         return usuarioRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuario com email " + email + " nao encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
     }
 
     private void expirarTarefasPendentesAtrasadas() {
@@ -172,13 +172,13 @@ public class TarefaService {
 
     private void validarPendenteParaConclusao(Tarefa tarefa) {
         if (tarefa.getStatus().getNomeStatus() != EnumStatus.PENDENTE) {
-            throw new IllegalArgumentException("Apenas tarefas pendentes podem ser concluidas.");
+            throw new IllegalArgumentException("Apenas tarefas pendentes podem ser concluídas.");
         }
     }
 
     private void validarConcluidaParaDesmarcar(Tarefa tarefa) {
         if (tarefa.getStatus().getNomeStatus() != EnumStatus.CONCLUIDO) {
-            throw new IllegalArgumentException("Apenas tarefas concluidas podem ser desmarcadas.");
+            throw new IllegalArgumentException("Apenas tarefas concluídas podem ser desmarcadas.");
         }
     }
 }
