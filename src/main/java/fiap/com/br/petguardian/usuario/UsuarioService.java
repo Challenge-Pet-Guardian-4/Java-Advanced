@@ -40,8 +40,8 @@ public class UsuarioService {
 
     @Transactional
     public Usuario create(UsuarioRequest request) {
-        Telefone telefone = telefoneRepository.save(request.toTelefone());
         Endereco endereco = enderecoService.findOrCreateByCepAndNumero(request.endereco());
+        Telefone telefone = telefoneRepository.save(request.toTelefone());
         return usuarioRepository.save(request.toEntity(telefone, endereco, passwordEncoder.encode(request.senha())));
     }
 

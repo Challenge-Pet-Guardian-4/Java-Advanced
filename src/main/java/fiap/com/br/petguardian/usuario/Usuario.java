@@ -37,7 +37,7 @@ public class Usuario {
     @Builder.Default
     private UsuarioRole role = UsuarioRole.COMUM;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "telefone_id_telefone", nullable = false)
     private Telefone telefone;
 

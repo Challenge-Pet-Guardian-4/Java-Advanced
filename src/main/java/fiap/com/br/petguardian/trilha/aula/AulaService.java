@@ -32,18 +32,21 @@ public class AulaService {
     private final UsuarioRepository usuarioRepository;
     private final ConteudoAulaRepository conteudoRepository;
 
+    @Transactional(readOnly = true)
     public boolean isCuidadorDaAula(Long aulaId, String email) {
         Aula aula = findAulaById(aulaId);
         Long petId = aula.getModulo().getTrilha().getPet().getId();
         return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId);
     }
 
+    @Transactional(readOnly = true)
     public Page<AulaResponse> findAll(Pageable pageable) {
         Page<Aula> aulas = aulaRepository.findAll(pageable);
         Map<Long, String> conteudos = buscarConteudosEmLote(aulas.map(Aula::getId).toList());
         return aulas.map(aula -> AulaResponse.fromEntity(aula, conteudos.get(aula.getId())));
     }
 
+    @Transactional(readOnly = true)
     public List<AulaResponse> findAllByModuloId(Long moduloId) {
         findModuloById(moduloId);
         List<Aula> aulas = aulaRepository.findAllByModuloId(moduloId);
@@ -53,6 +56,7 @@ public class AulaService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public AulaResponse findById(Long id) {
         Aula aula = findAulaById(id);
         return AulaResponse.fromEntity(aula, buscarConteudoMarkdown(id));

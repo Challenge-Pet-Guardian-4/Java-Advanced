@@ -7,11 +7,13 @@ import fiap.com.br.petguardian.validation.EnumValidation;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
 public record PetRequest(
         @NotBlank
+        @Size(max = 30)
         String nome,
 
         @NotNull
@@ -19,6 +21,7 @@ public record PetRequest(
         LocalDate dataNasc,
 
         @NotBlank
+        @Size(max = 30)
         String raca,
 
         @NotNull

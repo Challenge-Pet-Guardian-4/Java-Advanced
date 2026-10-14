@@ -19,15 +19,18 @@ public class ModuloService {
     private final ModuloRepository moduloRepository;
     private final TrilhaRepository trilhaRepository;
 
+    @Transactional(readOnly = true)
     public Page<Modulo> findAll(Pageable pageable) {
         return moduloRepository.findAll(pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Modulo> findAllByTrilhaId(Long trilhaId) {
         findTrilhaById(trilhaId);
         return moduloRepository.findAllByTrilhaId(trilhaId);
     }
 
+    @Transactional(readOnly = true)
     public Modulo findById(Long id) {
         return findModuloById(id);
     }

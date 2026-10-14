@@ -148,8 +148,8 @@ public class PetService {
     }
 
     private Raca findOrCreateRaca(String nomeRaca) {
-        return racaRepository.findByNomeIgnoreCase(nomeRaca)
-                .orElseGet(() -> racaRepository.save(Raca.builder().nome(nomeRaca).build()));
+        return racaRepository.findByNomeIgnoreCase(nomeRaca.trim())
+                .orElseGet(() -> racaRepository.save(Raca.builder().nome(nomeRaca.trim()).build()));
     }
 
     private void aplicarEm(Pet pet, PetRequest request, Raca raca) {

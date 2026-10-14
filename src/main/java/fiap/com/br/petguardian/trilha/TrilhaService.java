@@ -27,15 +27,18 @@ public class TrilhaService {
     private final PetRepository petRepository;
     private final ConteudoAulaRepository conteudoRepository;
 
+    @Transactional(readOnly = true)
     public Page<Trilha> findAll(Pageable pageable) {
         return trilhaRepository.findAll(pageable);
     }
 
+    @Transactional(readOnly = true)
     public List<Trilha> findAllByPetId(Long petId) {
         findPetById(petId);
         return trilhaRepository.findAllByPetId(petId);
     }
 
+    @Transactional(readOnly = true)
     public List<Trilha> findByUsuarioEmail(String email) {
         return trilhaRepository.findAllByUsuarioEmail(email.trim());
     }
@@ -71,6 +74,7 @@ public class TrilhaService {
         }
     }
 
+    @Transactional(readOnly = true)
     public Trilha findById(Long id) {
         return findTrilhaById(id);
     }

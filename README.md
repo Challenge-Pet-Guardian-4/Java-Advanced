@@ -174,7 +174,7 @@ O schema relacional completo do ecossistema é mantido diretamente no **Oracle D
 
 A modelagem contempla 15 tabelas relacionais (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`), além da coleção `conteudos_aula` no MongoDB Atlas:
 
-- **Script DDL & Packages:** Disponível em [`src/main/resources/db/migration/R__pkg_petguardian.sql`](./src/main/resources/db/migration/R__pkg_petguardian.sql), com criação idempotente de procedures, triggers de auditoria e validações.
+- **Script DDL & Packages:** Disponível em [`src/main/resources/db/migration/V4__pkg_petguardian.sql`](./src/main/resources/db/migration/V4__pkg_petguardian.sql), com criação idempotente de procedures, triggers de auditoria e validações.
 - **Suporte ao Flyway:** A aplicação inclui `org.flywaydb:flyway-database-oracle` no `build.gradle` com migrações versionadas (`V1__...` a `V4__...`) e repetíveis (`R__...`). A execução automática é habilitada (`spring.flyway.enabled=true`, baseline 1), garantindo evolução segura e DDL gerenciado (`spring.jpa.hibernate.ddl-auto=none`).
 
 Configurações ativas no `application.properties`:
@@ -407,7 +407,7 @@ SPRING_FLYWAY_ENABLED=true
 ADMIN_BCRYPT_HASH=$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G
 
 # MongoDB Atlas na Nuvem (Conteúdo Didático NoSQL)
-MONGODB_URI=mongodb+srv://enzookuizumifiap_db_user:PAEdhlPTE5QRMzjC@petguardian.agoderb.mongodb.net/petguardian
+MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/petguardian?retryWrites=true&w=majority
 
 # Servidor
 PORT=8080

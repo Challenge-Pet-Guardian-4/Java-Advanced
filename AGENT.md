@@ -176,7 +176,6 @@ No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OU
    - `V1__criar_tabelas.sql`: DDL relacional em 3FN compatível com Oracle 19c.
    - `V2__carga_inicial_status.sql`: Status de domínio fixos (`PENDENTE=1`, `CONCLUIDO=2`, `EXPIRADO=3`).
    - `V3__admin_inicial.sql`: Usuário administrador inicial (`enzo.admin@petguardian.com`) parametrizado via `${ADMIN_BCRYPT_HASH}`.
-   - `V4__indice_tarefa_status_prazo.sql`: Índice otimizado de busca de prazos.
-   - `R__pkg_petguardian.sql`: Migração repetível que compila a package e triggers de auditoria PL/SQL.
+   - `V4__pkg_petguardian.sql`: Migração que compila a package e triggers de auditoria PL/SQL (`PKG_PETGUARDIAN`).
 9. **Auditoria Automatizada RBAC:**
    - Suíte de validação formal em `scratch/test_admin_endpoints.ps1` com 45 asserções automatizadas cobrindo CRUDs de Admin e barreiras negativas de HTTP 403 para usuários comuns.

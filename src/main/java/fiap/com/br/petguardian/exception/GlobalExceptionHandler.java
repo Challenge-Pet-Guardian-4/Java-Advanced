@@ -31,7 +31,11 @@ public class GlobalExceptionHandler {
         }
 
         public ValidationErrorDetail(ObjectError error) {
-            this(error instanceof FieldError fieldError ? fieldError.getField() : error.getObjectName(), error.getDefaultMessage());
+            this(extrairCampo(error), error.getDefaultMessage());
+        }
+
+        private static String extrairCampo(ObjectError error) {
+            return error instanceof FieldError fieldError ? fieldError.getField() : error.getObjectName();
         }
     }
 

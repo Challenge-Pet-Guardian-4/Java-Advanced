@@ -4,6 +4,7 @@ import fiap.com.br.petguardian.endereco.Endereco;
 import fiap.com.br.petguardian.endereco.bairro.Bairro;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 public record EnderecoRequest(
         @NotBlank
@@ -11,6 +12,7 @@ public record EnderecoRequest(
         String cep,
 
         @NotBlank
+        @Size(max = 5)
         String numero
 ) {
     public Endereco toEntity(String rua, Bairro bairro) {

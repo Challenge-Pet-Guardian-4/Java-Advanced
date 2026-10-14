@@ -44,8 +44,8 @@ public class ConteudoAulaController {
 
     @GetMapping("/conteudos")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[PREMIUM / ADMIN] Listar todos os conteúdos das aulas no MongoDB com paginação e ordenação")
-    @PreAuthorize("hasAnyRole('PREMIUM', 'ADMIN')")
+    @Operation(summary = "[ADMIN] Listar todos os conteúdos das aulas no MongoDB com paginação e ordenação")
+    @PreAuthorize("hasRole('ADMIN')")
     public Page<ConteudoAulaResponse> findAll(
             @PageableDefault(size = 10, page = 0, sort = "aulaId", direction = Sort.Direction.ASC) Pageable pageable
     ) {
