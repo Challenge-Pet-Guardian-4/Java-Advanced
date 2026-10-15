@@ -8,6 +8,8 @@
   <img src="https://img.shields.io/badge/Java-17_LTS-007396?logo=openjdk&logoColor=white" alt="Java 17 LTS" />
   <img src="https://img.shields.io/badge/Spring_Boot-4.1.1-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 4.1.1" />
   <img src="https://img.shields.io/badge/Build-Gradle-02303A?logo=gradle&logoColor=white" alt="Gradle" />
+  <img src="https://img.shields.io/badge/Cloud-Microsoft_Azure-0078D4?logo=microsoftazure&logoColor=white" alt="Microsoft Azure" />
+  <img src="https://img.shields.io/badge/CI%2FCD-Azure_Pipelines-0078D7?logo=azuredevops&logoColor=white" alt="Azure DevOps" />
   <img src="https://img.shields.io/badge/Database-Oracle_19c-F80000?logo=oracle&logoColor=white" alt="Oracle Database 19c" />
   <img src="https://img.shields.io/badge/NoSQL-MongoDB_Atlas-47A248?logo=mongodb&logoColor=white" alt="MongoDB Atlas" />
   <img src="https://img.shields.io/badge/Security-JWT_RSA_(RBAC)-F80000?logo=jsonwebtokens&logoColor=white" alt="JWT RSA" />
@@ -16,11 +18,13 @@
 
 | Link Rápido | URL |
 |---|---|
-| **Repositório GitHub** | https://github.com/Challenge-Pet-Guardian-4/Java-Advanced |
-| **API em Produção (Railway)** | https://java-advanced-production-35ab.up.railway.app |
-| **Swagger UI Interativo (Produção)** | https://java-advanced-production-35ab.up.railway.app/swagger-ui/index.html |
-| **OpenAPI Docs JSON (Produção)** | https://java-advanced-production-35ab.up.railway.app/v3/api-docs |
-| **Actuator Health (Produção)** | https://java-advanced-production-35ab.up.railway.app/actuator/health |
+| **Repositório GitHub (Java)** | https://github.com/Challenge-Pet-Guardian-4/Java-Advanced |
+| **Repositório GitHub (DevOps)** | https://github.com/Challenge-Pet-Guardian-4/DevOps-Tools-Cloud-Computing |
+| **Projeto no Azure DevOps** | https://dev.azure.com/PetGuardian/Sprint%204%20%E2%80%93%20Azure%20DevOps |
+| **API em Produção (Azure Web App)** | https://app-petguardian-01bd2f0c.azurewebsites.net |
+| **Swagger UI Interativo (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/swagger-ui/index.html |
+| **OpenAPI Docs JSON (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/v3/api-docs |
+| **Actuator Health (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/actuator/health |
 | **Swagger UI (Local)** | http://localhost:8080/swagger-ui/index.html |
 | **Arquivo de Coleção Insomnia** | [/docs/Insomnia_2026-05-21.yaml](./docs/Insomnia_2026-05-21.yaml) |
 
@@ -57,16 +61,15 @@ O **PetGuardian** é uma API REST corporativa desenvolvida em **Spring Boot** pa
 
 ---
 
-## ☁️ Arquitetura e Integração em Nuvem
+## ☁️ Arquitetura e Integração em Nuvem (Microsoft Azure & DevOps)
 
-A API **PetGuardian** opera conectada diretamente a uma infraestrutura poliglota corporativa:
+A API **PetGuardian** opera conectada diretamente a uma infraestrutura poliglota corporativa em nuvem:
 
-* **Microsserviço da Aplicação (`Java-Advanced`):** Container Spring Boot 4.1.1 (Java 17 LTS / Gradle) com pipeline de entrega contínua vinculado ao GitHub, operando no Railway e em ambiente local.
+* **Microsserviço da Aplicação (`Java-Advanced`):** Hospedado no **Microsoft Azure App Service** (`app-petguardian-01bd2f0c`, Plano Linux B1 dedicado) com runtime nativo **Java 17 Java SE**, monitorado pelo Spring Boot Actuator e com reinicialização resiliente.
+* **Pipeline CI/CD Automatizada (`Azure DevOps`):** Esteira declarativa em YAML (`azure-pipelines.yml`) operando sobre agente Self-Hosted, executando a compilação Gradle, a suíte de 123 testes JUnit, a publicação do artefato (`drop/app.jar`) e o deploy contínuo (CD) automatizado a cada push nas branches `main` e `develop`.
 * **Banco de Dados Relacional Corporativo (`Oracle 19c`):** Instância gerenciada Oracle Database (`oracle.fiap.com.br:1521/orcl`), garantindo integridade transacional estrita, persistência das tabelas relacionais em 3FN e execução do pacote PL/SQL `PKG_PETGUARDIAN`.
-* **Banco de Dados NoSQL em Nuvem (`MongoDB Atlas`):** Cluster NoSQL em nuvem (`petguardian.agoderb.mongodb.net`), responsável pela coleção `conteudos_aula`, armazenando textos pedagógicos extensos em Markdown, metadados didáticos e links multimídia.
-* **Conectividade OJDBC11:** Pool de conexões otimizado com o driver oficial Oracle (`ojdbc11`) e dialeto Hibernate autodetectado.
-
-![Arquitetura de Deploy no Railway](docs/Railway.png)
+* **Banco de Dados NoSQL em Nuvem (`MongoDB Atlas`):** Cluster NoSQL em nuvem (`petguardian.agoderb.mongodb.net`), responsável pela coleção `conteudos_aula`, armazenando textos pedagógicos didáticos em Markdown, metadados de lições e links multimídia.
+* **Conectividade OJDBC11:** Pool de conexões otimizado HikariCP com o driver oficial Oracle (`ojdbc11`) e dialeto Hibernate autodetectado.
 
 ---
 
@@ -193,7 +196,8 @@ spring.flyway.baseline-version=1
 spring.flyway.placeholders.ADMIN_BCRYPT_HASH=${ADMIN_BCRYPT_HASH:$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G}
 
 # MongoDB Atlas na Nuvem (Conteúdos NoSQL)
-spring.data.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/petguardian}
+spring.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/petguardian}
+spring.data.mongodb.auto-index-creation=true
 ```
 
 ---
