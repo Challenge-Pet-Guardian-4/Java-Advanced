@@ -52,9 +52,9 @@ stages:
         failTaskOnFailedTests: true
 
     # 3. Copiar o arquivo JAR compilado para a pasta de staging como app.jar
-    - script: |
-        copy /y "$(System.DefaultWorkingDirectory)\build\libs\*.jar" "$(Build.ArtifactStagingDirectory)\app.jar"
-        copy /y "$(System.DefaultWorkingDirectory)\build\libs\*.jar" "$(Build.ArtifactStagingDirectory)\pet-guardian-0.0.1-SNAPSHOT.jar"
+    - powershell: |
+        Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\app.jar" -Force
+        Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\pet-guardian-0.0.1-SNAPSHOT.jar" -Force
       displayName: 'Copiar e renomear JAR para app.jar no Artifact Staging'
 
     # 4. Publicar o Artefato no Azure DevOps (Requisito obrigatório da Sprint 4)
