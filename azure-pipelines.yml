@@ -51,13 +51,11 @@ stages:
         testResultsFiles: '**/build/test-results/test/TEST-*.xml'
         failTaskOnFailedTests: true
 
-    # 3. Copiar o arquivo JAR compilado para a pasta de staging
-    - task: CopyFiles@2
-      displayName: 'Copiar JAR gerado para Artifact Staging'
-      inputs:
-        SourceFolder: '$(System.DefaultWorkingDirectory)/build/libs'
-        Contents: '*.jar'
-        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+    # 3. Copiar o arquivo JAR compilado para a pasta de staging como app.jar
+    - script: |
+        copy /y "$(System.DefaultWorkingDirectory)\build\libs\*.jar" "$(Build.ArtifactStagingDirectory)\app.jar"
+        copy /y "$(System.DefaultWorkingDirectory)\build\libs\*.jar" "$(Build.ArtifactStagingDirectory)\pet-guardian-0.0.1-SNAPSHOT.jar"
+      displayName: 'Copiar e renomear JAR para app.jar no Artifact Staging'
 
     # 4. Publicar o Artefato no Azure DevOps (Requisito obrigatório da Sprint 4)
     - task: PublishBuildArtifacts@1
@@ -95,4 +93,4 @@ stages:
               azureSubscription: '$(azureSubscription)'
               appType: 'webAppLinux'
               appName: '$(webAppName)'
-              package: '$(Pipeline.Workspace)/drop/*.jar'
+              package: '$(Pipeline.Workspace)/drop/app.jar'
