@@ -1,0 +1,99 @@
+# ==============================================================================
+# Pipeline CI/CD - PetGuardian API (Sprint 4 - DevOps Tools & Cloud Computing)
+# Stack: Java 17 | Spring Boot 4.1.1 | Gradle Wrapper
+# ==============================================================================
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  # Nome do Service Connection configurado no Azure DevOps
+  azureSubscription: 'Azure-Connection'
+  # Nome do seu App Service (Web App Linux) criado no Portal Azure
+  webAppName: 'app-petguardian-01bd2'
+  # Imagem base do agente de execução Microsoft
+  vmImageName: 'ubuntu-latest'
+
+stages:
+# ------------------------------------------------------------------------------
+# ETAPA 1: CI (Continuous Integration) - Build, Testes Unitários e Publicação
+# ------------------------------------------------------------------------------
+- stage: Build
+  displayName: 'CI - Build e Testes Automatizados'
+  jobs:
+  - job: BuildAndTest
+    displayName: 'Compilação Gradle e Testes'
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    # 1. Configurar JDK 17
+    - task: JavaToolInstaller@0
+      displayName: 'Configurar JDK 17'
+      inputs:
+        versionSpec: '17'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+
+    # 2. Dar permissão de execução ao Gradle Wrapper e executar Build + Testes
+    - script: |
+        chmod +x gradlew
+        ./gradlew clean test bootJar --no-daemon
+      displayName: 'Executar Gradle (clean test bootJar)'
+
+    # 3. Publicar resultados dos Testes JUnit (Requisito obrigatório da Sprint 4)
+    - task: PublishTestResults@2
+      displayName: 'Publicar Relatório de Testes JUnit'
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/build/test-results/test/TEST-*.xml'
+        failTaskOnFailedTests: true
+
+    # 4. Copiar o arquivo JAR compilado para a pasta de staging
+    - task: CopyFiles@2
+      displayName: 'Copiar JAR gerado para Artifact Staging'
+      inputs:
+        SourceFolder: '$(System.DefaultWorkingDirectory)/build/libs'
+        Contents: '*.jar'
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+    # 5. Publicar o Artefato no Azure DevOps (Requisito obrigatório da Sprint 4)
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publicar Artefato da Build (drop)'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+# ------------------------------------------------------------------------------
+# ETAPA 2: CD (Continuous Deployment) - Deploy Automático no Azure Web App
+# ------------------------------------------------------------------------------
+- stage: Deploy
+  displayName: 'CD - Deploy Automático no Azure Web App'
+  dependsOn: Build
+  condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+  jobs:
+  - deployment: DeployAppService
+    displayName: 'Deploy para Azure Web App (Linux Java 17)'
+    environment: 'production'
+    pool:
+      vmImage: $(vmImageName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Baixar o artefato (.jar) publicado pelo CI
+          - download: current
+            artifact: drop
+
+          # Fazer deploy do JAR no Azure Web App
+          - task: AzureWebApp@1
+            displayName: 'Deploy do Pacote JAR no Azure App Service'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webAppLinux'
+              appName: '$(webAppName)'
+              package: '$(Pipeline.Workspace)/drop/*.jar'
