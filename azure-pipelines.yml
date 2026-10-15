@@ -11,7 +11,7 @@ trigger:
 
 variables:
   # Nome do Service Connection configurado no Azure DevOps
-  azureSubscription: 'Azure-Connection'
+  azureSubscription: 'PetGuardian-Connection'
   # Nome do seu App Service (Web App Linux) criado no Portal Azure
   webAppName: 'app-petguardian-01bd2'
   # Imagem base do agente de execução Microsoft
