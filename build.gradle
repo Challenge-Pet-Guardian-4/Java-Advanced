@@ -51,6 +51,54 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}"
+    if (file('.env').exists()) {
+        file('.env').eachLine { line ->
+            def trimmed = line.trim()
+            if (trimmed && !trimmed.startsWith('#') && trimmed.contains('=')) {
+                def parts = trimmed.split('=', 2)
+                environment parts[0].trim(), parts[1].trim()
+            }
+        }
+    }
+}
+
+tasks.register('generateRsaKeys') {
+    doLast {
+        def mainKeysDir = file('src/main/resources/keys')
+        def testKeysDir = file('src/test/resources/keys')
+        mainKeysDir.mkdirs()
+        testKeysDir.mkdirs()
+
+        def privFile = file('src/main/resources/keys/private_key.pem')
+        def pubFile = file('src/main/resources/keys/public_key.pem')
+
+        if (!privFile.exists() || !pubFile.exists()) {
+            def keyGen = java.security.KeyPairGenerator.getInstance("RSA")
+            keyGen.initialize(2048)
+            def pair = keyGen.generateKeyPair()
+
+            def privEncoder = java.util.Base64.getMimeEncoder(64, "\r\n".getBytes())
+            def privPem = "-----BEGIN PRIVATE KEY-----\r\n" + privEncoder.encodeToString(pair.getPrivate().getEncoded()) + "\r\n-----END PRIVATE KEY-----\r\n"
+            def pubPem = "-----BEGIN PUBLIC KEY-----\r\n" + privEncoder.encodeToString(pair.getPublic().getEncoded()) + "\r\n-----END PUBLIC KEY-----\r\n"
+
+            privFile.text = privPem
+            pubFile.text = pubPem
+            println "Chaves RSA geradas com sucesso via Gradle!"
+        }
+
+        copy {
+            from mainKeysDir
+            into testKeysDir
+        }
+    }
+}
+
+tasks.named('processResources') {
+    dependsOn 'generateRsaKeys'
+}
+
+tasks.named('processTestResources') {
+    dependsOn 'generateRsaKeys'
 }
 
 tasks.withType(JavaCompile).configureEach {

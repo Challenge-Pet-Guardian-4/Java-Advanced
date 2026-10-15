@@ -35,6 +35,12 @@ stages:
       displayName: 'Executar Gradle (clean test bootJar)'
       env:
         JAVA_HOME: 'C:\Program Files\Java\jdk-21.0.12'
+        ORACLE_URL: 'jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl'
+        ORACLE_USER: 'RM561432'
+        ORACLE_PASSWORD: '301006'
+        MONGODB_URI: 'mongodb+srv://enzookuizumifiap_db_user:PAEdhlPTE5QRMzjC@petguardian.agoderb.mongodb.net/petguardian?retryWrites=true&w=majority'
+        ADMIN_BCRYPT_HASH: '$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G'
+        PORT: '8080'
 
     # 2. Publicar resultados dos Testes JUnit (Requisito obrigatório da Sprint 4)
     - task: PublishTestResults@2
