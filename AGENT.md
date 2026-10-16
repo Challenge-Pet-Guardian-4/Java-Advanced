@@ -177,5 +177,5 @@ No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OU
    - `V2__carga_inicial_status.sql`: Status de domínio fixos (`PENDENTE=1`, `CONCLUIDO=2`, `EXPIRADO=3`).
    - `V3__admin_inicial.sql`: Usuário administrador inicial (`enzo.admin@petguardian.com`) parametrizado via `${ADMIN_BCRYPT_HASH}`.
    - `V4__pkg_petguardian.sql`: Migração que compila a package e triggers de auditoria PL/SQL (`PKG_PETGUARDIAN`).
-9. **Auditoria Automatizada RBAC:**
-   - Suíte de validação formal em `scratch/test_admin_endpoints.ps1` com 45 asserções automatizadas cobrindo CRUDs de Admin e barreiras negativas de HTTP 403 para usuários comuns.
+9. **Auditoria Automatizada RBAC e Integração:**
+   - Suíte de validação formal automatizada no repositório `Compliance-Quality-Assurance-Tests` (Postman Collection) e 123 testes JUnit 5 com Spring Boot Test cobrindo CRUDs de Admin, procedures Oracle e barreiras negativas de HTTP 403.
