@@ -10,6 +10,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Comparator;
 import java.util.List;
@@ -45,7 +47,14 @@ import java.util.List;
         scheme = "bearer",
         bearerFormat = "JWT"
 )
-public class SwaggerConfig {
+public class SwaggerConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addRedirectViewController("/", "/swagger-ui/index.html");
+        registry.addRedirectViewController("/admin", "/admin/index.html");
+        registry.addRedirectViewController("/admin/", "/admin/index.html");
+    }
 
     @Bean
     public OpenApiCustomizer sortTagsCustomizer() {
