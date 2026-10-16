@@ -22,10 +22,12 @@
 | **Repositório GitHub (DevOps)** | https://github.com/Challenge-Pet-Guardian-4/DevOps-Tools-Cloud-Computing |
 | **Projeto no Azure DevOps** | https://dev.azure.com/PetGuardian/Sprint%204%20%E2%80%93%20Azure%20DevOps |
 | **API em Produção (Azure Web App)** | https://app-petguardian-01bd2f0c.azurewebsites.net |
+| **Console Web Admin (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/admin |
 | **Swagger UI Interativo (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/swagger-ui/index.html |
 | **OpenAPI Docs JSON (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/v3/api-docs |
 | **Actuator Health (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/actuator/health |
 | **Swagger UI (Local)** | http://localhost:8080/swagger-ui/index.html |
+| **Console Web Admin (Local)** | http://localhost:8080/admin |
 | **Arquivo de Coleção Insomnia** | [/docs/Insomnia_2026-05-21.yaml](./docs/Insomnia_2026-05-21.yaml) |
 
 ## 🔗 Vídeo de Demonstração
@@ -152,7 +154,8 @@ O sistema adota segurança corporativa stateless com autenticação JWT e par de
 | `/usuarios/{id}/upgrade-premium` | `PATCH` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se chamado por outro usuário |
 | `/usuarios/{id}/role` | `PATCH` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (exclusivo para `ADMIN` alterar role) |
 | `/usuarios`, `/usuarios/by-*` (Listagens) | `GET` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (consultas gerais exclusivas para `ADMIN`) |
-| `/usuarios/{id}`, `/usuarios/{id}/rede-cuidado` | `GET`, `PUT`, `DELETE` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se tentar acessar/alterar outro usuário |
+| `/usuarios/{id}` | `GET`, `PUT`, `DELETE` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se tentar acessar/alterar outro usuário |
+| `/usuarios/{id}/rede-cuidado` | `GET` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (usuário consulta sua própria rede via `/usuarios/me/rede-cuidado`) |
 | `/pets/**`, `/tarefas/**`, `/historicos/**` | Vários | 🔒 Cuidador | 🔒 Cuidador | ✅ Permitido | `403 Forbidden` se não pertencer ao Care Circle do pet |
 | `/enderecos/**` (Infraestrutura) | `GET`, `POST`, `PUT`, `DELETE` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (gestão exclusiva de `ADMIN`) |
 | `/trilhas`, `/modulos`, `/aulas` | `GET` | ❌ Bloqueado | ✅ Permitido | ✅ Permitido | `403 Forbidden` para tutores comuns |
@@ -178,27 +181,44 @@ O schema relacional completo do ecossistema é mantido diretamente no **Oracle D
 A modelagem contempla 15 tabelas relacionais (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`), além da coleção `conteudos_aula` no MongoDB Atlas:
 
 - **Script DDL & Packages:** Disponível em [`src/main/resources/db/migration/V4__pkg_petguardian.sql`](./src/main/resources/db/migration/V4__pkg_petguardian.sql), com criação idempotente de procedures, triggers de auditoria e validações.
-- **Suporte ao Flyway:** A aplicação inclui `org.flywaydb:flyway-database-oracle` no `build.gradle` com migrações versionadas (`V1__...` a `V4__...`) e repetíveis (`R__...`). A execução automática é habilitada (`spring.flyway.enabled=true`, baseline 1), garantindo evolução segura e DDL gerenciado (`spring.jpa.hibernate.ddl-auto=none`).
+- **Suporte ao Flyway:** A aplicação inclui `org.flywaydb:flyway-database-oracle` no `build.gradle` com migrações versionadas (`V1__...` a `V4__...`). A execução automática é habilitada (`spring.flyway.enabled=true`, baseline 0), garantindo evolução segura e DDL gerenciado (`spring.jpa.hibernate.ddl-auto=none`).
 
 Configurações ativas no `application.properties`:
 ```properties
 # Oracle Database 19c (FIAP Cloud)
-spring.datasource.url=${ORACLE_URL:jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl}
-spring.datasource.username=${ORACLE_USER:RM561432}
+spring.datasource.url=${ORACLE_URL}
+spring.datasource.username=${ORACLE_USER}
 spring.datasource.password=${ORACLE_PASSWORD}
 spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
-spring.jpa.hibernate.ddl-auto=${JPA_DDL_AUTO:none}
+spring.jpa.hibernate.ddl-auto=none
 
 # Flyway Migrations (Oracle 19c)
-spring.flyway.enabled=${SPRING_FLYWAY_ENABLED:true}
+spring.flyway.enabled=true
 spring.flyway.baseline-on-migrate=true
-spring.flyway.baseline-version=1
-spring.flyway.placeholders.ADMIN_BCRYPT_HASH=${ADMIN_BCRYPT_HASH:$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G}
+spring.flyway.baseline-version=0
+spring.flyway.placeholders.ADMIN_BCRYPT_HASH=${ADMIN_BCRYPT_HASH:}
 
 # MongoDB Atlas na Nuvem (Conteúdos NoSQL)
 spring.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/petguardian}
 spring.data.mongodb.auto-index-creation=true
 ```
+
+---
+
+## 🖥️ Console Web Administrativo (`/admin`)
+
+A aplicação disponibiliza um **Console Web Administrativo** completo integrado ao backend (servido nativamente em `/admin`), proporcionando interface de usuário e experiência (UI/UX) para gestão e observabilidade:
+
+* **Acesso Direto:** `https://app-petguardian-01bd2f0c.azurewebsites.net/admin` (ou `http://localhost:8080/admin` localmente).
+* **Autenticação Segura:** Modal de login integrado à rota `POST /login`, consumindo tokens Bearer JWT com persistência no `localStorage`.
+* **Dashboard Executivo & Observabilidade:**
+  - Status em tempo real do Spring Boot Actuator (`/actuator/health`) com verificação dos conectores **Oracle 19c** e **MongoDB Atlas**.
+  - Painel com contadores consolidados de usuários, pets cadastrados, tarefas em aberto e módulos pedagógicos.
+* **Módulos de Gestão Operacional (CRUD Completo):**
+  - **Usuários:** Listagem paginada, filtros por perfil (`ADMIN`, `PREMIUM`, `COMUM`) e controle de roles.
+  - **Pets & Care Circle:** Visualização de animais, tutores responsáveis e histórico clínico.
+  - **Rotinas e Cuidados:** Acompanhamento de tarefas por status (`PENDENTE`, `CONCLUIDO`, `EXPIRADO`), conclusão de rotinas e auditoria de pontuação.
+  - **Trilhas e Lições:** Consulta e gestão de conteúdos didáticos armazenados no MongoDB Atlas.
 
 ---
 
@@ -443,15 +463,10 @@ Para executar a suíte completa de testes unitários:
 ./gradlew test
 ```
 
-### 2. Auditoria Automatizada de Permissões de ADMIN & RBAC
-Para auditar a autorização de todas as rotas de ponta a ponta e comprovar que o perfil ADMIN tem permissões reais de criação/edição/deleção, e que o perfil COMUM é bloqueado com `403 Forbidden`:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scratch\test_admin_endpoints.ps1
-```
-
-- **Resultado da Auditoria:** 45 / 45 testes aprovados (100% de sucesso).
-- **Relatório Técnico Consolidado:** Consulte o arquivo [relatorio_auditoria_permissoes_admin.md](./relatorio_auditoria_permissoes_admin.md) para evidências completas da matriz de testes.
+### 2. Testes de Integração e Automação de QA
+Para validação de rotas, permissões de segurança RBAC e persistência com Stored Procedures:
+- **Suíte de Testes JUnit 5 / Spring Boot Test:** 123 testes automatizados executados via `./gradlew test` (100% de sucesso).
+- **Suíte de Automação Postman (QA):** Coleção oficial contendo asserções de status code, JSON Schema, autorização JWT e validação de Stored Procedures Oracle disponível no repositório de QA em [`Compliance-Quality-Assurance-Tests`](../Compliance-Quality-Assurance-Tests/).
 
 ---
 
