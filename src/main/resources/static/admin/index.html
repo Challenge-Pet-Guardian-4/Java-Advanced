@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="PetGuardian Enterprise Admin Console - Monitoramento, Métricas, Gestão de Usuários, Pets, Tarefas e Trilhas NoSQL">
+  <title>PetGuardian Console | Administração & Gestão Completa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Container de Toasts para Notificações -->
+  <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+  <!-- Modal 1: Autenticação Administrativa -->
+  <div id="login-modal" class="modal-overlay active">
+    <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <div class="auth-card-header">
+        <div class="auth-brand">
+          <div class="brand-badge-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </div>
+          <span class="auth-brand-name">PetGuardian</span>
+          <span class="auth-brand-env">Admin</span>
+        </div>
+        <h2 id="auth-title" class="auth-title">Acesso Administrativo</h2>
+        <p class="auth-subtitle">Informe suas credenciais de gestor para acessar o console executivo.</p>
+      </div>
+
+      <div class="api-endpoint-setting">
+        <div class="api-label-row">
+          <label for="api-url-input">Ambiente & Endpoint da API</label>
+          <span id="api-status-hint" class="status-indicator-tag">Desconectado</span>
+        </div>
+        <div class="env-selector-chips">
+          <button type="button" class="env-chip-btn active" id="btn-env-azure" data-url="https://app-petguardian-01bd2f0c.azurewebsites.net">
+            <span class="env-dot env-dot-azure"></span>
+            <span>☁️ Azure Cloud (Padrão)</span>
+          </button>
+          <button type="button" class="env-chip-btn" id="btn-env-localhost" data-url="http://localhost:8080">
+            <span class="env-dot env-dot-local"></span>
+            <span>💻 Localhost:8080</span>
+          </button>
+        </div>
+        <div class="input-action-group">
+          <input type="text" id="api-url-input" value="https://app-petguardian-01bd2f0c.azurewebsites.net" placeholder="https://app-petguardian-01bd2f0c.azurewebsites.net" spellcheck="false">
+          <button type="button" id="btn-ping-api" class="btn-subtle" title="Verificar conectividade com a API">Testar</button>
+        </div>
+      </div>
+
+      <form id="login-form" class="auth-form" onsubmit="return false;">
+        <div class="form-field">
+          <label for="login-email">E-mail corporativo</label>
+          <input type="email" id="login-email" required placeholder="admin@petguardian.com" value="enzo.admin@petguardian.com" autocomplete="username">
+        </div>
+        <div class="form-field">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" required placeholder="••••••••" value="123mudar" autocomplete="current-password">
+        </div>
+
+        <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block">
+          <span class="btn-text">Entrar no Console</span>
+          <span class="btn-spinner hidden"></span>
+        </button>
+
+        <div class="quick-auth-bar">
+          <span class="quick-auth-label">Credencial pré-configurada:</span>
+          <button type="button" class="quick-auth-chip" id="btn-fill-admin">
+            <code>enzo.admin@petguardian.com</code> (ADMIN)
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 2: Rede de Apoio e Cuidado (Care Circle) -->
+  <div id="care-circle-modal" class="modal-overlay">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="care-circle-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Rede de Cuidado Colaborativo</div>
+          <h3 id="care-circle-title" class="modal-heading">Detalhes da Rede</h3>
+          <p id="care-circle-subtitle" class="modal-subheading">Tutores, pets vinculados e cuidadores associados</p>
+        </div>
+        <button type="button" id="btn-close-care-circle" class="btn-icon-close" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="care-circle-content">
+        <!-- Renderizado dinamicamente -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Prontuário Veterinário & Ficha Consolidada -->
+  <div id="prontuario-modal" class="modal-overlay">
+    <div class="modal-window modal-window-lg" role="dialog" aria-modal="true" aria-labelledby="prontuario-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Prontuário Veterinário & Ficha Consolidada</div>
+          <h3 id="prontuario-title" class="modal-heading">Ficha do Paciente</h3>
+          <p id="prontuario-subtitle" class="modal-subheading">Biometria, cuidados preventivos e pontuação acumulada Oracle 19c</p>
+        </div>
+        <button type="button" id="btn-close-prontuario" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="prontuario-content">
+        <!-- Renderizado dinamicamente -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-trigger">Fechar Prontuário</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Diálogo de Confirmação Executiva (Substitui confirm/alert nativos) -->
+  <div id="confirm-modal" class="modal-overlay">
+    <div class="modal-window modal-window-sm" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="confirm-icon-wrap" id="confirm-icon-wrap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <div>
+            <h3 id="confirm-modal-title" class="modal-heading">Confirmação</h3>
+            <p class="modal-subheading">Ação sobre registro do sistema</p>
+          </div>
+        </div>
+        <button type="button" id="btn-close-confirm" class="btn-icon-close" aria-label="Fechar Diálogo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p id="confirm-modal-message" class="confirm-modal-text">Você tem certeza que deseja prosseguir com esta ação?</p>
+      </div>
+      <div class="modal-footer confirm-modal-footer">
+        <button type="button" id="btn-confirm-cancel" class="btn btn-secondary">
+          Cancelar
+        </button>
+        <button type="button" id="btn-confirm-action" class="btn btn-danger">
+          <svg class="confirm-btn-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+          </svg>
+          <span id="confirm-action-text">Sim, Confirmar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Gerenciamento de Usuário (Criar / Editar) -->
+  <div id="user-modal" class="modal-overlay">
+    <div class="modal-window modal-window-lg" role="dialog" aria-modal="true" aria-labelledby="user-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Controle de Acessos & Perfis</div>
+          <h3 id="user-modal-title" class="modal-heading">Editar Usuário</h3>
+          <p class="modal-subheading">Dados cadastrais, contato e localização geográfica</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-user" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="user-id">
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="user-nome">Nome Completo <span class="required">*</span></label>
+            <input type="text" id="user-nome" required maxlength="100" placeholder="Ex: Enzo Silva">
+          </div>
+          <div class="form-field">
+            <label for="user-email">E-mail <span class="required">*</span></label>
+            <input type="email" id="user-email" required maxlength="50" placeholder="enzo@petguardian.com">
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-field">
+            <label for="user-senha">Senha <span class="required" id="user-senha-required">*</span></label>
+            <div class="input-password-wrap">
+              <input type="password" id="user-senha" minlength="6" maxlength="72" placeholder="Mínimo 6 caracteres">
+              <button type="button" id="btn-toggle-user-senha" class="btn-eye-toggle" title="Mostrar ou ocultar senha" aria-label="Mostrar ou ocultar senha">
+                <svg class="eye-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+                <svg class="eye-icon-hide hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              </button>
+            </div>
+            <span class="field-hint" id="user-senha-hint">Obrigatório no cadastro</span>
+          </div>
+          <div class="form-field">
+            <label for="user-ddd">DDD <span class="required">*</span></label>
+            <input type="text" id="user-ddd" required maxlength="2" placeholder="11">
+          </div>
+          <div class="form-field">
+            <label for="user-telefone">Telefone (9 dígitos) <span class="required">*</span></label>
+            <input type="text" id="user-telefone" required maxlength="9" placeholder="988887777">
+          </div>
+        </div>
+
+        <div class="form-section-title">Endereço (Integração ViaCEP)</div>
+        <div class="form-grid-3">
+          <div class="form-field">
+            <label for="user-cep">CEP <span class="required">*</span></label>
+            <div class="input-with-loader">
+              <input type="text" id="user-cep" required maxlength="9" placeholder="01310-100">
+              <span id="cep-loader" class="field-spinner hidden"></span>
+            </div>
+            <span class="field-hint">Busca automática ao preencher 8 dígitos</span>
+          </div>
+          <div class="form-field">
+            <label for="user-numero">Número <span class="required">*</span></label>
+            <input type="text" id="user-numero" required maxlength="5" placeholder="1000">
+          </div>
+          <div class="form-field">
+            <label for="user-role">Perfil de Acesso (RBAC) <span class="required">*</span></label>
+            <select id="user-role" class="custom-select">
+              <option value="COMUM">COMUM (Tutor Padrão)</option>
+              <option value="PREMIUM">PREMIUM (Acesso Ilimitado)</option>
+              <option value="ADMIN">ADMIN (Administrador Executivo)</option>
+            </select>
+            <span class="field-hint">Define o nível de permissões do usuário</span>
+          </div>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-field">
+            <label for="user-cidade">Cidade</label>
+            <input type="text" id="user-cidade" readonly placeholder="Preenchido via CEP" class="input-readonly">
+          </div>
+          <div class="form-field">
+            <label for="user-bairro">Bairro</label>
+            <input type="text" id="user-bairro" readonly placeholder="Preenchido via CEP" class="input-readonly">
+          </div>
+          <div class="form-field">
+            <label for="user-uf">UF</label>
+            <input type="text" id="user-uf" readonly placeholder="UF" class="input-readonly">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="submit" id="btn-save-user" class="btn btn-primary">
+            <span class="btn-text">Salvar Usuário</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 4: Gerenciamento de Pet (Criar / Editar) -->
+  <div id="pet-modal" class="modal-overlay">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="pet-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Cadastro de Animais</div>
+          <h3 id="pet-modal-title" class="modal-heading">Gerenciar Pet</h3>
+          <p class="modal-subheading">Informações biométricas e características cadastrais</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-pet" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="pet-id">
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="pet-nome">Nome do Pet <span class="required">*</span></label>
+            <input type="text" id="pet-nome" required maxlength="30" placeholder="Ex: Rex">
+          </div>
+          <div class="form-field">
+            <label for="pet-data-nasc">Data de Nascimento <span class="required">*</span></label>
+            <input type="date" id="pet-data-nasc" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="pet-raca">Raça <span class="required">*</span></label>
+            <input type="text" id="pet-raca" required maxlength="30" placeholder="Ex: Golden Retriever, SRD">
+          </div>
+          <div class="form-field">
+            <label for="pet-porte">Porte do Animal <span class="required">*</span></label>
+            <select id="pet-porte" required>
+              <option value="PEQUENO">Pequeno</option>
+              <option value="MEDIO" selected>Médio</option>
+              <option value="GRANDE">Grande</option>
+              <option value="GIGANTE">Gigante</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="pet-sexo">Sexo <span class="required">*</span></label>
+            <select id="pet-sexo" required>
+              <option value="M">Macho (M)</option>
+              <option value="F">Fêmea (F)</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="pet-castrado">Animal Castrado? <span class="required">*</span></label>
+            <select id="pet-castrado" required>
+              <option value="true">Sim, castrado</option>
+              <option value="false">Não castrado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="submit" id="btn-save-pet" class="btn btn-primary">
+            <span class="btn-text">Salvar Pet</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 5: Gerenciamento de Tarefa (Criar / Editar) -->
+  <div id="task-modal" class="modal-overlay">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Rotina de Cuidados</div>
+          <h3 id="task-modal-title" class="modal-heading">Gerenciar Tarefa</h3>
+          <p class="modal-subheading">Atividades preventivas, prazos e gamificação</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-task" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="task-id">
+
+        <div class="form-field">
+          <label for="task-titulo">Título da Tarefa <span class="required">*</span></label>
+          <input type="text" id="task-titulo" required maxlength="30" placeholder="Ex: Vacina V10, Banho, Ração Especial">
+        </div>
+
+        <div class="form-field">
+          <label for="task-descricao">Descrição Detalhada <span class="required">*</span></label>
+          <textarea id="task-descricao" required maxlength="200" rows="3" placeholder="Orientações e detalhes da atividade..."></textarea>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="task-pet-id">Pet Vinculado <span class="required">*</span></label>
+            <select id="task-pet-id" required>
+              <option value="">Selecione um pet...</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="task-prazo">Prazo de Execução (Futuro) <span class="required">*</span></label>
+            <input type="datetime-local" id="task-prazo" required>
+          </div>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="task-pontos">Pontuação da Tarefa (0 a 10) <span class="required">*</span></label>
+            <input type="number" id="task-pontos" min="0" max="10" value="5" required>
+          </div>
+          <div class="form-field">
+            <label for="task-status">Status Inicial</label>
+            <select id="task-status">
+              <option value="PENDENTE">Pendente</option>
+              <option value="CONCLUIDO">Concluído</option>
+              <option value="EXPIRADO">Expirado</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="submit" id="btn-save-task" class="btn btn-primary">
+            <span class="btn-text">Salvar Tarefa</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 6: Gerenciamento de Trilha (Criar / Editar) -->
+  <div id="trilha-modal" class="modal-overlay">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="trilha-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Pedagogia & Adestramento</div>
+          <h3 id="trilha-modal-title" class="modal-heading">Gerenciar Trilha</h3>
+          <p class="modal-subheading">Trilhas de conhecimento vinculadas aos animais</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-trilha" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="trilha-id">
+
+        <div class="form-field">
+          <label for="trilha-nome">Nome da Trilha <span class="required">*</span></label>
+          <input type="text" id="trilha-nome" required maxlength="30" placeholder="Ex: Socialização Básica de Filhotes">
+        </div>
+
+        <div class="form-field">
+          <label for="trilha-descricao">Descrição <span class="required">*</span></label>
+          <textarea id="trilha-descricao" required maxlength="200" rows="3" placeholder="Resumo do programa didático..."></textarea>
+        </div>
+
+        <div class="form-field">
+          <label for="trilha-pet-id">Pet Associado <span class="required">*</span></label>
+          <select id="trilha-pet-id" required>
+            <option value="">Selecione o pet associado...</option>
+          </select>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="submit" id="btn-save-trilha" class="btn btn-primary">
+            <span class="btn-text">Salvar Trilha</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 7: Gerenciamento de Módulo (Criar / Editar) -->
+  <div id="modulo-modal" class="modal-overlay">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="modulo-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Módulos de Aprendizagem</div>
+          <h3 id="modulo-modal-title" class="modal-heading">Gerenciar Módulo</h3>
+          <p class="modal-subheading">Unidade temática agrupando aulas práticas</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-modulo" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="modulo-id">
+
+        <div class="form-field">
+          <label for="modulo-trilha-id">Trilha Pertencente <span class="required">*</span></label>
+          <select id="modulo-trilha-id" required>
+            <option value="">Selecione uma trilha...</option>
+          </select>
+        </div>
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="modulo-nome">Nome do Módulo <span class="required">*</span></label>
+            <input type="text" id="modulo-nome" required maxlength="50" placeholder="Ex: Primeiros Passos e Comandos">
+          </div>
+          <div class="form-field">
+            <label for="modulo-tempo">Tempo Estimado <span class="required">*</span></label>
+            <input type="text" id="modulo-tempo" required maxlength="10" placeholder="Ex: 45 min, 2 horas">
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="modulo-descricao">Descrição do Módulo <span class="required">*</span></label>
+          <textarea id="modulo-descricao" required maxlength="100" rows="3" placeholder="Objetivos pedagógicos deste módulo..."></textarea>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="submit" id="btn-save-modulo" class="btn btn-primary">
+            <span class="btn-text">Salvar Módulo</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 8: Gerenciamento de Aula (Criar / Editar) -->
+  <div id="aula-modal" class="modal-overlay">
+    <div class="modal-window" role="dialog" aria-modal="true" aria-labelledby="aula-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Estrutura Curricular</div>
+          <h3 id="aula-modal-title" class="modal-heading">Gerenciar Aula</h3>
+          <p class="modal-subheading">Lições individuais, pontuação e critérios avaliativos</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-aula" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="aula-id">
+
+        <div class="form-field">
+          <label for="aula-modulo-id">Módulo Vinculado <span class="required">*</span></label>
+          <select id="aula-modulo-id" required>
+            <option value="">Selecione o módulo...</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="aula-nome">Nome da Aula <span class="required">*</span></label>
+          <input type="text" id="aula-nome" required maxlength="50" placeholder="Ex: Comando 'Senta' com Reforço Positivo">
+        </div>
+
+        <div class="form-field">
+          <label for="aula-descricao">Descrição da Aula <span class="required">*</span></label>
+          <textarea id="aula-descricao" required maxlength="100" rows="2" placeholder="Resumo e instruções rápidas..."></textarea>
+        </div>
+
+        <div class="form-grid-3">
+          <div class="form-field">
+            <label for="aula-pontos">Pontos (0 a 10) <span class="required">*</span></label>
+            <input type="number" id="aula-pontos" min="0" max="10" value="5" required>
+          </div>
+          <div class="form-field">
+            <label for="aula-dificuldade">Dificuldade <span class="required">*</span></label>
+            <select id="aula-dificuldade" required>
+              <option value="FACIL">Fácil</option>
+              <option value="MEDIO" selected>Médio</option>
+              <option value="AVANCADO">Avançado</option>
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="aula-concluida">Estado Inicial</label>
+            <select id="aula-concluida" required>
+              <option value="false">Não Concluída</option>
+              <option value="true">Concluída</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="submit" id="btn-save-aula" class="btn btn-primary">
+            <span class="btn-text">Salvar Aula</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 9: Editor de Conteúdo NoSQL (MongoDB Atlas) -->
+  <div id="conteudo-modal" class="modal-overlay">
+    <div class="modal-window modal-window-xl" role="dialog" aria-modal="true" aria-labelledby="conteudo-modal-title">
+      <div class="modal-header">
+        <div>
+          <div class="modal-category">Coleção NoSQL: conteudos_aula (MongoDB Atlas)</div>
+          <h3 id="conteudo-modal-title" class="modal-heading">Editor de Conteúdo Didático</h3>
+          <p id="conteudo-modal-subtitle" class="modal-subheading">Publicação de artigos em Markdown e links de apoio</p>
+        </div>
+        <button type="button" class="btn-icon-close modal-close-trigger" aria-label="Fechar Modal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <form id="form-conteudo" onsubmit="return false;" class="modal-body">
+        <input type="hidden" id="conteudo-aula-id">
+
+        <div class="form-grid-2">
+          <div class="form-field">
+            <label for="conteudo-tipo">Tipo de Conteúdo <span class="required">*</span></label>
+            <input type="text" id="conteudo-tipo" required placeholder="Ex: TEXTO_MARKDOWN, ARTIGO_CLINICO, GUIA_PRATICO" value="TEXTO_MARKDOWN">
+          </div>
+          <div class="form-field">
+            <label for="conteudo-links">Links de Recursos Externos (Separados por vírgula)</label>
+            <input type="text" id="conteudo-links" placeholder="https://exemplo.com/material.pdf, https://youtube.com/...">
+          </div>
+        </div>
+
+        <div class="markdown-editor-container">
+          <div class="markdown-pane">
+            <div class="pane-header">
+              <span>Markdown (Fonte)</span>
+              <small class="text-tertiary">Suporte a títulos, listas, tabelas e links</small>
+            </div>
+            <textarea id="conteudo-markdown" required rows="14" placeholder="# Título do Conteúdo&#10;&#10;Descreva as orientações práticas aqui...&#10;&#10;### Dicas de Ouro:&#10;- Dica 1&#10;- Dica 2"></textarea>
+          </div>
+          <div class="markdown-pane">
+            <div class="pane-header">
+              <span>Visualização em Tempo Real</span>
+              <small class="text-tertiary">Renderizado no cliente</small>
+            </div>
+            <div id="conteudo-preview" class="markdown-preview-box">
+              <p class="text-tertiary">Digite no editor à esquerda para visualizar a prévia formatada.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-close-trigger">Cancelar</button>
+          <button type="button" id="btn-delete-conteudo" class="btn btn-danger hidden">Excluir do MongoDB</button>
+          <button type="submit" id="btn-save-conteudo" class="btn btn-primary">
+            <span class="btn-text">Salvar no MongoDB Atlas</span>
+            <span class="btn-spinner hidden"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Layout Principal do Console Administrativo -->
+  <div id="app-container" class="app-shell hidden">
+    <!-- Barra Lateral de Navegação (Sidebar) -->
+    <aside class="sidebar">
+      <div class="sidebar-brand-block">
+        <div class="brand-logo-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
+        <div class="brand-text-block">
+          <div class="brand-title">PetGuardian</div>
+          <div class="brand-badge-role">Admin Console</div>
+        </div>
+      </div>
+
+      <div class="nav-section-title">Gerenciamento</div>
+      <nav class="sidebar-nav">
+        <button type="button" class="nav-button active" data-tab="tab-dashboard">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
+          </svg>
+          <span class="nav-text">Métricas Globais</span>
+        </button>
+
+        <button type="button" class="nav-button" data-tab="tab-usuarios">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span class="nav-text">Usuários</span>
+          <span id="badge-users-count" class="nav-counter">0</span>
+        </button>
+
+        <button type="button" class="nav-button" data-tab="tab-pets">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="4" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="20" cy="16" r="2"/>
+            <path d="M9 10a5 5 0 0 1 5 5v3.5a2.5 2.5 0 0 1-5 0V17a2 2 0 0 0-2-2H5a2 2 0 0 1-2-2 5 5 0 0 1 5-5h1z"/>
+          </svg>
+          <span class="nav-text">Pets & Animais</span>
+          <span id="badge-pets-count" class="nav-counter">0</span>
+        </button>
+
+        <button type="button" class="nav-button" data-tab="tab-tarefas">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+          <span class="nav-text">Rotina de Cuidados</span>
+          <span id="badge-tasks-count" class="nav-counter">0</span>
+        </button>
+
+        <button type="button" class="nav-button" data-tab="tab-trilhas">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/>
+            <path d="M6 6h10"/><path d="M6 10h10"/>
+          </svg>
+          <span class="nav-text">Trilhas & Aulas NoSQL</span>
+          <span id="badge-trilhas-count" class="nav-counter">0</span>
+        </button>
+
+        <button type="button" class="nav-button" data-tab="tab-infra">
+          <svg class="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/>
+          </svg>
+          <span class="nav-text">Serviços & Infra</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="profile-card">
+          <div class="profile-avatar" id="admin-avatar">AD</div>
+          <div class="profile-info">
+            <div class="profile-name" id="admin-user-name">Administrador</div>
+            <div class="profile-tag">ROLE_ADMIN</div>
+          </div>
+          <button type="button" id="btn-logout" class="btn-logout-icon" title="Encerrar Sessão">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Área Principal de Conteúdo -->
+    <main class="main-viewport">
+      <!-- Topbar Header -->
+      <header class="app-topbar">
+        <div class="topbar-title-wrap">
+          <h1 id="page-title" class="page-main-heading">Métricas Globais</h1>
+          <p id="page-subtitle" class="page-sub-heading">Painel consolidado em tempo real</p>
+        </div>
+
+        <div class="topbar-actions">
+          <div class="env-switcher-wrap">
+            <label for="select-env-topbar" class="sr-only">Ambiente da API</label>
+            <select id="select-env-topbar" class="custom-select select-env-topbar" title="Alternar entre Azure Cloud e Localhost">
+              <option value="https://app-petguardian-01bd2f0c.azurewebsites.net">☁️ Azure (Prod)</option>
+              <option value="http://localhost:8080">💻 Localhost:8080</option>
+            </select>
+          </div>
+
+          <div class="live-status-pill" id="system-health-pill">
+            <span class="status-dot"></span>
+            <span id="system-health-text" class="status-label">Conectando...</span>
+          </div>
+
+          <div class="refresh-control">
+            <label for="select-refresh" class="sr-only">Frequência de atualização</label>
+            <select id="select-refresh" class="select-refresh">
+              <option value="0">Manual</option>
+              <option value="15000">15s</option>
+              <option value="30000" selected>30s</option>
+              <option value="60000">1 min</option>
+            </select>
+          </div>
+
+          <button type="button" id="btn-refresh-all" class="btn-refresh" title="Recarregar dados">
+            <svg class="refresh-icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
+            </svg>
+            <span>Atualizar</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- ABA 1: DASHBOARD DE MÉTRICAS -->
+      <section id="tab-dashboard" class="tab-pane active">
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Total de Tutores</span>
+              <span class="metric-tag">Usuários</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-value" id="kpi-total-usuarios">0</span>
+            </div>
+            <div class="metric-context" id="kpi-usuarios-breakdown">0 Comum • 0 Premium • 0 Admin</div>
+            <div class="metric-track">
+              <div id="bar-conversion-premium" class="metric-track-fill" style="width: 0%"></div>
+            </div>
+            <div class="metric-footer-note" id="kpi-conversion-text">Conversão Premium: 0%</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Pets Monitorados</span>
+              <span class="metric-tag">Animais</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-value" id="kpi-total-pets">0</span>
+            </div>
+            <div class="metric-context" id="kpi-pets-breakdown">Média: 0.0 pets por tutor</div>
+            <div class="metric-track">
+              <div id="bar-castrados" class="metric-track-fill accent-emerald" style="width: 0%"></div>
+            </div>
+            <div class="metric-footer-note" id="kpi-castrados-text">Castrados: 0%</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Tarefas de Rotina</span>
+              <span class="metric-tag">Atividades</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-value" id="kpi-total-tarefas">0</span>
+            </div>
+            <div class="metric-context" id="kpi-tarefas-breakdown">0 concluídas • 0 pendentes</div>
+            <div class="metric-track">
+              <div id="bar-taxa-conclusao" class="metric-track-fill accent-indigo" style="width: 0%"></div>
+            </div>
+            <div class="metric-footer-note" id="kpi-tarefas-text">Taxa de Conclusão: 0%</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-top">
+              <span class="metric-label">Pontuação do Ecossistema</span>
+              <span class="metric-tag">Gamificação</span>
+            </div>
+            <div class="metric-number-row">
+              <span class="metric-value" id="kpi-total-pontos">0 pts</span>
+            </div>
+            <div class="metric-context">Validação via rotinas corporativas</div>
+            <div class="metric-footer-note">Atualização automática por tarefas concluídas</div>
+          </div>
+        </div>
+
+        <div class="charts-row">
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3 class="panel-title">Distribuição de Perfis</h3>
+                <p class="panel-subtitle">Níveis de acesso e permissões (RBAC)</p>
+              </div>
+            </div>
+            <div class="donut-analytics-wrap">
+              <div class="donut-view">
+                <svg viewBox="0 0 36 36" class="donut-chart-svg" id="svg-donut-roles">
+                  <path class="donut-base-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path id="donut-segment-admin" class="donut-slice slice-admin" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0 100"/>
+                  <path id="donut-segment-premium" class="donut-slice slice-premium" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0 100"/>
+                  <path id="donut-segment-comum" class="donut-slice slice-comum" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0 100"/>
+                </svg>
+                <div class="donut-center-info">
+                  <span class="donut-center-val" id="donut-roles-total">0</span>
+                  <span class="donut-center-label">Total</span>
+                </div>
+              </div>
+              <div class="legend-stack">
+                <div class="legend-row">
+                  <span class="legend-indicator ind-admin"></span>
+                  <span class="legend-name">ADMIN</span>
+                  <strong class="legend-value" id="legend-admin-count">0</strong>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-indicator ind-premium"></span>
+                  <span class="legend-name">PREMIUM</span>
+                  <strong class="legend-value" id="legend-premium-count">0</strong>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-indicator ind-comum"></span>
+                  <span class="legend-name">COMUM</span>
+                  <strong class="legend-value" id="legend-comum-count">0</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <div class="panel-card-header">
+              <div>
+                <h3 class="panel-title">Status da Rotina</h3>
+                <p class="panel-subtitle">Conformidade das atividades agendadas</p>
+              </div>
+            </div>
+            <div class="donut-analytics-wrap">
+              <div class="donut-view">
+                <svg viewBox="0 0 36 36" class="donut-chart-svg" id="svg-donut-tasks">
+                  <path class="donut-base-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+                  <path id="donut-segment-concluido" class="donut-slice slice-concluido" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0 100"/>
+                  <path id="donut-segment-pendente" class="donut-slice slice-pendente" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0 100"/>
+                  <path id="donut-segment-expirado" class="donut-slice slice-expirado" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" stroke-dasharray="0 100"/>
+                </svg>
+                <div class="donut-center-info">
+                  <span class="donut-center-val" id="donut-tasks-total">0</span>
+                  <span class="donut-center-label">Tarefas</span>
+                </div>
+              </div>
+              <div class="legend-stack">
+                <div class="legend-row">
+                  <span class="legend-indicator ind-concluido"></span>
+                  <span class="legend-name">Concluídas</span>
+                  <strong class="legend-value" id="legend-concluido-count">0</strong>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-indicator ind-pendente"></span>
+                  <span class="legend-name">Pendentes</span>
+                  <strong class="legend-value" id="legend-pendente-count">0</strong>
+                </div>
+                <div class="legend-row">
+                  <span class="legend-indicator ind-expirado"></span>
+                  <span class="legend-name">Expiradas</span>
+                  <strong class="legend-value" id="legend-expirado-count">0</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3 class="panel-title">Métricas de Adoção & Ecossistema</h3>
+              <p class="panel-subtitle">Indicadores computados em tempo real através da correlação dos serviços</p>
+            </div>
+          </div>
+          <div class="insights-row">
+            <div class="insight-tile">
+              <div class="insight-label">Média de Pets / Tutor</div>
+              <div class="insight-value" id="metric-avg-pets">0.00</div>
+              <div class="insight-desc">Relação direta de animais cadastrados por usuário</div>
+            </div>
+            <div class="insight-tile">
+              <div class="insight-label">Engajamento nas Rotinas</div>
+              <div class="insight-value" id="metric-task-engagement">0%</div>
+              <div class="insight-desc">Percentual de conclusão de cuidados preventivos</div>
+            </div>
+            <div class="insight-tile">
+              <div class="insight-label">Conteúdos Educativos</div>
+              <div class="insight-value" id="metric-mongo-conteudos">0</div>
+              <div class="insight-desc">Artigos dinâmicos gerenciados no MongoDB Atlas</div>
+            </div>
+            <div class="insight-tile insight-span-porte">
+              <div class="insight-label">Distribuição por Porte Canino/Felino</div>
+              <div class="mini-bar-list" id="mini-bar-porte">
+                <!-- Preenchido via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 2: GESTÃO DE USUÁRIOS (CRM & RBAC) -->
+      <section id="tab-usuarios" class="tab-pane">
+        <div class="panel-card">
+          <div class="table-action-bar">
+            <div class="search-input-box">
+              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input type="text" id="input-search-user" placeholder="Filtrar por nome, e-mail ou cidade...">
+            </div>
+
+            <div class="action-bar-right">
+              <div class="tab-filter-pills">
+                <button type="button" class="btn-filter-pill active" data-role="ALL">Todos</button>
+                <button type="button" class="btn-filter-pill" data-role="ADMIN">ADMIN</button>
+                <button type="button" class="btn-filter-pill" data-role="PREMIUM">PREMIUM</button>
+                <button type="button" class="btn-filter-pill" data-role="COMUM">COMUM</button>
+              </div>
+
+              <button type="button" id="btn-open-new-user" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Novo Usuário</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="table-usuarios">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">ID</th>
+                  <th>Usuário</th>
+                  <th>Contato</th>
+                  <th>Localidade</th>
+                  <th style="width: 140px;">Nível (Role)</th>
+                  <th class="text-right" style="width: 180px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-usuarios">
+                <tr>
+                  <td colspan="6" class="table-cell-empty">Carregando dados dos usuários...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 3: PETS & PACIENTES -->
+      <section id="tab-pets" class="tab-pane">
+        <div class="panel-card">
+          <div class="table-action-bar">
+            <div class="search-input-box">
+              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input type="text" id="input-search-pet" placeholder="Buscar por nome do pet ou raça...">
+            </div>
+
+            <button type="button" id="btn-open-new-pet" class="btn btn-primary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              <span>Novo Pet</span>
+            </button>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="table-pets">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">ID</th>
+                  <th>Nome do Pet</th>
+                  <th>Raça</th>
+                  <th>Porte</th>
+                  <th>Sexo</th>
+                  <th>Castrado</th>
+                  <th class="text-right" style="width: 200px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-pets">
+                <tr>
+                  <td colspan="7" class="table-cell-empty">Carregando pets cadastrados...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 4: ROTINA & TAREFAS -->
+      <section id="tab-tarefas" class="tab-pane">
+        <div class="panel-card">
+          <div class="table-action-bar">
+            <div class="search-input-box">
+              <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              </svg>
+              <input type="text" id="input-search-task" placeholder="Buscar por título ou cuidador...">
+            </div>
+
+            <div class="action-bar-right">
+              <div class="tab-filter-pills">
+                <button type="button" class="btn-filter-pill active" data-status="ALL">Todas</button>
+                <button type="button" class="btn-filter-pill" data-status="CONCLUIDO">Concluídas</button>
+                <button type="button" class="btn-filter-pill" data-status="PENDENTE">Pendentes</button>
+                <button type="button" class="btn-filter-pill" data-status="EXPIRADO">Expiradas</button>
+              </div>
+
+              <button type="button" id="btn-open-new-task" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Nova Tarefa</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="data-table" id="table-tarefas">
+              <thead>
+                <tr>
+                  <th style="width: 70px;">ID</th>
+                  <th>Título da Tarefa</th>
+                  <th>Pet Vinculado</th>
+                  <th>Responsável</th>
+                  <th>Prazo</th>
+                  <th>Status</th>
+                  <th>Pontos</th>
+                  <th class="text-right" style="width: 170px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-tarefas">
+                <tr>
+                  <td colspan="8" class="table-cell-empty">Carregando tarefas agendadas...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 5: TRILHAS, MÓDULOS, AULAS & CONTEÚDOS NOSQL -->
+      <section id="tab-trilhas" class="tab-pane">
+        <div class="panel-card">
+          <div class="trilhas-master-header">
+            <div>
+              <h3 class="panel-title">Ecossistema Educativo & Adestramento</h3>
+              <p class="panel-subtitle">Gerencie a hierarquia de Trilhas (Oracle 19c) e Conteúdos Didáticos Ricos (MongoDB Atlas)</p>
+            </div>
+            <div class="trilha-view-switcher">
+              <button type="button" class="btn-sub-tab active" data-subtab="view-trilhas">1. Trilhas</button>
+              <button type="button" class="btn-sub-tab" data-subtab="view-modulos">2. Módulos</button>
+              <button type="button" class="btn-sub-tab" data-subtab="view-aulas">3. Aulas</button>
+              <button type="button" class="btn-sub-tab" data-subtab="view-conteudos">4. Conteúdos NoSQL (Atlas)</button>
+            </div>
+          </div>
+
+          <!-- Sub-Visão A: Trilhas -->
+          <div id="view-trilhas" class="subtab-pane active">
+            <div class="table-action-bar">
+              <div class="search-input-box">
+                <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" id="input-search-trilha" placeholder="Buscar por nome da trilha...">
+              </div>
+
+              <button type="button" id="btn-open-new-trilha" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Nova Trilha</span>
+              </button>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th>Nome da Trilha</th>
+                    <th>Descrição</th>
+                    <th>Pet Associado</th>
+                    <th class="text-right" style="width: 160px;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-trilhas">
+                  <tr>
+                    <td colspan="5" class="table-cell-empty">Carregando trilhas...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-Visão B: Módulos -->
+          <div id="view-modulos" class="subtab-pane">
+            <div class="table-action-bar">
+              <div class="search-input-box">
+                <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" id="input-search-modulo" placeholder="Buscar por nome do módulo...">
+              </div>
+
+              <button type="button" id="btn-open-new-modulo" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Novo Módulo</span>
+              </button>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th>Nome do Módulo</th>
+                    <th>Trilha Pai</th>
+                    <th>Duração</th>
+                    <th>Descrição</th>
+                    <th class="text-right" style="width: 160px;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-modulos">
+                  <tr>
+                    <td colspan="6" class="table-cell-empty">Carregando módulos...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-Visão C: Aulas -->
+          <div id="view-aulas" class="subtab-pane">
+            <div class="table-action-bar">
+              <div class="search-input-box">
+                <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" id="input-search-aula" placeholder="Buscar por título da aula...">
+              </div>
+
+              <button type="button" id="btn-open-new-aula" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Nova Aula</span>
+              </button>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">ID</th>
+                    <th>Nome da Aula</th>
+                    <th>Módulo Pai</th>
+                    <th>Dificuldade</th>
+                    <th>Pontos</th>
+                    <th>Status</th>
+                    <th class="text-right" style="width: 220px;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-aulas">
+                  <tr>
+                    <td colspan="7" class="table-cell-empty">Carregando aulas...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Sub-Visão D: Conteúdos Didáticos NoSQL (MongoDB Atlas) -->
+          <div id="view-conteudos" class="subtab-pane">
+            <div class="table-action-bar">
+              <div class="search-input-box">
+                <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+                </svg>
+                <input type="text" id="input-search-conteudo" placeholder="Buscar por ID de aula ou conteúdo...">
+              </div>
+
+              <button type="button" id="btn-open-new-conteudo" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span>Novo Conteúdo NoSQL</span>
+              </button>
+            </div>
+
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Aula Vinculada</th>
+                    <th>Tipo de Conteúdo</th>
+                    <th>Trecho do Markdown</th>
+                    <th>Links de Apoio</th>
+                    <th>Atualizado Em</th>
+                    <th class="text-right" style="width: 170px;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-conteudos">
+                  <tr>
+                    <td colspan="6" class="table-cell-empty">Carregando conteúdos do MongoDB Atlas...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABA 6: SERVIÇOS & INFRAESTRUTURA -->
+      <section id="tab-infra" class="tab-pane">
+        <div class="panel-card">
+          <div class="panel-card-header">
+            <div>
+              <h3 class="panel-title">Conectividade e Topologia de Serviços</h3>
+              <p class="panel-subtitle">Diagnóstico da infraestrutura poliglota corporativa</p>
+            </div>
+          </div>
+
+          <div class="services-status-grid">
+            <div class="service-tile">
+              <div class="service-head">
+                <div class="service-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="service-title">Oracle Database 19c</div>
+                  <div class="service-tech">Relacional • OJDBC11 Driver</div>
+                </div>
+              </div>
+              <p class="service-body">Gerenciamento relacional em 3FN, sequências e stored procedures corporativas (<code>PKG_PETGUARDIAN</code>).</p>
+              <div class="service-status-line is-up">
+                <span class="status-pulse-dot"></span>
+                <span>Operacional (FIAP Cloud)</span>
+              </div>
+            </div>
+
+            <div class="service-tile">
+              <div class="service-head">
+                <div class="service-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9v-2h2v2zm0-4H9V7h2v5z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="service-title">MongoDB Atlas</div>
+                  <div class="service-tech">NoSQL • Coleção conteudos_aula</div>
+                </div>
+              </div>
+              <p class="service-body">Cluster distribuído em nuvem para conteúdo rico de módulos didáticos e lições preventivas em Markdown.</p>
+              <div class="service-status-line is-up">
+                <span class="status-pulse-dot"></span>
+                <span>Operacional (Cluster Atlas)</span>
+              </div>
+            </div>
+
+            <div class="service-tile">
+              <div class="service-head">
+                <div class="service-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="service-title">ViaCEP HTTP Exchange</div>
+                  <div class="service-tech">Spring Cacheable (@Cacheable)</div>
+                </div>
+              </div>
+              <p class="service-body">Consulta e normalização de endereços com cache em memória desacoplado para mitigação de latência.</p>
+              <div class="service-status-line is-up">
+                <span class="status-pulse-dot"></span>
+                <span>Disponível (viacep.com.br)</span>
+              </div>
+            </div>
+
+            <div class="service-tile">
+              <div class="service-head">
+                <div class="service-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="service-title">Segurança & JWT RSA-2048</div>
+                  <div class="service-tech">Nimbus JOSE • Stateless</div>
+                </div>
+              </div>
+              <p class="service-body">Autenticação com chaves criptográficas assimétricas e verificação estrita de RBAC em cada endpoint.</p>
+              <div class="service-status-line is-up">
+                <span class="status-pulse-dot"></span>
+                <span>Ativo (Expiração em 60 min)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
