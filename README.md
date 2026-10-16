@@ -178,7 +178,7 @@ O sistema adota segurança corporativa stateless com autenticação JWT e par de
 
 O schema relacional completo do ecossistema é mantido diretamente no **Oracle Database** corporativo da FIAP (`oracle.fiap.com.br`), garantindo integridade referencial rigorosa, sequences, índices de performance e o empacotamento do pacote PL/SQL `PKG_PETGUARDIAN`.
 
-A modelagem contempla 15 tabelas relacionais (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`), além da coleção `conteudos_aula` no MongoDB Atlas:
+A modelagem contempla 15 tabelas de domínio em 3FN (`usuario`, `pet`, `raca`, `usuario_pet`, `tarefa`, `status`, `historico`, `trilha`, `modulo`, `aula`, `endereco`, `bairro`, `cidade`, `estado`, `telefone`) + 1 tabela de auditoria técnica DML (`auditoria_dml_tarefa`), totalizando 16 tabelas relacionais no Oracle Database, além da coleção `conteudos_aula` no MongoDB Atlas:
 
 - **Script DDL & Packages:** Disponível em [`src/main/resources/db/migration/V4__pkg_petguardian.sql`](./src/main/resources/db/migration/V4__pkg_petguardian.sql), com criação idempotente de procedures, triggers de auditoria e validações.
 - **Suporte ao Flyway:** A aplicação inclui `org.flywaydb:flyway-database-oracle` no `build.gradle` com migrações versionadas (`V1__...` a `V4__...`). A execução automática é habilitada (`spring.flyway.enabled=true`, baseline 0), garantindo evolução segura e DDL gerenciado (`spring.jpa.hibernate.ddl-auto=none`).
