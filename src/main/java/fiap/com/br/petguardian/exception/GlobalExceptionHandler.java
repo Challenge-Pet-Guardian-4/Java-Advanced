@@ -16,6 +16,7 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
 import java.util.List;
@@ -154,6 +155,13 @@ public class GlobalExceptionHandler {
         }
         return error(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ocorreu um erro interno inesperado no servidor.", request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleNoResourceFound(
+            NoResourceFoundException exception, HttpServletRequest request) {
+        log.warn("Recurso estático ou rota não encontrada: {}", request.getRequestURI());
+        return error(HttpStatus.NOT_FOUND, "Recurso não encontrado.", request);
     }
 
     @ExceptionHandler(Exception.class)
