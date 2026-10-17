@@ -1,7 +1,5 @@
-# ==============================================================================
-# Pipeline CI/CD - PetGuardian API (Sprint 4 - DevOps Tools & Cloud Computing)
-# Stack: Java 17/21 | Spring Boot 4.1.1 | Gradle Wrapper | Self-Hosted Agent
-# ==============================================================================
+# Pipeline CI/CD - PetGuardian API
+# Stack: Java 21 | Spring Boot 4.1.1 | Gradle Wrapper | Self-Hosted Agent
 
 trigger:
   branches:
@@ -10,16 +8,13 @@ trigger:
       - develop
 
 variables:
-  # Nome do Service Connection configurado no Azure DevOps
   azureSubscription: 'PetGuardian-Connection'
-  # Nome do seu App Service (Web App Linux) criado no Portal Azure
   webAppName: 'app-petguardian-01bd2f0c'
-  # Pool de Agente Self-Hosted (DESKTOP-AGENT)
   poolName: 'Default'
 
 stages:
 # ------------------------------------------------------------------------------
-# ETAPA 1: CI (Continuous Integration) - Build, Testes Unitários e Publicação
+# ETAPA 1: CI - Build, Testes e Publicação
 # ------------------------------------------------------------------------------
 - stage: Build
   displayName: 'CI - Build e Testes Automatizados'
@@ -42,7 +37,7 @@ stages:
         ADMIN_BCRYPT_HASH: $(ADMIN_BCRYPT_HASH)
         PORT: '8080'
 
-    # 2. Publicar resultados dos Testes JUnit (Requisito obrigatório da Sprint 4)
+    # 2. Publicar resultados dos Testes JUnit
     - task: PublishTestResults@2
       displayName: 'Publicar Relatório de Testes JUnit'
       condition: succeededOrFailed()
@@ -57,7 +52,7 @@ stages:
         Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\pet-guardian-0.0.1-SNAPSHOT.jar" -Force
       displayName: 'Copiar e renomear JAR para app.jar no Artifact Staging'
 
-    # 4. Publicar o Artefato no Azure DevOps (Requisito obrigatório da Sprint 4)
+    # 4. Publicar o Artefato no Azure DevOps
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar Artefato da Build (drop)'
       inputs:
@@ -66,12 +61,12 @@ stages:
         publishLocation: 'Container'
 
 # ------------------------------------------------------------------------------
-# ETAPA 2: CD (Continuous Deployment) - Deploy Automático no Azure Web App
+# ETAPA 2: CD - Deploy Automático no Azure Web App
 # ------------------------------------------------------------------------------
 - stage: Deploy
   displayName: 'CD - Deploy Automático no Azure Web App'
   dependsOn: Build
-  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
   jobs:
   - deployment: DeployAppService
     displayName: 'Deploy para Azure Web App'
