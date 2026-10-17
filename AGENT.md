@@ -6,7 +6,7 @@ Guia técnico definitivo da arquitetura, convenções de código, segurança, pe
 
 ## 🏛️ 1. Arquitetura & Stack Técnica
 
-- **Java Version:** Java 17 LTS | **Framework:** Spring Boot 4.1.1 | **Build:** Gradle 8.x
+- **Java Version:** Java 21 LTS (compatível com Java 17+) | **Framework:** Spring Boot 4.1.1 | **Build:** Gradle 8.x
 - **Persistência Relacional:** Spring Data JPA + Hibernate 7, conectado ao **Oracle Database 19c** corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`). Dialeto autodetectado (`OracleDialect`), `spring.jpa.hibernate.ddl-auto=none` e migrações Flyway ativas.
 - **Persistência NoSQL em Nuvem:** Spring Data MongoDB via `spring.data.mongodb.uri=${MONGODB_URI}` apontando para o cluster **MongoDB Atlas na Nuvem** (`petguardian.agoderb.mongodb.net`), armazenando conteúdo didático rico em Markdown e vídeos (`conteudos_aula`).
 - **Segurança Stateless:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas **RSA 2048-bit** (PKCS#8).

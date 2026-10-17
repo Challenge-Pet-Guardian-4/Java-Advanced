@@ -5,7 +5,7 @@
 > Plataforma corporativa para gestão da saúde e rotina de cuidados do pet em família sob a **Arquitetura Pet-Centric**, com persistência relacional e rotinas analíticas corporativas em **Oracle Database 19c (PL/SQL)** e persistência NoSQL orientada a documentos no **MongoDB Atlas na Nuvem**.
 
 <p>
-  <img src="https://img.shields.io/badge/Java-17_LTS-007396?logo=openjdk&logoColor=white" alt="Java 17 LTS" />
+  <img src="https://img.shields.io/badge/Java-21_LTS-007396?logo=openjdk&logoColor=white" alt="Java 21 LTS" />
   <img src="https://img.shields.io/badge/Spring_Boot-4.1.1-6DB33F?logo=springboot&logoColor=white" alt="Spring Boot 4.1.1" />
   <img src="https://img.shields.io/badge/Build-Gradle-02303A?logo=gradle&logoColor=white" alt="Gradle" />
   <img src="https://img.shields.io/badge/Cloud-Microsoft_Azure-0078D4?logo=microsoftazure&logoColor=white" alt="Microsoft Azure" />
@@ -66,7 +66,7 @@ O **PetGuardian** é uma API REST corporativa desenvolvida em **Spring Boot** pa
 
 A API **PetGuardian** opera conectada diretamente a uma infraestrutura poliglota corporativa em nuvem:
 
-* **Microsserviço da Aplicação (`Java-Advanced`):** Hospedado no **Microsoft Azure App Service** (`app-petguardian-01bd2f0c`, Plano Linux B1 dedicado) com runtime nativo **Java 17 Java SE**, monitorado pelo Spring Boot Actuator e com reinicialização resiliente.
+* **Microsserviço da Aplicação (`Java-Advanced`):** Hospedado no **Microsoft Azure App Service** (`app-petguardian-01bd2f0c`, Plano Linux B1 dedicado) com runtime nativo **Java 21 Java SE**, monitorado pelo Spring Boot Actuator e com reinicialização resiliente.
 * **Pipeline CI/CD Automatizada (`Azure DevOps`):** Esteira declarativa em YAML (`azure-pipelines.yml`) operando sobre agente Self-Hosted, executando a compilação Gradle, a suíte de 123 testes JUnit, a publicação do artefato (`drop/app.jar`) e o deploy contínuo (CD) automatizado a cada push nas branches `main` e `develop`.
 * **Banco de Dados Relacional Corporativo (`Oracle 19c`):** Instância gerenciada Oracle Database (`oracle.fiap.com.br:1521/orcl`), garantindo integridade transacional estrita, persistência das tabelas relacionais em 3FN e execução do pacote PL/SQL `PKG_PETGUARDIAN`.
 * **Banco de Dados NoSQL em Nuvem (`MongoDB Atlas`):** Cluster NoSQL em nuvem (`petguardian.agoderb.mongodb.net`), responsável pela coleção `conteudos_aula`, armazenando textos pedagógicos didáticos em Markdown, metadados de lições e links multimídia.
@@ -121,7 +121,7 @@ src/main/java/fiap/com/br/petguardian/
 
 | Tecnologia | Versão | Finalidade |
 |---|---|---|
-| **Java** | 17 LTS | Linguagem oficial do ecossistema corporativo |
+| **Java** | 21 LTS | Linguagem oficial do ecossistema corporativo |
 | **Spring Boot** | 4.1.1 | Framework base para microsserviços REST corporativos |
 | **Spring Data JPA / Hibernate 7** | Integrado | Mapeamento Objeto-Relacional (ORM) e consultas dinâmicas otimizadas com `@NamedStoredProcedureQueries` |
 | **Spring Data MongoDB** | Integrado | Persistência NoSQL orientada a documentos para conteúdos didáticos ricos em Markdown (`conteudos_aula`) |
@@ -402,7 +402,7 @@ Os endpoints utilizam os seguintes prefixos visuais padronizados no Swagger UI:
 ## 💻 Como Executar
 
 ### Pré-requisitos
-- **Java 17 LTS** instalado e configurado no `JAVA_HOME`.
+- **Java 21 LTS** (ou Java 17 LTS) instalado e configurado no `JAVA_HOME`.
 - **Git** para clonagem do repositório.
 - Conectividade de rede com o servidor Oracle da FIAP (`oracle.fiap.com.br:1521`) e MongoDB Atlas na nuvem.
 
