@@ -43,8 +43,4 @@ public class UsuarioPet {
     @Builder.Default
     @Column(name = "respon_princ", nullable = false)
     private boolean responsavelPrincipal = false;
-
-    public void promoverResponsavelPrincipal() {
-        this.responsavelPrincipal = true;
-    }
 }

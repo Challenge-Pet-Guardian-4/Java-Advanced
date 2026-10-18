@@ -8,7 +8,7 @@ Guia técnico definitivo da arquitetura, convenções de código, segurança, pe
 
 - **Java Version:** Java 21 LTS | **Framework:** Spring Boot 4.1.1 | **Build:** Gradle 9.x
 - **Persistência Relacional:** Spring Data JPA + Hibernate 7, conectado ao **Oracle Database 19c** corporativo da FIAP (`oracle.fiap.com.br:1521/orcl`). Dialeto autodetectado (`OracleDialect`), `spring.jpa.hibernate.ddl-auto=none` e migrações Flyway ativas.
-- **Persistência NoSQL em Nuvem:** Spring Data MongoDB via `spring.data.mongodb.uri=${MONGODB_URI}` apontando para o cluster **MongoDB Atlas na Nuvem** (`petguardian.agoderb.mongodb.net`), armazenando conteúdo didático rico em Markdown e vídeos (`conteudos_aula`).
+- **Persistência NoSQL em Nuvem:** Spring Data MongoDB via `spring.mongodb.uri=${MONGODB_URI}` apontando para o cluster **MongoDB Atlas na Nuvem** (`petguardian.agoderb.mongodb.net`), armazenando conteúdo didático rico em Markdown e vídeos (`conteudos_aula`).
 - **Segurança Stateless:** Spring Security + OAuth2 Resource Server com tokens JWT assinados via par de chaves assimétricas **RSA 2048-bit** (PKCS#8).
 - **HTTP Client Declarativo:** `@HttpExchange` e `@GetExchange` com `RestClient` via `@ImportHttpServices` para integração de CEPs com o ViaCEP.
 - **Cache:** Spring Cache em memória para resolução estática de domínios como `Status`.
@@ -39,16 +39,20 @@ A autorização é governada por **Role-Based Access Control (RBAC)** em 3 níve
 
 ---
 
-## 🗄️ 3. Integração com Stored Procedures Oracle (`PKG_PETGUARDIAN`)
+## 🗄️ 3. Integração com Stored Procedures & Functions Oracle (`PKG_PETGUARDIAN`)
 
-A camada de persistência integra diretamente 4 rotinas empacotadas no Oracle PL/SQL corporativo através de anotações `@Procedure` e `@NamedStoredProcedureQueries` no Spring Data JPA:
+A camada de persistência integra diretamente 5 rotinas empacotadas no Oracle PL/SQL corporativo através de anotações `@Procedure` e `@NamedStoredProcedureQueries` no Spring Data JPA:
 
-| Stored Procedure | Entidade / Mapeamento | Repositório | Finalidade Corporativa |
-| :--- | :--- | :--- | :--- |
-| `pkg_petguardian.pr_calcular_pontuacao_pet` | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoPet")` | `PetRepository` | Calcula em tempo real pontos de tarefas concluídas, aulas didáticas e pontuação consolidada do animal. |
-| `pkg_petguardian.pr_calcular_pontuacao_usuario` | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoUsuario")` | `PetRepository` | Consolida em batch único a pontuação acumulada de todos os pets sob tutela do usuário logado. |
-| `pkg_petguardian.pr_obter_resumo_rede_cuidado` | `@NamedStoredProcedureQuery("UsuarioPet.obterResumoRedeCuidado")` | `UsuarioPetRepository` | Retorna total de pets, cuidadores, tarefas pendentes, tarefas concluídas e pontos agregados da rede familiar. |
-| `pkg_petguardian.pr_transferir_responsavel_principal` | `@Procedure("pkg_petguardian.pr_transferir_responsavel_principal")` | `UsuarioPetRepository` | Executa a transferência atômica de tutela do tutor anterior para o novo no Care Circle (`USUARIO_PET`). |
+| Rotina PL/SQL | Tipo | Entidade / Mapeamento | Repositório | Finalidade Corporativa |
+| :--- | :---: | :--- | :--- | :--- |
+| `pkg_petguardian.pr_calcular_pontuacao_pet` | Procedure | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoPet")` | `PetRepository` | Calcula em tempo real pontos de tarefas concluídas, aulas didáticas e pontuação consolidada do animal. |
+| `pkg_petguardian.pr_calcular_pontuacao_usuario` | Procedure | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoUsuario")` | `PetRepository` | Consolida em batch único a pontuação acumulada de todos os pets sob tutela do usuário logado. |
+| `pkg_petguardian.pr_obter_resumo_rede_cuidado` | Procedure | `@NamedStoredProcedureQuery("UsuarioPet.obterResumoRedeCuidado")` | `UsuarioPetRepository` | Retorna total de pets, cuidadores, tarefas pendentes, tarefas concluídas e pontos agregados da rede familiar. |
+| `pkg_petguardian.fn_obter_nivel_usuario` | Function | `@Procedure("pkg_petguardian.fn_obter_nivel_usuario")` | `UsuarioPetRepository` | Retorna o nível de gamificação do tutor (`BRONZE`, `PRATA`, `OURO`) baseado no XP total acumulado. |
+| `pkg_petguardian.pr_transferir_responsavel_principal` | Procedure | `@Procedure("pkg_petguardian.pr_transferir_responsavel_principal")` | `UsuarioPetRepository` | Executa a transferência atômica de tutela do tutor anterior para o novo no Care Circle (`USUARIO_PET`). |
+
+> **Nota Técnica sobre `pr_obter_resumo_rede_cuidado` e `RedeCuidadoMapper`:**  
+> A procedure Oracle calcula 5 parâmetros OUT (`p_total_pets`, `p_total_cuidadores`, `p_tarefas_pendentes`, `p_tarefas_concluidas`, `p_pontos_acumulados`), os quais são estritamente mapeados na `@NamedStoredProcedureQuery` para integridade JDBC. No DTO final (`RedeCuidadoResponse`), `pets` e `cuidadores` são retornados como coleções completas detalhadas (cujos tamanhos refletem a contagem), enquanto tarefas e pontos são extraídos dos parâmetros OUT.
 
 ### ⚠️ Regra Crítica de Mapeamento para Hibernate 7
 No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OUT` exigem declaração explícita de tipos com `@StoredProcedureParameter(mode = ParameterMode.OUT, type = Integer.class)` via `@NamedStoredProcedureQueries` na entidade (`Pet` e `UsuarioPet`). Não invocar procedures com múltiplos parâmetros OUT sem esse mapeamento explícito para evitar `ParameterTypeException`.
@@ -165,7 +169,7 @@ No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OU
 6. **Segregação de Repositórios Poliglotas:**
    - `@EnableJpaRepositories` gerencia as entidades relacionais Oracle (`fiap.com.br.petguardian.*`).
    - `@EnableMongoRepositories` gerencia exclusivamente os documentos NoSQL (`fiap.com.br.petguardian.trilha.aula.conteudo`).
-   - Configuração de URI via `spring.data.mongodb.uri=${MONGODB_URI}`.
+   - Configuração de URI via `spring.mongodb.uri=${MONGODB_URI}`.
 7. **Tratamento Global de Erros (`GlobalExceptionHandler`):**
    - `400`: `MethodArgumentNotValidException`, `IllegalArgumentException`.
    - `401`: `AuthenticationException`.

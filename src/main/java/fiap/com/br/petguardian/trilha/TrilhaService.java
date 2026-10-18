@@ -39,12 +39,6 @@ public class TrilhaService {
     }
 
     @Transactional(readOnly = true)
-    public List<Trilha> findByUsuarioEmail(String email) {
-        return trilhaRepository.findAllByUsuarioEmail(email.trim());
-    }
-
-
-    @Transactional(readOnly = true)
     public List<TrilhaCompletaResponse> findTrilhasCompletasByUsuarioEmail(String email) {
         List<Trilha> trilhas = trilhaRepository.findAllByUsuarioEmail(email.trim());
         List<Long> aulaIds = trilhas.stream()
