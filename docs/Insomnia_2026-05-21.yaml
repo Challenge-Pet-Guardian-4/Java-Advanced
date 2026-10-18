@@ -2071,14 +2071,14 @@ environments:
         email: comum@petguardian.com
         senha: password123
         token: ""
-    - name: Producao (Railway)
+    - name: Producao (Azure)
       meta:
-        id: env_sub_railway
+        id: env_sub_azure
         created: 1779315088279
         modified: 1779315088279
         isPrivate: false
       data:
-        base_url: https://java-advanced-production-35ab.up.railway.app
+        base_url: https://app-petguardian-01bd2f0c.azurewebsites.net
         email: enzo.admin@petguardian.com
-        senha: Admin@123456
+        senha: "123mudar"
         token: ""

@@ -2,7 +2,6 @@ package fiap.com.br.petguardian.usuariopet;
 
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
-import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;

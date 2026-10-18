@@ -7,7 +7,7 @@
 -- ou não tiver 60 caracteres no momento da primeira execução, a criação é ignorada.
 
 DECLARE
-    v_hash VARCHAR2(100) := '${ADMIN_BCRYPT_HASH}';
+    v_hash VARCHAR2(100) := TRIM('${ADMIN_BCRYPT_HASH}');
     v_existe_admin NUMBER := 0;
     v_tel_id NUMBER(19);
     v_est_id NUMBER(19);
@@ -53,6 +53,9 @@ BEGIN
             -- Usuário ADMIN padrão
             INSERT INTO usuario (nome, email, senha, role, telefone_id_telefone, endereco_id_endereco)
             VALUES ('Enzo Admin', 'enzo.admin@petguardian.com', v_hash, 'ADMIN', v_tel_id, v_end_id);
+        ELSE
+            -- Garante que se o usuário já existir no Oracle, a senha seja atualizada com o hash do ambiente
+            UPDATE usuario SET senha = v_hash, role = 'ADMIN' WHERE email = 'enzo.admin@petguardian.com';
         END IF;
     END IF;
 END;
