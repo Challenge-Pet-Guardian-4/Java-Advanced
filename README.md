@@ -165,11 +165,11 @@ O sistema adota segurança corporativa stateless com autenticação JWT e par de
 
 ### 🔑 Credenciais Provisionadas para Avaliação
 
-| Perfil (Role) | E-mail Oficial | Senha Padrão | BCrypt Hash (V3 Flyway / .env) | Finalidade do Perfil |
+| Perfil (Role) | E-mail Oficial | Senha Padrão | Hash de Senha | Finalidade do Perfil |
 |---|---|---|---|---|
-| **ADMIN** | `enzo.admin@petguardian.com` | `123mudar` | `$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G` | Acesso irrestrito a todo o sistema, promoção de roles, CRUD pedagógico completo, escrita no MongoDB Atlas e gestão de endereços. |
-| **PREMIUM** | `carolina.cuidadora@petguardian.com` | `User@123456` | Hash registrado na base | Gestão de pets, tarefas e consumo/conclusão de lições pedagógicas gamificadas. |
-| **COMUM** | `enzo.teste@petguardian.com` | `Senha123` | Hash registrado na base | Usuário de controle para validação de segurança RBAC (recebe `403 Forbidden` em trilhas e recursos de admin). |
+| **ADMIN** | `enzo.admin@petguardian.com` | `123mudar` | Gerenciado via `.env` (`ADMIN_BCRYPT_HASH`) | Acesso irrestrito a todo o sistema, promoção de roles, CRUD pedagógico completo, escrita no MongoDB Atlas e gestão de endereços. |
+| **PREMIUM** | `carolina.cuidadora@petguardian.com` | `User@123456` | Gerenciado na base de dados | Gestão de pets, tarefas e consumo/conclusão de lições pedagógicas gamificadas. |
+| **COMUM** | `enzo.teste@petguardian.com` | `Senha123` | Gerenciado na base de dados | Usuário de controle para validação de segurança RBAC (recebe `403 Forbidden` em trilhas e recursos de admin). |
 
 ---
 
@@ -182,25 +182,7 @@ A modelagem contempla 15 tabelas de domínio em 3FN (`usuario`, `pet`, `raca`, `
 - **Script DDL & Packages:** Disponível em [`src/main/resources/db/migration/V4__pkg_petguardian.sql`](./src/main/resources/db/migration/V4__pkg_petguardian.sql), com criação idempotente de procedures, triggers de auditoria e validações.
 - **Suporte ao Flyway:** A aplicação inclui `org.flywaydb:flyway-database-oracle` no `build.gradle` com migrações versionadas (`V1__...` a `V4__...`). A execução automática é habilitada (`spring.flyway.enabled=true`, baseline 0), garantindo evolução segura e DDL gerenciado (`spring.jpa.hibernate.ddl-auto=none`).
 
-Configurações ativas no `application.properties`:
-```properties
-# Oracle Database 19c (FIAP Cloud)
-spring.datasource.url=${ORACLE_URL}
-spring.datasource.username=${ORACLE_USER}
-spring.datasource.password=${ORACLE_PASSWORD}
-spring.datasource.driver-class-name=oracle.jdbc.OracleDriver
-spring.jpa.hibernate.ddl-auto=none
-
-# Flyway Migrations (Oracle 19c)
-spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=true
-spring.flyway.baseline-version=0
-spring.flyway.placeholders.ADMIN_BCRYPT_HASH=${ADMIN_BCRYPT_HASH:}
-
-# MongoDB Atlas na Nuvem (Conteúdos NoSQL)
-spring.mongodb.uri=${MONGODB_URI:mongodb://localhost:27017/petguardian}
-spring.data.mongodb.auto-index-creation=true
-```
+Todas as propriedades de infraestrutura e migrações são gerenciadas centralizadamente no arquivo [`src/main/resources/application.properties`](./src/main/resources/application.properties), utilizando injeção declarativa por variáveis de ambiente sem expor parâmetros sensíveis ou valores estáticos no versionamento.
 
 ---
 
@@ -416,25 +398,13 @@ Seguindo as melhores práticas do **OWASP**, as credenciais não são versionada
 cp .env.example .env
 ```
 
-Parâmetros ativos no `.env`:
+Consulte o arquivo [`/.env.example`](./.env.example) para o template de variáveis de ambiente suportadas:
 
-```env
-# Oracle Database 19c Corporativo (FIAP Cloud)
-ORACLE_URL=jdbc:oracle:thin:@//oracle.fiap.com.br:1521/orcl
-ORACLE_USER=RM561432
-ORACLE_PASSWORD=sua_senha_aqui
-JPA_DDL_AUTO=none
-
-# Flyway Migrations (Oracle 19c)
-SPRING_FLYWAY_ENABLED=true
-ADMIN_BCRYPT_HASH=$2a$10$CGKqNEY043BjTqp9faNVoOodCnu3uU.rLNuuHR4XqwZTXjuShRf0G
-
-# MongoDB Atlas na Nuvem (Conteúdo Didático NoSQL)
-MONGODB_URI=mongodb+srv://usuario:senha@cluster.mongodb.net/petguardian?retryWrites=true&w=majority
-
-# Servidor
-PORT=8080
-```
+- **`ORACLE_URL` / `ORACLE_USER` / `ORACLE_PASSWORD`**: Conexão com o Oracle Database 19c corporativo.
+- **`SPRING_FLYWAY_ENABLED` / `JPA_DDL_AUTO`**: Controle de migrações gerenciadas (`none` para DDL).
+- **`ADMIN_BCRYPT_HASH`**: Hash BCrypt para o administrador inicial provisionado via Flyway V3.
+- **`MONGODB_URI`**: URI do cluster MongoDB Atlas para conteúdos didáticos NoSQL.
+- **`PORT`**: Porta HTTP da aplicação (padrão `8080`).
 
 ---
 
@@ -464,7 +434,7 @@ Para executar a suíte completa de testes unitários:
 
 ### 2. Testes de Integração e Automação de QA
 Para validação de rotas, permissões de segurança RBAC e persistência com Stored Procedures:
-- **Suíte de Testes JUnit 5 / Spring Boot Test:** 123 testes automatizados executados via `./gradlew test` (100% de sucesso).
+- **Suíte de Testes JUnit 5 / Spring Boot Test:** Testes automatizados executados via `./gradlew test` (100% de sucesso).
 - **Suíte de Automação Postman (QA):** Coleção oficial contendo asserções de status code, JSON Schema, autorização JWT e validação de Stored Procedures Oracle disponível no repositório de QA em [`Compliance-Quality-Assurance-Tests`](../Compliance-Quality-Assurance-Tests/).
 
 ---
