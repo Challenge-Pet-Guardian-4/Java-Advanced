@@ -402,7 +402,7 @@ Os endpoints utilizam os seguintes prefixos visuais padronizados no Swagger UI:
 ## 💻 Como Executar
 
 ### Pré-requisitos
-- **Java 21 LTS** (ou Java 17 LTS) instalado e configurado no `JAVA_HOME`.
+- **Java 21 LTS** instalado e configurado no `JAVA_HOME`.
 - **Git** para clonagem do repositório.
 - Conectividade de rede com o servidor Oracle da FIAP (`oracle.fiap.com.br:1521`) e MongoDB Atlas na nuvem.
 

@@ -1,7 +1,7 @@
 # ============================================================
 # Stage 1 — BUILD: compila o projeto com Gradle
 # ============================================================
-FROM gradle:jdk17 AS build
+FROM gradle:jdk21 AS build
 
 WORKDIR /app
 
@@ -27,7 +27,7 @@ RUN gradle bootJar --no-daemon -x test
 # ============================================================
 # Stage 2 — RUNTIME: imagem mínima de produção
 # ============================================================
-FROM eclipse-temurin:17-jre-alpine AS runtime
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
