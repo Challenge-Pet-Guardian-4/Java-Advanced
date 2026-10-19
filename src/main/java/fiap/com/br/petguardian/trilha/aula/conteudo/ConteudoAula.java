@@ -24,7 +24,7 @@ public class ConteudoAula {
     @Id
     private String id;
 
-    @Indexed(unique = true)
+    @Indexed(name = "idx_aula_id_unique", unique = true)
     @Field("aula_id")
     private Long aulaId;
 
