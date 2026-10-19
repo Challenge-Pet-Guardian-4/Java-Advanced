@@ -194,3 +194,6 @@ CREATE INDEX idx_trilha_pet ON trilha(pet_id_pet);
 CREATE INDEX idx_modulo_trilha ON modulo(trilha_id_trilha);
 CREATE INDEX idx_aula_modulo ON aula(modulo_id_modulo);
 CREATE INDEX idx_historico_pet ON historico(pet_id_pet);
+
+-- ÍNDICE CONDICIONAL: Garante no máximo 1 tutor responsável principal ativo por pet no Care Circle
+CREATE UNIQUE INDEX uq_usuario_pet_principal ON usuario_pet (CASE WHEN respon_princ = 1 THEN pet_id_pet END);

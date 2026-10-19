@@ -209,7 +209,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
             );
 
         -- Tarefas pendentes e concluídas da rede do tutor (agregação unificada condicional)
-        SELECT NVL(COUNT(CASE WHEN t.status_id_status = 1 AND t.prazo >= SYSTIMESTAMP THEN 1 END), 0),
+        SELECT NVL(COUNT(CASE WHEN t.status_id_status = 1 THEN 1 END), 0),
                NVL(COUNT(CASE WHEN t.status_id_status = 2 THEN 1 END), 0)
           INTO p_tarefas_pendentes,
                p_tarefas_concluidas
@@ -238,7 +238,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
         v_tot NUMBER;
     BEGIN
         IF p_id_usuario IS NULL OR p_id_usuario <= 0 THEN
-            RETURN 'BRONZE';
+            RAISE_APPLICATION_ERROR(-20018, 'ID do usuário fornecido é nulo ou inválido.');
         END IF;
 
         pr_calcular_pontuacao_usuario(p_id_usuario, v_tar, v_aul, v_tot);
@@ -250,9 +250,6 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
         ELSE
             RETURN 'OURO';
         END IF;
-    EXCEPTION
-        WHEN OTHERS THEN
-            RETURN 'BRONZE';
     END fn_obter_nivel_usuario;
 
     -- ----------------------------------------------------------------
