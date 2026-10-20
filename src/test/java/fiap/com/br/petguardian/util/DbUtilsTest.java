@@ -18,6 +18,19 @@ class DbUtilsTest {
     }
 
     @Test
+    @DisplayName("Deve extrair int com chave em maiusculas mesmo que mapa esteja em maiusculas ou minusculas")
+    void deveExtrairIntComChaveEmMaiusculasEMinusculas() {
+        Map<String, Object> mapUpper = Map.of("P_PONTOS_TAREFAS", 50, "P_TAREFAS_PENDENTES", 3);
+        assertEquals(50, DbUtils.getInt(mapUpper, "P_PONTOS_TAREFAS"));
+        assertEquals(50, DbUtils.getInt(mapUpper, "p_pontos_tarefas"));
+        assertEquals(3, DbUtils.getInt(mapUpper, "p_tarefas_pendentes"));
+
+        Map<String, Object> mapLower = Map.of("p_pontos_tarefas", 80);
+        assertEquals(80, DbUtils.getInt(mapLower, "P_PONTOS_TAREFAS"));
+        assertEquals(80, DbUtils.getInt(mapLower, "p_pontos_tarefas"));
+    }
+
+    @Test
     @DisplayName("Deve retornar 0 para mapa nulo, vazio ou valor nao numerico")
     void deveRetornarZeroCasosBorda() {
         assertEquals(0, DbUtils.getInt(null, "chave"));

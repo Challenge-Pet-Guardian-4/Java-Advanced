@@ -37,13 +37,6 @@ public class TarefaController {
             .map(TarefaResponse::fromEntity);
     }
 
-    @GetMapping("/me/pontos")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[CUIDADOR] Consultar pontos totais acumulados pelo cuidador autenticado")
-    public Integer calcularMyPontosTotais(Authentication authentication) {
-        return tarefaService.calcularPontosTotaisEmail(authentication.getName());
-    }
-
     // =========================================================================
     // 2. OPERAÇÕES DE GESTÃO DA TAREFA POR ID (CUIDADOR OU ADMIN)
     // =========================================================================
@@ -130,13 +123,5 @@ public class TarefaController {
             @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
         return tarefaService.findAllByUsuario(usuarioId, status, pageable)
             .map(TarefaResponse::fromEntity);
-    }
-
-    @GetMapping("/by-usuario/{usuarioId}/pontos")
-    @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[ADMIN] Consultar pontos totais acumulados pelo cuidador")
-    @PreAuthorize("hasRole('ADMIN')")
-    public Integer calcularPontosTotaisUsuario(@PathVariable Long usuarioId) {
-        return tarefaService.calcularPontosTotaisUsuario(usuarioId);
     }
 }

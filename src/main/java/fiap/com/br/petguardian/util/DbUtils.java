@@ -8,6 +8,14 @@ public final class DbUtils {
     }
 
     public static int getInt(Map<String, Object> map, String key) {
-        return map != null && map.get(key) instanceof Number n ? n.intValue() : 0;
+        if (map == null || key == null) return 0;
+        Object val = map.get(key);
+        if (val == null) {
+            val = map.get(key.toUpperCase());
+        }
+        if (val == null) {
+            val = map.get(key.toLowerCase());
+        }
+        return val instanceof Number n ? n.intValue() : 0;
     }
 }

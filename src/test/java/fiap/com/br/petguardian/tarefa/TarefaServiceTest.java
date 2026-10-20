@@ -195,18 +195,6 @@ class TarefaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve consultar pontos totais acumulados pelo usuario")
-    void deveConsultarPontosUsuario() {
-        Usuario usuario = Usuario.builder().id(1L).build();
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
-        when(tarefaRepository.calcularPontosTotaisUsuario(1L, EnumStatus.CONCLUIDO)).thenReturn(120);
-
-        Integer pontos = tarefaService.calcularPontosTotaisUsuario(1L);
-
-        assertEquals(120, pontos);
-    }
-
-    @Test
     @DisplayName("Deve deletar tarefa com sucesso chamando deleteById")
     void deveDeletarTarefa() {
         Tarefa tarefa = Tarefa.builder().id(50L).build();
@@ -230,18 +218,6 @@ class TarefaServiceTest {
 
         assertNotNull(resultado);
         verify(tarefaRepository).findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(1L, EnumStatus.PENDENTE, pageable);
-    }
-
-    @Test
-    @DisplayName("Deve consultar pontos totais acumulados pelo email do usuario")
-    void deveConsultarPontosPorEmail() {
-        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
-        when(tarefaRepository.calcularPontosTotaisUsuario(1L, EnumStatus.CONCLUIDO)).thenReturn(150);
-
-        Integer pontos = tarefaService.calcularPontosTotaisEmail("enzo@fiap.com.br");
-
-        assertEquals(150, pontos);
     }
 
     @Test

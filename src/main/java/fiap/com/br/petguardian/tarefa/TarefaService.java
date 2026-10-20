@@ -3,10 +3,10 @@ package fiap.com.br.petguardian.tarefa;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.tarefa.status.StatusService;
-import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
@@ -27,11 +27,6 @@ public class TarefaService {
     private final StatusService statusService;
     private final UsuarioPetRepository usuarioPetRepository;
 
-    public boolean isCuidadorDaTarefa(Long tarefaId, String email) {
-        Tarefa tarefa = findTarefaById(tarefaId);
-        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(email.trim(), tarefa.getPet().getId());
-    }
-
     public Page<Tarefa> findAll(Pageable pageable) {
         expirarTarefasPendentesAtrasadas();
         return tarefaRepository.findAll(pageable);
@@ -48,12 +43,6 @@ public class TarefaService {
     public Page<Tarefa> findAllByEmail(String email, String statusFiltro, Pageable pageable) {
         Usuario usuario = findUsuarioByEmail(email);
         return findAllByUsuario(usuario.getId(), statusFiltro, pageable);
-    }
-
-    @Transactional(readOnly = true)
-    public Integer calcularPontosTotaisEmail(String email) {
-        Usuario usuario = findUsuarioByEmail(email);
-        return tarefaRepository.calcularPontosTotaisUsuario(usuario.getId(), EnumStatus.CONCLUIDO);
     }
 
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {
@@ -117,9 +106,9 @@ public class TarefaService {
     }
 
     @Transactional(readOnly = true)
-    public Integer calcularPontosTotaisUsuario(Long usuarioId) {
-        findUsuarioById(usuarioId);
-        return tarefaRepository.calcularPontosTotaisUsuario(usuarioId, EnumStatus.CONCLUIDO);
+    public boolean isCuidadorDaTarefa(Long tarefaId, String authEmail) {
+        Tarefa tarefa = findTarefaById(tarefaId);
+        return usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId(authEmail, tarefa.getPet().getId());
     }
 
     private Tarefa findTarefaById(Long id) {
@@ -135,11 +124,6 @@ public class TarefaService {
     private Pet findPetById(Long id) {
         return petRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
-    }
-
-    private Usuario findUsuarioById(Long id) {
-        return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
     }
 
     private Usuario findUsuarioByEmail(String email) {

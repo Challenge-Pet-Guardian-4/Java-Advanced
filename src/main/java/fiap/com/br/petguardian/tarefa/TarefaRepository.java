@@ -34,9 +34,6 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Page<Tarefa> findAllByPetId(Long petId, Pageable pageable);
 
-    @Query("select coalesce(sum(t.pontosTarefa), 0) from Tarefa t where t.usuario.id = :usuarioId and t.status.nomeStatus = :status")
-    Integer calcularPontosTotaisUsuario(@Param("usuarioId") Long usuarioId, @Param("status") EnumStatus status);
-
     @EntityGraph(attributePaths = {"pet"})
     List<Tarefa> findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List<Long> petIds, EnumStatus status);
 
@@ -50,5 +47,12 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
             @Param("agora") LocalDateTime agora,
             @Param("pendente") Status pendente,
             @Param("expirada") Status expirada
+    );
+
+    @EntityGraph(attributePaths = {"pet", "usuario"})
+    List<Tarefa> findAllByStatusNomeStatusAndPrazoBetween(
+            EnumStatus status,
+            LocalDateTime inicio,
+            LocalDateTime fim
     );
 }
