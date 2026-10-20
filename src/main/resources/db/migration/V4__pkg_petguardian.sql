@@ -22,6 +22,8 @@ CREATE OR REPLACE PACKAGE pkg_petguardian AS
 
     -- ----------------------------------------------------------------
     -- SEÇÃO 1: PONTUAÇÃO GAMIFICADA DE PETS E USUÁRIOS
+    -- ARQUITETURA PET-CENTRIC: A pontuação (XP) pertence ao PET.
+    -- Todos os co-cuidadores compartilham e visualizam a mesma evolução.
     -- ----------------------------------------------------------------
 
     -- 1.1 Cálculo consolidado de pontuação do pet individual (tarefas + aulas)
@@ -32,7 +34,7 @@ CREATE OR REPLACE PACKAGE pkg_petguardian AS
         p_pontos_totais  OUT NUMBER
     );
 
-    -- 1.2 Cálculo agregado de todos os pets do usuário
+    -- 1.2 Cálculo agregado de todos os pets do usuário (agregação da rede de cuidado do tutor)
     PROCEDURE pr_calcular_pontuacao_usuario (
         p_id_usuario     IN NUMBER,
         p_pontos_tarefas OUT NUMBER,
@@ -82,6 +84,11 @@ CREATE OR REPLACE PACKAGE pkg_petguardian AS
         p_new_usuario    IN NUMBER
     );
 
+    -- 2.3 Exportação nativa do dataset relacional de AULA em formato JSON
+    PROCEDURE pr_exportar_aulas_json (
+        p_json_dataset OUT CLOB
+    );
+
 END pkg_petguardian;
 /
 
@@ -95,6 +102,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
     -- ----------------------------------------------------------------
 
     -- 1.1 Cálculo consolidado de pontuação do pet individual (tarefas + aulas)
+    -- Os pontos pertencem ao Pet: tarefas e aulas realizadas somam ao XP do animal
     PROCEDURE pr_calcular_pontuacao_pet (
         p_id_pet         IN NUMBER,
         p_pontos_tarefas OUT NUMBER,
@@ -112,12 +120,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
             RAISE_APPLICATION_ERROR(-20019, 'Pet com id ' || p_id_pet || ' não foi encontrado.');
         END IF;
 
-        -- Soma de tarefas concluídas do pet (status_id_status = 2)
+        -- Soma de tarefas concluídas do pet (busca dinâmica por status 'CONCLUIDO', sem ID mágico)
         SELECT NVL(SUM(t.pontos_tarefa), 0)
           INTO p_pontos_tarefas
           FROM tarefa t
+          JOIN status s ON t.status_id_status = s.id_status
          WHERE t.pet_id_pet = p_id_pet
-           AND t.status_id_status = 2;
+           AND s.nome_status = 'CONCLUIDO';
 
         -- Soma de aulas concluídas associadas às trilhas e módulos do pet
         SELECT NVL(SUM(a.pontos_aula), 0)
@@ -136,7 +145,7 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
             RAISE_APPLICATION_ERROR(-20020, 'Erro ao calcular pontuação consolidada do pet: ' || SQLERRM);
     END pr_calcular_pontuacao_pet;
 
-    -- 1.2 Cálculo agregado de todos os pets do usuário
+    -- 1.2 Cálculo agregado de todos os pets do usuário (usado por pr_obter_resumo_rede_cuidado)
     PROCEDURE pr_calcular_pontuacao_usuario (
         p_id_usuario     IN NUMBER,
         p_pontos_tarefas OUT NUMBER,
@@ -154,11 +163,12 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
             RAISE_APPLICATION_ERROR(-20022, 'Usuário com id ' || p_id_usuario || ' não foi encontrado.');
         END IF;
 
-        -- Tarefas concluídas de todos os pets sob tutela do usuário (via USUARIO_PET)
+        -- Tarefas concluídas de todos os pets sob tutela do usuário (via USUARIO_PET e status 'CONCLUIDO')
         SELECT NVL(SUM(t.pontos_tarefa), 0)
           INTO p_pontos_tarefas
           FROM tarefa t
-         WHERE t.status_id_status = 2
+          JOIN status s ON t.status_id_status = s.id_status
+         WHERE s.nome_status = 'CONCLUIDO'
            AND t.pet_id_pet IN (
                SELECT up.pet_id_pet 
                  FROM usuario_pet up 
@@ -225,12 +235,13 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
                 WHERE up.usuario_id_usuario = p_id_usuario
             );
 
-        -- Tarefas pendentes e concluídas da rede do tutor (agregação unificada condicional)
-        SELECT NVL(COUNT(CASE WHEN t.status_id_status = 1 THEN 1 END), 0),
-               NVL(COUNT(CASE WHEN t.status_id_status = 2 THEN 1 END), 0)
+        -- Tarefas pendentes e concluídas da rede do tutor (busca dinâmica por status 'PENDENTE' e 'CONCLUIDO')
+        SELECT NVL(COUNT(CASE WHEN s.nome_status = 'PENDENTE' THEN 1 END), 0),
+               NVL(COUNT(CASE WHEN s.nome_status = 'CONCLUIDO' THEN 1 END), 0)
           INTO p_tarefas_pendentes,
                p_tarefas_concluidas
           FROM tarefa t
+          JOIN status s ON t.status_id_status = s.id_status
          WHERE t.pet_id_pet IN (
              SELECT up.pet_id_pet
                FROM usuario_pet up
@@ -354,6 +365,32 @@ CREATE OR REPLACE PACKAGE BODY pkg_petguardian AS
         WHEN OTHERS THEN
             RAISE_APPLICATION_ERROR(-20043, 'Erro ao registrar auditoria de tarefa: ' || SQLERRM);
     END pr_registrar_auditoria_tarefa;
+
+    -- 2.3 Exportação nativa do dataset relacional de AULA em formato JSON
+    PROCEDURE pr_exportar_aulas_json (
+        p_json_dataset OUT CLOB
+    ) IS
+    BEGIN
+        SELECT JSON_SERIALIZE(
+            JSON_ARRAYAGG(
+                JSON_OBJECT(
+                    'id_aula'          VALUE a.id_aula,
+                    'nome'             VALUE a.nome,
+                    'descricao'        VALUE a.descricao,
+                    'pontos_aula'      VALUE a.pontos_aula,
+                    'dificuldade'      VALUE a.dificuldade,
+                    'concluida'        VALUE a.concluida,
+                    'modulo_id_modulo' VALUE a.modulo_id_modulo
+                )
+                ORDER BY a.id_aula
+            ) RETURNING CLOB PRETTY
+        )
+        INTO p_json_dataset
+        FROM aula a;
+    EXCEPTION
+        WHEN OTHERS THEN
+            RAISE_APPLICATION_ERROR(-20044, 'Erro ao exportar dataset JSON de aulas: ' || SQLERRM);
+    END pr_exportar_aulas_json;
 
 END pkg_petguardian;
 /
