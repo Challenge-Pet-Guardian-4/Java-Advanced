@@ -79,6 +79,34 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET /usuarios/{id} deve bloquear usuario COMUM com 403")
+    void deveBloquearUsuarioComumNoGetPorId() throws Exception {
+        mockMvc.perform(get("/usuarios/1")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /usuarios/{id} deve permitir ADMIN buscar usuario por ID com 200")
+    void devePermitirAdminBuscarUsuarioPorId() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.COMUM);
+        when(usuarioService.findById(1L)).thenReturn(usuario);
+
+        mockMvc.perform(get("/usuarios/1")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.email").value("user@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("GET /usuarios/{id} sem autenticacao deve retornar 401")
+    void deveRetornar401NoGetSemAutenticacao() throws Exception {
+        mockMvc.perform(get("/usuarios/1"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     @DisplayName("PUT /usuarios/{id} deve bloquear usuario COMUM com 403")
     void deveBloquearUsuarioComumTentandoAtualizarPorId() throws Exception {
         var request = criarRequest("outro@fiap.com.br");

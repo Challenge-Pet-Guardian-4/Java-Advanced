@@ -19,5 +19,4 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     @EntityGraph(attributePaths = {"telefone", "endereco.bairro.cidade.estado"})
     Optional<Usuario> findByEmail(String email);
-
 }
