@@ -150,10 +150,10 @@ O sistema adota segurança corporativa stateless com autenticação JWT e par de
 |---|---|:---:|:---:|:---:|---|
 | `/login` | `POST` | 🔓 Livre | 🔓 Livre | 🔓 Livre | Rota pública para obtenção do token JWT |
 | `/usuarios` (Cadastro) | `POST` | 🔓 Livre | 🔓 Livre | 🔓 Livre | Rota pública de cadastro (perfil atribuído sempre como `COMUM`) |
-| `/usuarios/{id}/upgrade-premium` | `PATCH` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se chamado por outro usuário |
+| `/usuarios/{id}/upgrade-premium` | `PATCH` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (usuário usa `/usuarios/me`) |
 | `/usuarios/{id}/role` | `PATCH` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (exclusivo para `ADMIN` alterar role) |
 | `/usuarios`, `/usuarios/by-*` (Listagens) | `GET` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (consultas gerais exclusivas para `ADMIN`) |
-| `/usuarios/{id}` | `GET`, `PUT`, `DELETE` | ✅ Próprio | ✅ Próprio | ✅ Permitido | `403 Forbidden` se tentar acessar/alterar outro usuário |
+| `/usuarios/{id}` | `GET`, `PUT`, `DELETE` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (usuário usa `/usuarios/me`) |
 | `/usuarios/{id}/rede-cuidado` | `GET` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (usuário consulta sua própria rede via `/usuarios/me/rede-cuidado`) |
 | `/pets/**`, `/tarefas/**`, `/historicos/**` | Vários | 🔒 Cuidador | 🔒 Cuidador | ✅ Permitido | `403 Forbidden` se não pertencer ao Care Circle do pet |
 | `/enderecos/**` (Infraestrutura) | `GET`, `POST`, `PUT`, `DELETE` | ❌ Bloqueado | ❌ Bloqueado | ✅ Permitido | `403 Forbidden` (gestão exclusiva de `ADMIN`) |
@@ -272,12 +272,12 @@ Os endpoints utilizam os seguintes prefixos visuais padronizados no Swagger UI:
 | `PATCH` | `/usuarios/me/upgrade-premium` | `[AUTENTICADO]` Realizar upgrade do usuário autenticado para PREMIUM | Autenticado |
 | `GET` | `/usuarios` | `[ADMIN]` Listar todos os usuários com paginação e ordenação | `ADMIN` |
 | `GET` | `/usuarios/by-email` | `[ADMIN]` Buscar usuário por email | `ADMIN` |
-| `GET` | `/usuarios/{id}` | `[AUTENTICADO]` Buscar usuário por ID | Próprio ou `ADMIN` |
+| `GET` | `/usuarios/{id}` | `[ADMIN]` Buscar usuário por ID | `ADMIN` |
 | `GET` | `/usuarios/{id}/rede-cuidado` | `[ADMIN]` Visualizar rede de cuidado do usuário por ID | `ADMIN` |
-| `PUT` | `/usuarios/{id}` | `[AUTENTICADO]` Atualizar usuário por ID | Próprio ou `ADMIN` |
-| `DELETE` | `/usuarios/{id}` | `[AUTENTICADO]` Deletar usuário por ID | Próprio ou `ADMIN` |
+| `PUT` | `/usuarios/{id}` | `[ADMIN]` Atualizar usuário por ID | `ADMIN` |
+| `DELETE` | `/usuarios/{id}` | `[ADMIN]` Deletar usuário por ID | `ADMIN` |
 | `PATCH` | `/usuarios/{id}/role` | `[ADMIN]` Alterar role do usuário | `ADMIN` |
-| `PATCH` | `/usuarios/{id}/upgrade-premium` | `[AUTENTICADO]` Realizar upgrade de um usuário para PREMIUM | Próprio ou `ADMIN` |
+| `PATCH` | `/usuarios/{id}/upgrade-premium` | `[ADMIN]` Realizar upgrade de um usuário para PREMIUM | `ADMIN` |
 
 ---
 

@@ -85,12 +85,12 @@ No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OU
 - `PATCH /usuarios/me/upgrade-premium`: `[AUTENTICADO]` Auto-promoção de perfil de `COMUM` para `PREMIUM`.
 - `GET /usuarios`: `[ADMIN]` Listagem global de usuários com paginação e ordenação.
 - `GET /usuarios/by-email`: `[ADMIN]` Busca de usuário por parâmetro de e-mail exato.
-- `GET /usuarios/{id}`: `[AUTENTICADO]` Detalhes de um usuário (restrito ao próprio usuário ou `ADMIN`).
+- `GET /usuarios/{id}`: `[ADMIN]` Detalhes de um usuário por ID (exclusivo para `ADMIN`).
 - `GET /usuarios/{id}/rede-cuidado`: `[ADMIN]` Visão da rede de cuidado de qualquer usuário do sistema.
-- `PUT /usuarios/{id}`: `[AUTENTICADO]` Atualização cadastral por ID (próprio usuário ou `ADMIN`).
-- `DELETE /usuarios/{id}`: `[AUTENTICADO]` Remoção de conta por ID (próprio usuário ou `ADMIN`).
+- `PUT /usuarios/{id}`: `[ADMIN]` Atualização cadastral por ID (exclusivo para `ADMIN`).
+- `DELETE /usuarios/{id}`: `[ADMIN]` Remoção de conta por ID (exclusivo para `ADMIN`).
 - `PATCH /usuarios/{id}/role`: `[ADMIN]` Alteração da role de qualquer usuário (`COMUM`, `PREMIUM`, `ADMIN`).
-- `PATCH /usuarios/{id}/upgrade-premium`: `[AUTENTICADO]` Promoção para `PREMIUM` por ID (próprio usuário ou `ADMIN`).
+- `PATCH /usuarios/{id}/upgrade-premium`: `[ADMIN]` Promoção para `PREMIUM` por ID (exclusivo para `ADMIN`).
 
 ### Pets & Care Circle (`/pets`)
 - `GET /pets/me`: `[CUIDADOR]` Lista pets associados ao usuário logado (como tutor principal ou co-cuidador).

@@ -72,7 +72,7 @@ public class UsuarioController {
     }
 
     // =========================================================================
-    // 2. CADASTRO PÚBLICO E OPERAÇÕES POR ID (DONO OU ADMIN)
+    // 2. CADASTRO PÚBLICO
     // =========================================================================
 
     @PostMapping
@@ -82,41 +82,41 @@ public class UsuarioController {
         return UsuarioResponse.fromEntity(usuarioService.create(usuarioRequest));
     }
 
+    // =========================================================================
+    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
+    // =========================================================================
+
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[DONO / ADMIN] Buscar usuário por ID")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    @Operation(summary = "[ADMIN] Buscar usuário por ID")
+    @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse findById(@PathVariable Long id) {
         return UsuarioResponse.fromEntity(usuarioService.findById(id));
     }
 
     @PutMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[DONO / ADMIN] Atualizar usuário por ID")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    @Operation(summary = "[ADMIN] Atualizar usuário por ID")
+    @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse update(@PathVariable Long id, @Valid @RequestBody UsuarioRequest usuarioRequest) {
         return UsuarioResponse.fromEntity(usuarioService.update(id, usuarioRequest));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "[DONO / ADMIN] Deletar usuário por ID")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    @Operation(summary = "[ADMIN] Deletar usuário por ID")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         usuarioService.delete(id);
     }
 
     @PatchMapping("/{id}/upgrade-premium")
     @ResponseStatus(HttpStatus.OK)
-    @Operation(summary = "[DONO / ADMIN] Realizar upgrade do perfil COMUM para PREMIUM")
-    @PreAuthorize("hasRole('ADMIN') or @usuarioService.isOwner(#id, authentication.name)")
+    @Operation(summary = "[ADMIN] Realizar upgrade do perfil COMUM para PREMIUM")
+    @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse upgradePremium(@PathVariable Long id) {
         return UsuarioResponse.fromEntity(usuarioService.upgradePremium(usuarioService.findById(id).getEmail()));
     }
-
-    // =========================================================================
-    // 3. OPERAÇÕES EXCLUSIVAS DE ADMINISTRAÇÃO (ROLE ADMIN)
-    // =========================================================================
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)

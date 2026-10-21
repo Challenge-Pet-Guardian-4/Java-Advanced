@@ -134,22 +134,6 @@ class UsuarioServiceTest {
     }
 
     @Test
-    @DisplayName("isOwner deve retornar true quando email pertence ao usuario com o id informado")
-    void deveRetornarTrueQuandoEmailEhDono() {
-        when(usuarioRepository.existsByIdAndEmailIgnoreCase(1L, "enzo@fiap.com.br")).thenReturn(true);
-
-        assertTrue(usuarioService.isOwner(1L, "enzo@fiap.com.br"));
-    }
-
-    @Test
-    @DisplayName("isOwner deve retornar false quando email nao pertence ao usuario com o id informado")
-    void deveRetornarFalseQuandoEmailNaoEhDono() {
-        when(usuarioRepository.existsByIdAndEmailIgnoreCase(1L, "outro@fiap.com.br")).thenReturn(false);
-
-        assertFalse(usuarioService.isOwner(1L, "outro@fiap.com.br"));
-    }
-
-    @Test
     @DisplayName("Deve criar usuario sempre com role COMUM independente de qualquer input")
     void deveCriarUsuarioSempreComoComum() {
         var enderecoReq = new EnderecoRequest("01310100", "100");

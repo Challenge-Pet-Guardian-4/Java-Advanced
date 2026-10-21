@@ -97,10 +97,6 @@ public class UsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
     }
 
-    public boolean isOwner(Long id, String email) {
-        return usuarioRepository.existsByIdAndEmailIgnoreCase(id, email.trim());
-    }
-
     private Usuario atualizarDados(Usuario usuario, UsuarioRequest request) {
         usuario.setNome(request.nome());
         usuario.setEmail(request.email().trim().toLowerCase());

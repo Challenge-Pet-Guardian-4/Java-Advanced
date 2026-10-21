@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -78,49 +79,12 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /usuarios/{id} deve permitir dono atualizar seu cadastro com status 200")
-    void devePermitirDonoAtualizarCadastro() throws Exception {
-        var request = criarRequest("dono@fiap.com.br");
-        Usuario usuarioSalvo = criarUsuarioMock(1L, "dono@fiap.com.br", UsuarioRole.COMUM);
-
-        when(usuarioService.isOwner(1L, "dono@fiap.com.br")).thenReturn(true);
-        when(usuarioService.update(eq(1L), any(UsuarioRequest.class))).thenReturn(usuarioSalvo);
-
-        mockMvc.perform(put("/usuarios/1")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("dono@fiap.com.br").claim("role", "COMUM")))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.email").value("dono@fiap.com.br"));
-    }
-
-    @Test
-    @DisplayName("PUT /usuarios/{id} deve permitir dono alterar seu email com status 200")
-    void devePermitirDonoAlterarEmail() throws Exception {
-        var request = criarRequest("novo_email@fiap.com.br");
-        Usuario usuarioSalvo = criarUsuarioMock(1L, "novo_email@fiap.com.br", UsuarioRole.COMUM);
-
-        when(usuarioService.isOwner(1L, "antigo@fiap.com.br")).thenReturn(true);
-        when(usuarioService.update(eq(1L), any(UsuarioRequest.class))).thenReturn(usuarioSalvo);
-
-        mockMvc.perform(put("/usuarios/1")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("antigo@fiap.com.br").claim("role", "COMUM")))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("novo_email@fiap.com.br"));
-    }
-
-    @Test
-    @DisplayName("PUT /usuarios/{id} deve bloquear usuario COMUM tentando atualizar cadastro de outro usuario com 403")
-    void deveBloquearUsuarioComumTentandoAtualizarOutroUsuario() throws Exception {
+    @DisplayName("PUT /usuarios/{id} deve bloquear usuario COMUM com 403")
+    void deveBloquearUsuarioComumTentandoAtualizarPorId() throws Exception {
         var request = criarRequest("outro@fiap.com.br");
 
-        when(usuarioService.isOwner(2L, "invasor@fiap.com.br")).thenReturn(false);
-
-        mockMvc.perform(put("/usuarios/2")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("invasor@fiap.com.br").claim("role", "COMUM")))
+        mockMvc.perform(put("/usuarios/1")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isForbidden());
@@ -154,24 +118,10 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("DELETE /usuarios/{id} deve permitir dono deletar seu proprio cadastro com 204")
-    void devePermitirDonoDeletarCadastro() throws Exception {
-        when(usuarioService.isOwner(1L, "dono@fiap.com.br")).thenReturn(true);
-
+    @DisplayName("DELETE /usuarios/{id} deve bloquear usuario COMUM com 403")
+    void deveBloquearUsuarioComumTentandoDeletarPorId() throws Exception {
         mockMvc.perform(delete("/usuarios/1")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("dono@fiap.com.br").claim("role", "COMUM"))))
-                .andExpect(status().isNoContent());
-
-        verify(usuarioService).delete(1L);
-    }
-
-    @Test
-    @DisplayName("DELETE /usuarios/{id} deve bloquear usuario COMUM tentando deletar outro usuario com 403")
-    void deveBloquearUsuarioComumTentandoDeletarOutroUsuario() throws Exception {
-        when(usuarioService.isOwner(2L, "invasor@fiap.com.br")).thenReturn(false);
-
-        mockMvc.perform(delete("/usuarios/2")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("invasor@fiap.com.br").claim("role", "COMUM"))))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM"))))
                 .andExpect(status().isForbidden());
     }
 
@@ -233,27 +183,36 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve permitir dono realizar upgrade para PREMIUM")
-    void devePermitirDonoRealizarUpgradePremium() throws Exception {
+    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve bloquear usuario COMUM com 403")
+    void deveBloquearUsuarioComumNoUpgradePremiumPorId() throws Exception {
+        mockMvc.perform(patch("/usuarios/1/upgrade-premium")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve permitir ADMIN realizar upgrade para PREMIUM com 200")
+    void devePermitirAdminRealizarUpgradePremium() throws Exception {
         Usuario usuarioSalvo = criarUsuarioMock(1L, "dono@fiap.com.br", UsuarioRole.PREMIUM);
-        when(usuarioService.isOwner(1L, "dono@fiap.com.br")).thenReturn(true);
         when(usuarioService.findById(1L)).thenReturn(usuarioSalvo);
         when(usuarioService.upgradePremium("dono@fiap.com.br")).thenReturn(usuarioSalvo);
 
         mockMvc.perform(patch("/usuarios/1/upgrade-premium")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("dono@fiap.com.br").claim("role", "COMUM"))))
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("PREMIUM"));
     }
 
     @Test
-    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve bloquear outro usuario tentando fazer upgrade com 403")
-    void deveBloquearOutroUsuarioTentandoUpgradePremium() throws Exception {
-        when(usuarioService.isOwner(2L, "invasor@fiap.com.br")).thenReturn(false);
+    @DisplayName("GET /usuarios/me deve permitir usuario autenticado buscar seu perfil com 200")
+    void devePermitirBuscarProprioPerfil() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "me@fiap.com.br", UsuarioRole.COMUM);
+        when(usuarioService.findByEmail("me@fiap.com.br")).thenReturn(usuario);
 
-        mockMvc.perform(patch("/usuarios/2/upgrade-premium")
-                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("invasor@fiap.com.br").claim("role", "COMUM"))))
-                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/usuarios/me")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("me@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("me@fiap.com.br"));
     }
 
     @Test
@@ -272,5 +231,27 @@ class UsuarioSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("X-Novo-Token", "novo-token"))
                 .andExpect(jsonPath("$.email").value("novo_email@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("DELETE /usuarios/me deve permitir usuario autenticado deletar seu perfil com 204")
+    void devePermitirDeletarProprioPerfil() throws Exception {
+        mockMvc.perform(delete("/usuarios/me")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("me@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isNoContent());
+
+        verify(usuarioService).delete("me@fiap.com.br");
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/me/upgrade-premium deve permitir usuario autenticado realizar upgrade com 200")
+    void devePermitirUsuarioAutenticadoUpgradePremium() throws Exception {
+        Usuario usuarioSalvo = criarUsuarioMock(1L, "me@fiap.com.br", UsuarioRole.PREMIUM);
+        when(usuarioService.upgradePremium("me@fiap.com.br")).thenReturn(usuarioSalvo);
+
+        mockMvc.perform(patch("/usuarios/me/upgrade-premium")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("me@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PREMIUM"));
     }
 }
