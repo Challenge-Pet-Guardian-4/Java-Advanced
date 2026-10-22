@@ -3,6 +3,8 @@ package fiap.com.br.petguardian.trilha.modulo;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.trilha.Trilha;
 import fiap.com.br.petguardian.trilha.TrilhaRepository;
+import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.modulo.dto.ModuloRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,7 @@ public class ModuloService {
 
     private final ModuloRepository moduloRepository;
     private final TrilhaRepository trilhaRepository;
+    private final ConteudoAulaRepository conteudoRepository;
 
     @Transactional(readOnly = true)
     public Page<Modulo> findAll(Pageable pageable) {
@@ -51,8 +54,10 @@ public class ModuloService {
 
     @Transactional
     public void delete(Long id) {
-        findModuloById(id);
-        moduloRepository.deleteById(id);
+        Modulo modulo = findModuloById(id);
+        List<Long> aulaIds = modulo.getAulas().stream().map(Aula::getId).toList();
+        moduloRepository.delete(modulo);
+        conteudoRepository.deleteByAulaIdIn(aulaIds);
     }
 
     private Modulo findModuloById(Long id) {

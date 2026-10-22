@@ -60,7 +60,7 @@ public class EnderecoService {
     public Endereco findOrCreateByCepAndNumero(EnderecoRequest enderecoRequest) {
         Endereco novo = buildEndereco(enderecoRequest);
         return enderecoRepository
-                .findByCepAndNumeroAndBairroId(novo.getCep(), novo.getNumero(), novo.getBairro().getId())
+                .findFirstByCepAndNumeroAndBairroIdOrderByIdAsc(novo.getCep(), novo.getNumero(), novo.getBairro().getId())
                 .orElseGet(() -> enderecoRepository.save(novo));
     }
 

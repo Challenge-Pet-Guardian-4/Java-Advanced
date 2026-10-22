@@ -13,9 +13,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
+import org.springframework.data.core.PropertyReferenceException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.Instant;
@@ -123,12 +127,48 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, mensagem, request);
     }
 
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
+        log.warn("Parâmetro com tipo inválido detectado: {}", exception.getMessage());
+        String tipoEsperado = exception.getRequiredType() != null ? exception.getRequiredType().getSimpleName() : "compatível";
+        String mensagem = String.format("O valor '%s' é inválido para o parâmetro '%s'. Esperava-se um valor do tipo %s.",
+                exception.getValue(), exception.getName(), tipoEsperado);
+        return error(HttpStatus.BAD_REQUEST, mensagem, request);
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ApiErrorResponse> handlePropertyReferenceException(
+            PropertyReferenceException exception, HttpServletRequest request) {
+        log.warn("Campo de ordenação inválido detectado: {}", exception.getMessage());
+        String mensagem = String.format("Propriedade de ordenação '%s' é inválida para a entidade.", exception.getPropertyName());
+        return error(HttpStatus.BAD_REQUEST, mensagem, request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException exception, HttpServletRequest request) {
+        log.warn("Método HTTP não suportado: {}", exception.getMessage());
+        String mensagem = String.format("Método HTTP '%s' não é suportado para esta rota. Métodos suportados: %s",
+                exception.getMethod(), exception.getSupportedHttpMethods());
+        return error(HttpStatus.METHOD_NOT_ALLOWED, mensagem, request);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException exception, HttpServletRequest request) {
+        log.warn("Content-Type não suportado: {}", exception.getMessage());
+        String mensagem = String.format("Content-Type '%s' não é suportado para esta requisição.", exception.getContentType());
+        return error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, mensagem, request);
+    }
+
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(
             DataIntegrityViolationException exception, HttpServletRequest request) {
         log.error("Erro de consistência/integridade no banco de dados", exception);
         String msg = exception.getMostSpecificCause() != null ? exception.getMostSpecificCause().getMessage() : "";
-        if (msg != null && msg.contains("ORA-00001")) {
+        if (msg != null && (msg.contains("ORA-00001") || msg.toLowerCase().contains("unique") || msg.toLowerCase().contains("duplicate"))) {
             return error(HttpStatus.CONFLICT,
                     "Registro duplicado. Verifique se o e-mail ou outro dado único já está cadastrado.", request);
         }
@@ -149,7 +189,7 @@ public class GlobalExceptionHandler {
             return error(HttpStatus.BAD_REQUEST,
                     "Tamanho de texto excede o limite máximo permitido pela coluna no banco de dados.", request);
         }
-        if (msg != null && msg.contains("ORA-00001")) {
+        if (msg != null && (msg.contains("ORA-00001") || msg.toLowerCase().contains("unique") || msg.toLowerCase().contains("duplicate"))) {
             return error(HttpStatus.CONFLICT,
                     "Registro duplicado. Verifique se o e-mail ou outro dado único já está cadastrado.", request);
         }

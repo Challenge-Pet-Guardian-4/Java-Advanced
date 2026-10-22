@@ -1,9 +1,12 @@
 package fiap.com.br.petguardian.endereco;
 
+import fiap.com.br.petguardian.endereco.bairro.Bairro;
 import fiap.com.br.petguardian.endereco.bairro.BairroRepository;
+import fiap.com.br.petguardian.endereco.cidade.Cidade;
 import fiap.com.br.petguardian.endereco.cidade.CidadeRepository;
 import fiap.com.br.petguardian.endereco.dto.EnderecoRequest;
 import fiap.com.br.petguardian.endereco.dto.ViaCepResponse;
+import fiap.com.br.petguardian.endereco.estado.Estado;
 import fiap.com.br.petguardian.endereco.estado.EstadoRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -107,5 +110,29 @@ class EnderecoServiceTest {
         assertEquals("200", resultado.getNumero());
         assertEquals("Av Nova", resultado.getRua());
         assertEquals(enderecoExistente.getUsuarios(), resultado.getUsuarios());
+    }
+
+    @Test
+    @DisplayName("Deve reaproveitar endereco existente buscando pelo primeiro ordenado por id")
+    void deveReaproveitarEnderecoExistente() {
+        var request = new EnderecoRequest("01310100", "100");
+        var viaCep = new ViaCepResponse("Av Paulista", "Bela Vista", "São Paulo", "SP", false);
+        Estado estado = Estado.builder().id(1L).nome("SP").build();
+        Cidade cidade = Cidade.builder().id(10L).nome("São Paulo").estado(estado).build();
+        Bairro bairro = Bairro.builder().id(100L).nome("Bela Vista").cidade(cidade).build();
+        Endereco enderecoExistente = Endereco.builder().id(5L).cep("01310100").numero("100").rua("Av Paulista").bairro(bairro).build();
+
+        when(viaCepService.getEnderecoPorCep("01310100")).thenReturn(viaCep);
+        when(estadoRepository.findByNomeIgnoreCase("SP")).thenReturn(Optional.of(estado));
+        when(cidadeRepository.findByNomeIgnoreCaseAndEstadoId("São Paulo", 1L)).thenReturn(Optional.of(cidade));
+        when(bairroRepository.findByNomeIgnoreCaseAndCidadeId("Bela Vista", 10L)).thenReturn(Optional.of(bairro));
+        when(enderecoRepository.findFirstByCepAndNumeroAndBairroIdOrderByIdAsc("01310100", "100", 100L)).thenReturn(Optional.of(enderecoExistente));
+
+        Endereco resultado = enderecoService.findOrCreateByCepAndNumero(request);
+
+        assertNotNull(resultado);
+        assertEquals(5L, resultado.getId());
+        assertEquals("01310100", resultado.getCep());
+        verify(enderecoRepository).findFirstByCepAndNumeroAndBairroIdOrderByIdAsc("01310100", "100", 100L);
     }
 }

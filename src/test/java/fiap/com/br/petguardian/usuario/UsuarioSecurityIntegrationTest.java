@@ -13,6 +13,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.core.PropertyReferenceException;
+import org.springframework.data.core.TypeInformation;
+
+import java.util.List;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,6 +27,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
@@ -272,6 +278,18 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
+    @DisplayName("DELETE /usuarios/me deve impedir ADMIN de se autoexcluir retornando 400")
+    void deveImpedirAdminDeSeAutoexcluir() throws Exception {
+        doThrow(new IllegalArgumentException("Administrador não pode se autoexcluir para evitar perda de acesso ao sistema."))
+                .when(usuarioService).delete("admin@fiap.com.br");
+
+        mockMvc.perform(delete("/usuarios/me")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Administrador não pode se autoexcluir para evitar perda de acesso ao sistema."));
+    }
+
+    @Test
     @DisplayName("PATCH /usuarios/me/upgrade-premium deve permitir usuario autenticado realizar upgrade com 200")
     void devePermitirUsuarioAutenticadoUpgradePremium() throws Exception {
         Usuario usuarioSalvo = criarUsuarioMock(1L, "me@fiap.com.br", UsuarioRole.PREMIUM);
@@ -281,5 +299,95 @@ class UsuarioSecurityIntegrationTest {
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("me@fiap.com.br").claim("role", "COMUM"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("PREMIUM"));
+    }
+
+    @Test
+    @DisplayName("GET /actuator/metrics deve bloquear usuario COMUM com 403")
+    void deveBloquearUsuarioComumEmActuatorMetrics() throws Exception {
+        mockMvc.perform(get("/actuator/metrics")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /actuator/metrics deve permitir usuario ADMIN com 200")
+    void devePermitirAdminEmActuatorMetrics() throws Exception {
+        mockMvc.perform(get("/actuator/metrics")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /actuator/caches deve bloquear usuario COMUM com 403")
+    void deveBloquearUsuarioComumEmActuatorCaches() throws Exception {
+        mockMvc.perform(get("/actuator/caches")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("GET /actuator/caches deve permitir usuario ADMIN com 200")
+    void devePermitirAdminEmActuatorCaches() throws Exception {
+        mockMvc.perform(get("/actuator/caches")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("GET /actuator/health deve permitir acesso publico anonimo sem 401 ou 403 e sem detalhes")
+    void devePermitirAcessoAnonimoEmActuatorHealth() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(result -> {
+                    int status = result.getResponse().getStatus();
+                    org.junit.jupiter.api.Assertions.assertTrue(status == 200 || status == 503,
+                            "Esperava 200 (UP) ou 503 (DOWN), mas recebeu " + status);
+                })
+                .andExpect(jsonPath("$.components").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("GET /usuarios/abc com ADMIN deve retornar 400 por MethodArgumentTypeMismatchException")
+    void deveRetornar400AoPassarParametroComTipoInvalido() throws Exception {
+        mockMvc.perform(get("/usuarios/abc")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("GET /usuarios com ordenacao invalida deve retornar 400 por PropertyReferenceException")
+    void deveRetornar400AoPassarPropriedadeDeOrdenacaoInvalida() throws Exception {
+        when(usuarioService.findAll(any(Pageable.class)))
+                .thenThrow(new PropertyReferenceException("campoInvalido", TypeInformation.of(Usuario.class), List.of()));
+
+        mockMvc.perform(get("/usuarios?sort=campoInvalido,desc")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Propriedade de ordenação 'campoInvalido' é inválida para a entidade."));
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios deve retornar 405 Method Not Allowed")
+    void deveRetornar405AoChamarMetodoNaoSuportado() throws Exception {
+        mockMvc.perform(patch("/usuarios")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("POST /usuarios com Content-Type invalido deve retornar 415 Unsupported Media Type")
+    void deveRetornar415AoEnviarContentTypeNaoSuportado() throws Exception {
+        mockMvc.perform(post("/usuarios")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("texto qualquer"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+    }
+    @Test
+    @DisplayName("GET /admin deve permitir acesso publico anonimo e redirecionar para /admin/index.html")
+    void devePermitirAcessoPublicoEmAdmin() throws Exception {
+        mockMvc.perform(get("/admin"))
+                .andExpect(status().is3xxRedirection());
     }
 }

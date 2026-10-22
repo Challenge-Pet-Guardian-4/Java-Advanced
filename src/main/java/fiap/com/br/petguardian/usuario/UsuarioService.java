@@ -79,7 +79,11 @@ public class UsuarioService {
 
     @Transactional
     public void delete(String email) {
-        deleteUsuario(findByEmail(email));
+        Usuario usuario = findByEmail(email);
+        if (usuario.getRole() == UsuarioRole.ADMIN) {
+            throw new IllegalArgumentException("Administrador não pode se autoexcluir para evitar perda de acesso ao sistema.");
+        }
+        deleteUsuario(usuario);
     }
 
     private void deleteUsuario(Usuario usuario) {

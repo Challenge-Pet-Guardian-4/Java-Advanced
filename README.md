@@ -306,7 +306,6 @@ Os endpoints utilizam os seguintes prefixos visuais padronizados no Swagger UI:
 | Método | Endpoint | Resumo Swagger | Permissão |
 |---|---|---|---|
 | `GET` | `/tarefas/me` | `[CUIDADOR]` Listar tarefas do cuidador autenticado com filtro opcional | `CUIDADOR` |
-| `GET` | `/tarefas/me/pontos` | `[CUIDADOR]` Consultar pontos totais acumulados pelo cuidador autenticado | `CUIDADOR` |
 | `GET` | `/tarefas/by-pet/{petId}` | `[CUIDADOR / ADMIN]` Listar todas as tarefas de um pet específico | Cuidador ou `ADMIN` |
 | `GET` | `/tarefas/{id}` | `[CUIDADOR / ADMIN]` Buscar tarefa por ID | Cuidador ou `ADMIN` |
 | `POST` | `/tarefas` | `[CUIDADOR / ADMIN]` Criar tarefa | Cuidador ou `ADMIN` |
@@ -316,7 +315,6 @@ Os endpoints utilizam os seguintes prefixos visuais padronizados no Swagger UI:
 | `DELETE` | `/tarefas/{id}` | `[CUIDADOR / ADMIN]` Deletar tarefa | Cuidador ou `ADMIN` |
 | `GET` | `/tarefas` | `[ADMIN]` Listar todas as tarefas com paginação e ordenação | `ADMIN` |
 | `GET` | `/tarefas/by-usuario/{usuarioId}` | `[ADMIN]` Listar tarefas do cuidador com filtro opcional | `ADMIN` |
-| `GET` | `/tarefas/by-usuario/{usuarioId}/pontos` | `[ADMIN]` Consultar pontos totais acumulados pelo cuidador | `ADMIN` |
 
 ---
 

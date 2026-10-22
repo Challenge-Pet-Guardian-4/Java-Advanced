@@ -89,8 +89,13 @@ public class TrilhaService {
 
     @Transactional
     public void delete(Long id) {
-        findTrilhaById(id);
-        trilhaRepository.deleteById(id);
+        Trilha trilha = findTrilhaById(id);
+        List<Long> aulaIds = trilha.getModulos().stream()
+                .flatMap(m -> m.getAulas().stream())
+                .map(Aula::getId)
+                .toList();
+        trilhaRepository.delete(trilha);
+        conteudoRepository.deleteByAulaIdIn(aulaIds);
     }
 
     private Trilha findTrilhaById(Long id) {

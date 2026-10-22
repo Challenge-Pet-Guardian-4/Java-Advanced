@@ -262,4 +262,40 @@ class UsuarioServiceTest {
         verify(petRepository, never()).delete(any(Pet.class));
         verify(usuarioRepository).delete(coCuidador);
     }
+
+    @Test
+    @DisplayName("delete por email deve lancar IllegalArgumentException se usuario for ADMIN")
+    void deletePorEmailDeveLancarExcecaoParaAdmin() {
+        Usuario admin = Usuario.builder()
+                .id(1L)
+                .email("admin@fiap.com.br")
+                .role(UsuarioRole.ADMIN)
+                .usuarioPets(Set.of())
+                .build();
+
+        when(usuarioRepository.findByEmail("admin@fiap.com.br")).thenReturn(Optional.of(admin));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> usuarioService.delete("admin@fiap.com.br"));
+
+        assertEquals("Administrador não pode se autoexcluir para evitar perda de acesso ao sistema.", ex.getMessage());
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
+    }
+
+    @Test
+    @DisplayName("delete por email deve permitir exclusao se usuario for COMUM")
+    void deletePorEmailDevePermitirExclusaoParaComum() {
+        Usuario comum = Usuario.builder()
+                .id(2L)
+                .email("comum@fiap.com.br")
+                .role(UsuarioRole.COMUM)
+                .usuarioPets(Set.of())
+                .build();
+
+        when(usuarioRepository.findByEmail("comum@fiap.com.br")).thenReturn(Optional.of(comum));
+
+        usuarioService.delete("comum@fiap.com.br");
+
+        verify(usuarioRepository).delete(comum);
+    }
 }

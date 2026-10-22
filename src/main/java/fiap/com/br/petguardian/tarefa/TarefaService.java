@@ -63,6 +63,7 @@ public class TarefaService {
 
         Tarefa tarefa = request.toEntity(usuario, pet, LocalDateTime.now());
         tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
+        tarefa.setConclusao(null);
         return tarefaRepository.save(tarefa);
     }
 

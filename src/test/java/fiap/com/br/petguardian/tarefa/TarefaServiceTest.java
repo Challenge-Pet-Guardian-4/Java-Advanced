@@ -81,28 +81,18 @@ class TarefaServiceTest {
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
-        Tarefa tarefaSalva = Tarefa.builder()
-                .id(100L)
-                .titulo("Remédio")
-                .pontosTarefa(10)
-                .descricao("Dar antibiótico")
-                .criacao(LocalDateTime.now())
-                .prazo(LocalDateTime.now().plusDays(1))
-                .status(statusPendente)
-                .usuario(usuario)
-                .pet(pet)
-                .build();
 
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
         when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
-        when(tarefaRepository.save(any(Tarefa.class))).thenReturn(tarefaSalva);
+        when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Tarefa resultado = tarefaService.create(request, "enzo@fiap.com.br");
 
         assertNotNull(resultado);
         assertEquals("Remédio", resultado.getTitulo());
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
+        assertNull(resultado.getConclusao());
         verify(tarefaRepository).save(any(Tarefa.class));
     }
 

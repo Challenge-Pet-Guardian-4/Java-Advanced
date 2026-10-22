@@ -13,4 +13,6 @@ public interface ConteudoAulaRepository extends MongoRepository<ConteudoAula, St
     List<ConteudoAula> findByAulaIdIn(Collection<Long> aulaIds);
 
     void deleteByAulaId(Long aulaId);
+
+    void deleteByAulaIdIn(Collection<Long> aulaIds);
 }

@@ -18,5 +18,5 @@ public interface EnderecoRepository extends JpaRepository<Endereco, Long> {
     Optional<Endereco> findById(Long id);
 
     @EntityGraph(attributePaths = {"bairro.cidade.estado"})
-    Optional<Endereco> findByCepAndNumeroAndBairroId(String cep, String numero, Long bairroId);
+    Optional<Endereco> findFirstByCepAndNumeroAndBairroIdOrderByIdAsc(String cep, String numero, Long bairroId);
 }

@@ -3,7 +3,9 @@ package fiap.com.br.petguardian.trilha;
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
+import fiap.com.br.petguardian.trilha.aula.Aula;
 import fiap.com.br.petguardian.trilha.dto.TrilhaRequest;
+import fiap.com.br.petguardian.trilha.modulo.Modulo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +19,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -68,14 +71,20 @@ class TrilhaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve deletar trilha")
-    void deveDeletarTrilha() {
-        Trilha trilha = Trilha.builder().id(1L).build();
+    @DisplayName("Deve deletar trilha e remover conteudos MongoDB em lote")
+    void deveDeletarTrilhaComModulosEAulasERemoverConteudosNoMongo() {
+        Aula aula1 = Aula.builder().id(101L).build();
+        Aula aula2 = Aula.builder().id(102L).build();
+        Modulo modulo1 = Modulo.builder().id(21L).aulas(java.util.Set.of(aula1)).build();
+        Modulo modulo2 = Modulo.builder().id(22L).aulas(java.util.Set.of(aula2)).build();
+        Trilha trilha = Trilha.builder().id(1L).modulos(java.util.Set.of(modulo1, modulo2)).build();
+
         when(trilhaRepository.findById(1L)).thenReturn(Optional.of(trilha));
 
         trilhaService.delete(1L);
 
-        verify(trilhaRepository).deleteById(1L);
+        verify(conteudoRepository).deleteByAulaIdIn(argThat(ids -> ids.size() == 2 && ids.containsAll(List.of(101L, 102L))));
+        verify(trilhaRepository).delete(trilha);
     }
 
     @Test

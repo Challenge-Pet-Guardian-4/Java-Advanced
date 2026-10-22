@@ -34,7 +34,7 @@ public interface TarefaRepository extends JpaRepository<Tarefa, Long> {
     @EntityGraph(attributePaths = {"status", "pet", "usuario"})
     Page<Tarefa> findAllByPetId(Long petId, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"pet"})
+    @EntityGraph(attributePaths = {"pet", "status", "usuario"})
     List<Tarefa> findAllByPetIdInAndStatusNomeStatusOrderByConclusaoDesc(List<Long> petIds, EnumStatus status);
 
     @Query("select t.pet.id, count(t) from Tarefa t where t.pet.id in :petIds group by t.pet.id")

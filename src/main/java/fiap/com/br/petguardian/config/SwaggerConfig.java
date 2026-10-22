@@ -38,6 +38,7 @@ import java.util.List;
                 @Tag(name = "Trilhas", description = "Gerenciamento de trilhas de aprendizado e adestramento do pet"),
                 @Tag(name = "Modulos", description = "Gerenciamento de módulos das trilhas de aprendizado"),
                 @Tag(name = "Aulas", description = "Gerenciamento de aulas e conteúdos educativos das trilhas"),
+                @Tag(name = "Conteúdos NoSQL", description = "Gerenciamento de conteúdos dinâmicos no MongoDB"),
                 @Tag(name = "Endereco", description = "Gerenciamento de endereços")
         }
 )
@@ -70,6 +71,7 @@ public class SwaggerConfig implements WebMvcConfigurer {
                     "Trilhas",
                     "Modulos",
                     "Aulas",
+                    "Conteúdos NoSQL",
                     "Endereco"
             );
             if (openApi.getTags() != null) {
