@@ -32,7 +32,8 @@ import java.util.Set;
                         @StoredProcedureParameter(mode = ParameterMode.IN, name = "p_id_usuario", type = Long.class),
                         @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_tarefas", type = Integer.class),
                         @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_aulas", type = Integer.class),
-                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_totais", type = Integer.class)
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_pontos_totais", type = Integer.class),
+                        @StoredProcedureParameter(mode = ParameterMode.OUT, name = "p_detalhe_pets_json", type = String.class)
                 }
         )
 })

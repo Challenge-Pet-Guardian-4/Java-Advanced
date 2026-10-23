@@ -2,10 +2,11 @@ package fiap.com.br.petguardian.usuariopet;
 
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
-import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
+import fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
 import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
@@ -39,9 +40,6 @@ class UsuarioPetServiceTest {
 
     @Mock
     private TarefaRepository tarefaRepository;
-
-    @Mock
-    private RedeCuidadoMapper redeCuidadoMapper;
 
     @InjectMocks
     private UsuarioPetService usuarioPetService;
@@ -164,17 +162,20 @@ class UsuarioPetServiceTest {
     @DisplayName("Deve montar rede de cuidado vazia quando usuario nao possui vinculos")
     void deveMontarRedeDeCuidadoVazia() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0, "BRONZE");
 
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
-        when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado(1L);
 
         assertNotNull(resultado);
         assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
         assertEquals("Enzo", resultado.nomeUsuario());
+        assertEquals(0, resultado.pets().size());
+        assertEquals(0, resultado.coCuidadores().size());
+        assertEquals(0, resultado.totalTarefasPendentes());
+        assertEquals(0, resultado.totalTarefasConcluidas());
+        assertEquals(0, resultado.pontosAcumulados());
         assertEquals("BRONZE", resultado.nivelGamificacao());
     }
 
@@ -182,11 +183,9 @@ class UsuarioPetServiceTest {
     @DisplayName("Deve montar rede de cuidado a partir do email do usuario")
     void deveMontarRedeDeCuidadoPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        var emptyResponse = new RedeCuidadoResponse("enzo@fiap.com.br", "Enzo", List.of(), List.of(), 0, 0, 0, "BRONZE");
 
         when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
-        when(redeCuidadoMapper.toEmptyResponse(usuario)).thenReturn(emptyResponse);
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
 
@@ -199,7 +198,8 @@ class UsuarioPetServiceTest {
     @DisplayName("Deve montar rede de cuidado com vinculos utilizando Stored Procedure Oracle")
     void deveMontarRedeDeCuidadoComVinculosEProcedureOracle() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Raca raca = Raca.builder().id(1L).nome("Golden Retriever").build();
+        Pet pet = Pet.builder().id(10L).nome("Thor").raca(raca).build();
         UsuarioPet vinculo = UsuarioPet.builder()
                 .id(new UsuarioPetId(1L, 10L))
                 .usuario(usuario)
@@ -207,7 +207,6 @@ class UsuarioPetServiceTest {
                 .responsavelPrincipal(true)
                 .build();
 
-        var petResumo = new RedeCuidadoResponse.PetResumo(10L, "Thor", "Golden", true, 1);
         Map<String, Object> resumoDb = Map.of(
                 "p_tarefas_pendentes", 3,
                 "p_tarefas_concluidas", 7,
@@ -218,14 +217,8 @@ class UsuarioPetServiceTest {
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vinculo));
         when(tarefaRepository.countTarefasByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 1L}));
         when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vinculo));
-        when(redeCuidadoMapper.toPetResumoList(any(), any())).thenReturn(List.of(petResumo));
-        when(redeCuidadoMapper.toCuidadorResumoList(any(), any())).thenReturn(List.of());
         when(usuarioPetRepository.obterResumoRedeCuidadoNoBanco(1L)).thenReturn(resumoDb);
         when(usuarioPetRepository.obterNivelUsuarioNoBanco(1L)).thenReturn("PRATA");
-        var expectedResponse = new RedeCuidadoResponse(
-                "enzo@fiap.com.br", "Enzo", List.of(petResumo), List.of(), 3, 7, 150, "PRATA"
-        );
-        when(redeCuidadoMapper.toResponse(any(), any(), any(), any(), any())).thenReturn(expectedResponse);
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
 
@@ -234,6 +227,10 @@ class UsuarioPetServiceTest {
         assertEquals("Enzo", resultado.nomeUsuario());
         assertEquals(1, resultado.pets().size());
         assertEquals("Thor", resultado.pets().get(0).nome());
+        assertEquals("Golden Retriever", resultado.pets().get(0).raca());
+        assertTrue(resultado.pets().get(0).responsavelPrincipal());
+        assertEquals(1, resultado.pets().get(0).totalTarefas());
+        assertEquals(0, resultado.coCuidadores().size()); // Sem co-cuidadores alem do proprio usuario logado
         assertEquals(3, resultado.totalTarefasPendentes());
         assertEquals(7, resultado.totalTarefasConcluidas());
         assertEquals(150, resultado.pontosAcumulados());
@@ -241,6 +238,5 @@ class UsuarioPetServiceTest {
 
         verify(usuarioPetRepository).obterResumoRedeCuidadoNoBanco(1L);
         verify(usuarioPetRepository).obterNivelUsuarioNoBanco(1L);
-        verify(redeCuidadoMapper).toResponse(any(), any(), any(), any(), any());
     }
 }

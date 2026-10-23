@@ -233,7 +233,7 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 4. **Tratamento de Indisponibilidade Externa:** Falhas de rede ou timeout na consulta do ViaCEP disparam `RestClientException`, capturada centralmente pelo `GlobalExceptionHandler` e retornando `503 Service Unavailable`.
 
 ### 5. Fluxo de Processamento PL/SQL no Oracle Database (Stored Procedures Tipadas)
-1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos` e `/pets/{id}/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet` para pontuação individual do animal e `pr_calcular_pontuacao_usuario` para agregação dos pontos de todos os pets tutelados pelo usuário) mapeadas via `@NamedStoredProcedureQueries` no Hibernate 7.
+1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos` e `/pets/{id}/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet` para pontuação individual do animal e `pr_calcular_pontuacao_usuario` com agregação nativa Oracle 19c `JSON_ARRAYAGG` retornando totais e `p_detalhe_pets_json` em uma única ida ao banco, eliminando o N+1 procedural) mapeadas via `@NamedStoredProcedureQueries` no Hibernate 7.
 2. **Relatório Analítico de Rede de Cuidado:** Disparado por `GET /usuarios/me/rede-cuidado` e `GET /usuarios/{id}/rede-cuidado`, executa `pkg_petguardian.pr_obter_resumo_rede_cuidado`.
 3. **Transferência Atômica de Titularidade:** Disparado por `PATCH /pets/{petId}/responsavel-principal`, executa `pkg_petguardian.pr_transferir_responsavel_principal` garantindo consistência na troca do titular principal do animal.
 

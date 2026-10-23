@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 class DbUtilsTest {
 
@@ -36,5 +37,21 @@ class DbUtilsTest {
         assertEquals(0, DbUtils.getInt(null, "chave"));
         assertEquals(0, DbUtils.getInt(Map.of(), "chave"));
         assertEquals(0, DbUtils.getInt(Map.of("chave", "stringInvalida"), "chave"));
+    }
+
+    @Test
+    @DisplayName("Deve extrair string com chave em maiusculas, minusculas ou exata, e null para bordas")
+    void deveExtrairStringComFallback() {
+        Map<String, Object> mapUpper = Map.of("P_DETALHE_PETS_JSON", "[{\"petId\":1}]");
+        assertEquals("[{\"petId\":1}]", DbUtils.getString(mapUpper, "p_detalhe_pets_json"));
+        assertEquals("[{\"petId\":1}]", DbUtils.getString(mapUpper, "P_DETALHE_PETS_JSON"));
+
+        Map<String, Object> mapLower = Map.of("p_detalhe_pets_json", "[]");
+        assertEquals("[]", DbUtils.getString(mapLower, "P_DETALHE_PETS_JSON"));
+        assertEquals("[]", DbUtils.getString(mapLower, "p_detalhe_pets_json"));
+
+        assertNull(DbUtils.getString(null, "chave"));
+        assertNull(DbUtils.getString(Map.of(), "chave"));
+        assertNull(DbUtils.getString(Map.of("outra", "valor"), "chave"));
     }
 }

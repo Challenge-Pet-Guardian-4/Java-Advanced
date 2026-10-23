@@ -6,13 +6,14 @@ import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
-import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
+import fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.TransferirResponsabilidadeRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -25,7 +26,6 @@ public class UsuarioPetService {
     private final UsuarioRepository usuarioRepository;
     private final PetRepository petRepository;
     private final TarefaRepository tarefaRepository;
-    private final RedeCuidadoMapper redeCuidadoMapper;
 
     // =========================================================================
     // 1. CHECAGEM DE AUTORIZAÇÃO E SEGURANÇA (SpEL)
@@ -101,31 +101,22 @@ public class UsuarioPetService {
 
     private RedeCuidadoResponse processarRedeCuidado(Usuario usuario) {
         List<UsuarioPet> vinculos = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(usuario.getEmail().trim());
-
-        // Se o tutor ainda não possui pets vinculados, devolve o resumo inicial zerado
         if (vinculos.isEmpty()) {
-            return redeCuidadoMapper.toEmptyResponse(usuario);
+            return RedeCuidadoResponse.empty(usuario);
         }
 
         List<Long> petIds = vinculos.stream().map(up -> up.getPet().getId()).toList();
-
-        // Consulta a contagem de tarefas por pet em uma única query agrupada (evita N+1 queries no banco)
-        // e transforma o resultado em um mapa [ID do Pet -> Quantidade de Tarefas]
         Map<Long, Integer> tarefasPorPet = tarefaRepository.countTarefasByPetIdIn(petIds).stream()
                 .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).intValue()));
 
-        // Delega o mapeamento de coleções e relacionamentos para o RedeCuidadoMapper
-        var pets = redeCuidadoMapper.toPetResumoList(vinculos, tarefasPorPet);
-        var cuidadores = redeCuidadoMapper.toCuidadorResumoList(
+        return RedeCuidadoResponse.of(
+                usuario,
+                vinculos,
+                tarefasPorPet,
                 usuarioPetRepository.findAllByPetIdIn(petIds),
-                usuario.getEmail()
+                usuarioPetRepository.obterResumoRedeCuidadoNoBanco(usuario.getId()),
+                usuarioPetRepository.obterNivelUsuarioNoBanco(usuario.getId())
         );
-
-        // Consulta as métricas consolidadas via Stored Procedure e Function do Oracle
-        Map<String, Object> resumoDb = usuarioPetRepository.obterResumoRedeCuidadoNoBanco(usuario.getId());
-        String nivel = usuarioPetRepository.obterNivelUsuarioNoBanco(usuario.getId());
-
-        return redeCuidadoMapper.toResponse(usuario, pets, cuidadores, resumoDb, nivel);
     }
 
     // =========================================================================

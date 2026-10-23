@@ -46,12 +46,12 @@ A camada de persistência integra diretamente 5 rotinas empacotadas no Oracle PL
 | Rotina PL/SQL | Tipo | Entidade / Mapeamento | Repositório | Finalidade Corporativa |
 | :--- | :---: | :--- | :--- | :--- |
 | `pkg_petguardian.pr_calcular_pontuacao_pet` | Procedure | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoPet")` | `PetRepository` | Calcula em tempo real pontos de tarefas concluídas, aulas didáticas e pontuação consolidada do animal. |
-| `pkg_petguardian.pr_calcular_pontuacao_usuario` | Procedure | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoUsuario")` | `PetRepository` | Consolida em batch único a pontuação acumulada de todos os pets sob tutela do usuário logado. |
+| `pkg_petguardian.pr_calcular_pontuacao_usuario` | Procedure | `@NamedStoredProcedureQuery("Pet.calcularPontuacaoUsuario")` | `PetRepository` | Consolida em batch único a pontuação acumulada de todos os pets e o detalhamento individual serializado via JSON nativo Oracle (`p_detalhe_pets_json`), eliminando queries N+1. |
 | `pkg_petguardian.pr_obter_resumo_rede_cuidado` | Procedure | `@NamedStoredProcedureQuery("UsuarioPet.obterResumoRedeCuidado")` | `UsuarioPetRepository` | Retorna total de pets, cuidadores, tarefas pendentes, tarefas concluídas e pontos agregados da rede familiar. |
 | `pkg_petguardian.fn_obter_nivel_usuario` | Function | `@Procedure("pkg_petguardian.fn_obter_nivel_usuario")` | `UsuarioPetRepository` | Retorna o nível de gamificação do tutor (`BRONZE`, `PRATA`, `OURO`) baseado no XP total acumulado. |
 | `pkg_petguardian.pr_transferir_responsavel_principal` | Procedure | `@Procedure("pkg_petguardian.pr_transferir_responsavel_principal")` | `UsuarioPetRepository` | Executa a transferência atômica de tutela do tutor anterior para o novo no Care Circle (`USUARIO_PET`). |
 
-> **Nota Técnica sobre `pr_obter_resumo_rede_cuidado` e `RedeCuidadoMapper`:**  
+> **Nota Técnica sobre `pr_obter_resumo_rede_cuidado` e `consolidação da Rede de Cuidado`:**  
 > A procedure Oracle calcula 5 parâmetros OUT (`p_total_pets`, `p_total_cuidadores`, `p_tarefas_pendentes`, `p_tarefas_concluidas`, `p_pontos_acumulados`), os quais são estritamente mapeados na `@NamedStoredProcedureQuery` para integridade JDBC. No DTO final (`RedeCuidadoResponse`), `pets` e `cuidadores` são retornados como coleções completas detalhadas (cujos tamanhos refletem a contagem), enquanto tarefas e pontos são extraídos dos parâmetros OUT.
 
 ### ⚠️ Regra Crítica de Mapeamento para Hibernate 7

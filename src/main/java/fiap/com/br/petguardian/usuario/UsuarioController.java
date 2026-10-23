@@ -1,7 +1,7 @@
 package fiap.com.br.petguardian.usuario;
 
 import fiap.com.br.petguardian.auth.TokenService;
-import fiap.com.br.petguardian.usuario.dto.RedeCuidadoResponse;
+import fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuario.dto.RoleUpdateRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
 import fiap.com.br.petguardian.usuario.dto.UsuarioResponse;

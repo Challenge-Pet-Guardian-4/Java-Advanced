@@ -18,4 +18,16 @@ public final class DbUtils {
         }
         return val instanceof Number n ? n.intValue() : 0;
     }
+
+    public static String getString(Map<String, Object> map, String key) {
+        if (map == null || key == null) return null;
+        Object val = map.get(key);
+        if (val == null) {
+            val = map.get(key.toUpperCase());
+        }
+        if (val == null) {
+            val = map.get(key.toLowerCase());
+        }
+        return val != null ? val.toString() : null;
+    }
 }

@@ -17,6 +17,7 @@ import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetId;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
+import fiap.com.br.petguardian.util.DbUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -129,12 +130,7 @@ public class PetService {
     public PetPontuacaoAgregadaResponse calcularPontuacaoAgregadaPetsUsuario(String email) {
         Usuario usuario = findUsuarioByEmail(email);
         Map<String, Object> out = petRepository.calcularPontuacaoUsuarioNoBanco(usuario.getId());
-
-        List<PetPontuacaoResponse> detalhePets = usuarioPetRepository.findAllByUsuarioEmailIgnoreCase(email.trim()).stream()
-                .map(up -> calcularPontuacaoPet(up.getPet()))
-                .toList();
-
-        return PetPontuacaoAgregadaResponse.fromMap(out, detalhePets);
+        return PetPontuacaoAgregadaResponse.fromMap(out, DbUtils.getString(out, "p_detalhe_pets_json"));
     }
 
     // =========================================================================
