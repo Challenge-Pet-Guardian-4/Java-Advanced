@@ -135,4 +135,23 @@ class EnderecoServiceTest {
         assertEquals("01310100", resultado.getCep());
         verify(enderecoRepository).findFirstByCepAndNumeroAndBairroIdOrderByIdAsc("01310100", "100", 100L);
     }
+
+    @Test
+    @DisplayName("Deve salvar 'Não Informado' quando ViaCEP retornar campos em branco para cidade pequena")
+    void deveSalvarNaoInformadoParaCepCidadePequena() {
+        var request = new EnderecoRequest("14110000", "SN");
+        var viaCep = new ViaCepResponse("", "", "Batatais", "SP", false);
+
+        when(viaCepService.getEnderecoPorCep("14110000")).thenReturn(viaCep);
+        when(estadoRepository.findByNomeIgnoreCase("SP")).thenReturn(Optional.of(Estado.builder().id(1L).nome("SP").build()));
+        when(cidadeRepository.findByNomeIgnoreCaseAndEstadoId("Batatais", 1L)).thenReturn(Optional.of(Cidade.builder().id(2L).nome("Batatais").build()));
+        when(bairroRepository.findByNomeIgnoreCaseAndCidadeId("Não Informado", 2L)).thenReturn(Optional.of(Bairro.builder().id(3L).nome("Não Informado").build()));
+        when(enderecoRepository.findFirstByCepAndNumeroAndBairroIdOrderByIdAsc(any(), any(), any())).thenReturn(Optional.empty());
+        when(enderecoRepository.save(any(Endereco.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Endereco endereco = enderecoService.create(request);
+
+        assertEquals("Não Informado", endereco.getRua());
+        assertEquals("Não Informado", endereco.getBairro().getNome());
+    }
 }

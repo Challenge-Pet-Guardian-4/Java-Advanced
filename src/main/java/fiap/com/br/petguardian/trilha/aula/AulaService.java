@@ -12,6 +12,7 @@ import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuario.UsuarioRole;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AulaService {
@@ -82,7 +84,7 @@ public class AulaService {
     public void delete(Long id) {
         findAulaById(id);
         aulaRepository.deleteById(id);
-        removerConteudoDoMongo(id);
+        conteudoRepository.deleteByAulaId(id);
     }
 
     @Transactional
@@ -109,6 +111,7 @@ public class AulaService {
                     .map(ConteudoAula::getCorpoMarkdown)
                     .orElse(null);
         } catch (Exception e) {
+            log.warn("Falha ao consultar o conteúdo NoSQL da aula {}: {}", aulaId, e.getMessage());
             return null;
         }
     }
@@ -122,14 +125,8 @@ public class AulaService {
                     .filter(c -> c.getCorpoMarkdown() != null)
                     .collect(Collectors.toMap(ConteudoAula::getAulaId, ConteudoAula::getCorpoMarkdown, (a, b) -> a));
         } catch (Exception e) {
+            log.warn("Falha ao consultar conteúdos NoSQL em lote: {}", e.getMessage());
             return Map.of();
-        }
-    }
-
-    private void removerConteudoDoMongo(Long aulaId) {
-        try {
-            conteudoRepository.deleteByAulaId(aulaId);
-        } catch (Exception ignored) {
         }
     }
 

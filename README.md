@@ -42,7 +42,7 @@
 | **Enzo Okuizumi** | **561432** | 2TDSPG | [EnzoOkuizumiFiap](https://github.com/EnzoOkuizumiFiap) | [Enzo Okuizumi](https://www.linkedin.com/in/enzo-okuizumi-b60292256/) |
 | **Gustavo Okada** | **563428** | 2TDSPG | [Gdev3356](https://github.com/Gdev3356) | [Gustavo Okada](https://www.linkedin.com/in/gustavo-okada-53a3b8359/) |
 | **Lucas Barros Gouveia** | **566422** | 2TDSPG | [LuzBGouveia](https://github.com/LuzBGouveia) | [Lucas Barros Gouveia](https://www.linkedin.com/in/lucas-barros-gouveia-09b147355/) |
-| **Luna de Carvalho Guimarães** | **562290** | 2TDSPG | [lunaguima](https://github.com/lunaguima) | [Luna M. Guimarães](https://www.linkedin.com/in/luna-m-guimar%C3%A3es-1850ab173/) |
+| **Luna de Carvalho Guimarães** | **562290** | 2TDSPG | [lunaguima](https://github.com/lunaguima) | [Luna Guimarães](https://www.linkedin.com/in/luna-guimar%C3%A3es-b0ba82309/) |
 | **Milton Marcelino** | **564836** | 2TDSPG | [MiltonMarcelino](https://github.com/MiltonMarcelino) | [Milton Marcelino](http://linkedin.com/in/milton-marcelino-250298142) |
 
 ---
@@ -55,7 +55,7 @@ O **PetGuardian** é uma API REST corporativa desenvolvida em **Spring Boot** pa
 - **Ecossistema Centrado no Animal:** O pet não é um atributo secundário do usuário, mas a entidade nuclear (`pet`), acumulando histórico clínico, tarefas da rotina diária e pontuação própria de bem-estar.
 - **Rede de Cuidado Familiar (Care Circle):** Um animal pode possuir múltiplos cuidadores com distinção de autoridade: um **Tutor Principal** (com autoridade sobre deleção e gestão de co-cuidadores) e múltiplos **Co-cuidadores** colaborativos com visibilidade em tempo real.
 - **Gamificação de Bem-Estar em Dupla Camada:**
-  - `pontos_tarefa`: Conquistados pelos cuidadores ao executar cuidados essenciais de rotina (alimentar, medicar, passear, higienizar).
+  - `pontos_tarefa`: Conquistados e somados diretamente ao score de bem-estar do pet ao executar cuidados essenciais de rotina (alimentar, medicar, passear, higienizar).
   - `pontos_aula`: Conquistados ao finalizar lições educativas de adestramento e boas práticas, agregando pontos diretamente ao score de bem-estar do pet.
 - **Persistência Poliglota Integrada:** Dados relacionais em 3FN e Stored Procedures no **Oracle 19c** corporativo da FIAP + Documentos didáticos flexíveis em Markdown com vídeos no **MongoDB Atlas na Nuvem**.
 - **Ciclo de Vida Auditável:** Transições de status automatizadas (`PENDENTE`, `CONCLUIDO`, `EXPIRADO`), com suporte nativo a desmarcação imediata e auditoria de conclusões via Trigger PL/SQL.
@@ -210,14 +210,15 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 ### 1. Fluxo de Gamificação e Ciclo de Vida da Rotina
 1. **Criação de Tarefa:** O tutor cria uma rotina (`/tarefas`) vinculando pet e responsável. O sistema valida se o usuário pertence à rede de cuidado do animal e inicializa com status `PENDENTE`.
 2. **Auto-Expiração Inteligente:** Ao listar ou buscar tarefas, o método `expirarTarefasPendentesAtrasadas()` avalia o `prazo` contra o relógio do servidor (`LocalDateTime.now()`) e transiciona tarefas pendentes atrasadas para `EXPIRADO` diretamente no banco de dados via Spring Data JPA.
-3. **Conclusão e Gamificação:** O cuidador conclui a tarefa via `PATCH /tarefas/{id}/concluir` autenticado via JWT. O sistema credita imediatamente os pontos ao cuidador (`calcularPontosTotaisUsuario`) e soma ao score de bem-estar do pet.
-4. **Desmarcação Resiliente:** Se houver necessidade de cancelamento ou correção operacional, o endpoint `PATCH /tarefas/{id}/desmarcar` (autenticado via JWT) valida a titularidade do cuidador no Care Circle, remove os pontos acumulados e retorna a tarefa para `PENDENTE`.
+3. **Conclusão e Gamificação:** O cuidador conclui a tarefa via `PATCH /tarefas/{id}/concluir` autenticado via JWT. O sistema credita imediatamente os pontos diretamente ao score de bem-estar do pet via Stored Procedure Oracle (`pr_calcular_pontuacao_pet`), preservando o registro do criador original da tarefa.
+4. **Desmarcação Resiliente:** Se houver necessidade de cancelamento ou correção operacional, o endpoint `PATCH /tarefas/{id}/desmarcar` (autenticado via JWT) valida a titularidade do cuidador no Care Circle, remove os pontos acumulados do pet e retorna a tarefa para `PENDENTE`.
 
 ### 2. Fluxo de Governança Familiar Pet-Centric (Care Circle)
 1. **Titularidade Automática no Nascimento do Pet:** Ao cadastrar um pet (`POST /pets`), o tutor criador é registrado imediatamente na tabela `usuario_pet` com a flag `responsavel_principal = true`.
 2. **Convite de Co-cuidadores:** O responsável principal convida familiares ou cuidadores (`POST /pets/{petId}/cuidadores`) informando o e-mail do convidado.
 3. **Visão Agregada da Família:** O endpoint `GET /usuarios/me/rede-cuidado` (ou `GET /usuarios/{id}/rede-cuidado` para `ADMIN`) consolida todos os animais sob responsabilidade do usuário, a lista completa de co-cuidadores de cada animal e as tarefas pendentes/concluídas da semana via Stored Procedure Oracle.
 4. **Transferência de Responsabilidade Principal:** Caso a tutela principal mude, o endpoint `PATCH /pets/{petId}/responsavel-principal` valida se a solicitação partiu do titular atual e transfere atomicamente os privilégios administrativos via Stored Procedure PL/SQL.
+5. **Exclusão com Cascata Poliglota (Oracle + MongoDB):** A exclusão de um animal (`DELETE /pets/{id}`) ou do tutor principal (`DELETE /usuarios/me` ou `DELETE /usuarios/{id}`) remove os vínculos relacionais no Oracle 19c e simultaneamente limpa em lote todos os documentos NoSQL de conteúdos pedagógicos associados no MongoDB Atlas (`conteudoAulaRepository.deleteByAulaIdIn(...)`), eliminando qualquer registro órfão poliglota.
 
 ### 3. Fluxo de Trilhas Educativas com Persistência Poliglota (Oracle + MongoDB Atlas)
 1. **Curadoria Relacional (ADMIN):** Administradores criam trilhas (`POST /trilhas`), módulos (`POST /modulos`) e lições (`POST /aulas`) no Oracle 19c.
@@ -228,9 +229,11 @@ O sistema implementa múltiplos fluxos transacionais e analíticos de ponta a po
 ### 4. Fluxo de Integração Declarativa de Endereço via ViaCEP
 1. **Consumo sem Boilerplate:** Utilizando HTTP Service Interfaces (`@HttpExchange`), o serviço `ViaCepService` consome a API do ViaCEP (`https://viacep.com.br/ws/{cep}/json`).
 2. **Normalização Automática de Entidades:** O `EnderecoService` decompõe a resposta, garantindo a normalização e reaproveitamento de `Bairro`, `Cidade` e `Estado` no Oracle Database sem duplicidades.
+3. **Resiliência com Fallback Automático:** Caso a consulta retorne campos nulos ou em branco (comum em CEPs únicos municipais ou zonas rurais), o serviço normaliza os valores automaticamente como `"Não Informado"`, protegendo colunas `NOT NULL` do banco sem interromper o cadastro.
+4. **Tratamento de Indisponibilidade Externa:** Falhas de rede ou timeout na consulta do ViaCEP disparam `RestClientException`, capturada centralmente pelo `GlobalExceptionHandler` e retornando `503 Service Unavailable`.
 
 ### 5. Fluxo de Processamento PL/SQL no Oracle Database (Stored Procedures Tipadas)
-1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos` e `/pets/{id}/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet` e `pr_calcular_pontuacao_usuario`) mapeadas via `@NamedStoredProcedureQueries` no Hibernate 7.
+1. **Cálculo de Pontuação via Stored Procedures:** Disparado pelos endpoints canônicos de pontos (`/pets/me/pontos` e `/pets/{id}/pontos`), executa as rotinas empacotadas do Oracle (`pr_calcular_pontuacao_pet` para pontuação individual do animal e `pr_calcular_pontuacao_usuario` para agregação dos pontos de todos os pets tutelados pelo usuário) mapeadas via `@NamedStoredProcedureQueries` no Hibernate 7.
 2. **Relatório Analítico de Rede de Cuidado:** Disparado por `GET /usuarios/me/rede-cuidado` e `GET /usuarios/{id}/rede-cuidado`, executa `pkg_petguardian.pr_obter_resumo_rede_cuidado`.
 3. **Transferência Atômica de Titularidade:** Disparado por `PATCH /pets/{petId}/responsavel-principal`, executa `pkg_petguardian.pr_transferir_responsavel_principal` garantindo consistência na troca do titular principal do animal.
 
@@ -278,6 +281,10 @@ Os endpoints utilizam os seguintes prefixos visuais padronizados no Swagger UI:
 | `DELETE` | `/usuarios/{id}` | `[ADMIN]` Deletar usuário por ID | `ADMIN` |
 | `PATCH` | `/usuarios/{id}/role` | `[ADMIN]` Alterar role do usuário | `ADMIN` |
 | `PATCH` | `/usuarios/{id}/upgrade-premium` | `[ADMIN]` Realizar upgrade de um usuário para PREMIUM | `ADMIN` |
+
+> [!IMPORTANT]
+> **Salvaguarda de Governança Administrativa (ADMIN):**
+> Administradores podem se autoexcluir (`DELETE /usuarios/me`), ser excluídos (`DELETE /usuarios/{id}`) ou ter seu perfil alterado (`PATCH /usuarios/{id}/role`), **desde que não sejam o único administrador existente no sistema** (`countByRole(ADMIN) > 1`). Se houver apenas 1 ADMIN no banco, qualquer tentativa de exclusão ou rebaixamento é bloqueada com `400 Bad Request` ("Não é possível excluir/rebaixar o único administrador do sistema"), garantindo que o sistema nunca fique sem gestor administrativo.
 
 ---
 
@@ -442,7 +449,7 @@ Para validação de rotas, permissões de segurança RBAC e persistência com St
 A API possui interceptador global (`@RestControllerAdvice` em `GlobalExceptionHandler`) que padroniza os erros:
 
 ### Formato 1: Erros de Validação de Campos (`400 Bad Request`)
-Disparado por falhas no Bean Validation (`@NotBlank`, `@NotNull`, `@Pattern`, `@DddValidation`, `@EnumValidation`, `@Positive`, `@Future`):
+Disparado por falhas no Bean Validation (`@NotBlank`, `@NotNull`, `@Pattern`, `@DddValidation`, `@EnumValidation`, `@Positive`, `@Future`) ou validação de parâmetros de requisição (`@RequestParam` inválidos ou parâmetros obrigatórios ausentes):
 ```json
 {
   "erros": [
@@ -458,8 +465,8 @@ Disparado por falhas no Bean Validation (`@NotBlank`, `@NotNull`, `@Pattern`, `@
 }
 ```
 
-### Formato 2: Erros de Domínio e Segurança (`401`, `403`, `404`, `409`)
-Disparado por `ResourceNotFoundException` (`404`), `AuthenticationException` (`401`), `AuthorizationDeniedException` (`403`) ou `DataIntegrityViolationException` (`409`):
+### Formato 2: Erros de Domínio, Regras de Negócio e Infraestrutura (`400`, `401`, `403`, `404`, `409`, `503`)
+Disparado por violações de regras de negócio (`IllegalArgumentException` com `400`), `ResourceNotFoundException` (`404`), `AuthenticationException` (`401`), `AuthorizationDeniedException` (`403`), `DataIntegrityViolationException` (`409`) ou falha em serviço externo (`RestClientException` com `503`):
 ```json
 {
   "timestamp": "2026-10-11T18:22:30.021Z",

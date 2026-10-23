@@ -5,6 +5,7 @@ import fiap.com.br.petguardian.tarefa.dto.TarefaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,7 +32,7 @@ public class TarefaController {
     @Operation(summary = "[CUIDADOR] Listar tarefas do cuidador autenticado com filtro opcional de status e paginação")
     public Page<TarefaResponse> findMyTarefas(
             Authentication authentication,
-            @RequestParam(defaultValue = "ALL") String status,
+            @RequestParam(defaultValue = "ALL") @Pattern(regexp = "(?i)(ALL|PENDENTE|CONCLUIDO|EXPIRADO)", message = "O status deve ser ALL, PENDENTE, CONCLUIDO ou EXPIRADO.") String status,
             @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
         return tarefaService.findAllByEmail(authentication.getName(), status, pageable)
             .map(TarefaResponse::fromEntity);
@@ -72,24 +73,24 @@ public class TarefaController {
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "[CUIDADOR / ADMIN] Atualizar tarefa")
     @PreAuthorize("hasRole('ADMIN') or (@tarefaService.isCuidadorDaTarefa(#id, authentication.name) and @usuarioPetService.isCuidadorDoPet(#tarefaRequest.petId(), authentication.name))")
-    public TarefaResponse update(@PathVariable Long id, @Valid @RequestBody TarefaRequest tarefaRequest, Authentication authentication) {
-        return TarefaResponse.fromEntity(tarefaService.update(id, tarefaRequest, authentication.getName()));
+    public TarefaResponse update(@PathVariable Long id, @Valid @RequestBody TarefaRequest tarefaRequest) {
+        return TarefaResponse.fromEntity(tarefaService.update(id, tarefaRequest));
     }
 
     @PatchMapping("/{id}/concluir")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "[CUIDADOR / ADMIN] Concluir tarefa")
     @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
-    public TarefaResponse concluir(@PathVariable Long id, Authentication authentication) {
-        return TarefaResponse.fromEntity(tarefaService.concluir(id, authentication.getName()));
+    public TarefaResponse concluir(@PathVariable Long id) {
+        return TarefaResponse.fromEntity(tarefaService.concluir(id));
     }
 
     @PatchMapping("/{id}/desmarcar")
     @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "[CUIDADOR / ADMIN] Desmarcar tarefa concluída retornando ao status PENDENTE")
     @PreAuthorize("hasRole('ADMIN') or @tarefaService.isCuidadorDaTarefa(#id, authentication.name)")
-    public TarefaResponse desmarcar(@PathVariable Long id, Authentication authentication) {
-        return TarefaResponse.fromEntity(tarefaService.desmarcar(id, authentication.getName()));
+    public TarefaResponse desmarcar(@PathVariable Long id) {
+        return TarefaResponse.fromEntity(tarefaService.desmarcar(id));
     }
 
     @DeleteMapping("/{id}")
@@ -119,7 +120,7 @@ public class TarefaController {
     @PreAuthorize("hasRole('ADMIN')")
     public Page<TarefaResponse> findByUsuario(
             @PathVariable Long usuarioId,
-            @RequestParam(defaultValue = "ALL") String status,
+            @RequestParam(defaultValue = "ALL") @Pattern(regexp = "(?i)(ALL|PENDENTE|CONCLUIDO|EXPIRADO)", message = "O status deve ser ALL, PENDENTE, CONCLUIDO ou EXPIRADO.") String status,
             @PageableDefault(size = 10, page = 0, sort = "prazo", direction = Sort.Direction.ASC) Pageable pageable) {
         return tarefaService.findAllByUsuario(usuarioId, status, pageable)
             .map(TarefaResponse::fromEntity);

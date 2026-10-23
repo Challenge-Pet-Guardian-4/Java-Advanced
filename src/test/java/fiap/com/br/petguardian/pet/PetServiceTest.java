@@ -8,6 +8,10 @@ import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.pet.raca.RacaRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
+import fiap.com.br.petguardian.trilha.Trilha;
+import fiap.com.br.petguardian.trilha.modulo.Modulo;
+import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
@@ -28,6 +32,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -55,6 +60,9 @@ class PetServiceTest {
 
     @Mock
     private HistoricoRepository historicoRepository;
+
+    @Mock
+    private ConteudoAulaRepository conteudoRepository;
 
     @InjectMocks
     private PetService petService;
@@ -220,14 +228,31 @@ class PetServiceTest {
     }
 
     @Test
-    @DisplayName("Deve deletar pet chamando deleteById")
+    @DisplayName("Deve deletar pet sem trilhas chamando delete e limpando lista vazia no mongo")
     void deveDeletarPet() {
         Pet pet = Pet.builder().id(10L).build();
         when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
 
         petService.delete(10L);
 
-        verify(petRepository).deleteById(10L);
+        verify(petRepository).delete(pet);
+        verify(conteudoRepository).deleteByAulaIdIn(List.of());
+    }
+
+    @Test
+    @DisplayName("Deve deletar pet com trilhas e limpar conteudos de aula no mongo")
+    void deveDeletarPetComTrilhasECascatasMongo() {
+        Aula aula = Aula.builder().id(101L).build();
+        Modulo modulo = Modulo.builder().id(201L).aulas(Set.of(aula)).build();
+        Trilha trilha = Trilha.builder().id(301L).modulos(Set.of(modulo)).build();
+        Pet pet = Pet.builder().id(10L).trilhas(Set.of(trilha)).build();
+
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+
+        petService.delete(10L);
+
+        verify(petRepository).delete(pet);
+        verify(conteudoRepository).deleteByAulaIdIn(List.of(101L));
     }
 
     @Test

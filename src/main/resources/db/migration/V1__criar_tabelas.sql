@@ -155,6 +155,7 @@ CREATE TABLE aula (
     concluida        NUMBER(1) NOT NULL,
     modulo_id_modulo NUMBER(5) NOT NULL,
     CONSTRAINT aula_pk PRIMARY KEY (id_aula),
+    CONSTRAINT ck_aula_dificuldade CHECK (dificuldade IN ('AVANCADO', 'FACIL', 'MEDIO')),
     CONSTRAINT ck_aula_concluida CHECK (concluida IN (0, 1)),
     CONSTRAINT aula_modulo_fk FOREIGN KEY (modulo_id_modulo) REFERENCES modulo(id_modulo)
 );

@@ -97,11 +97,11 @@ class TarefaServiceTest {
     }
 
     @Test
-    @DisplayName("Deve concluir tarefa somando pontos e registrando concluinte e data")
+    @DisplayName("Deve concluir tarefa definindo status CONCLUIDO e data de conclusao, preservando criador original")
     void deveConcluirTarefa() {
         Pet pet = Pet.builder().id(10L).build();
         Usuario criador = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        Usuario concluinte = Usuario.builder().id(2L).nome("CoCuidador").email("concluinte@fiap.com.br").build();
+
 
         Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
         Status statusConcluido = Status.builder().id(2L).nomeStatus(EnumStatus.CONCLUIDO).build();
@@ -119,16 +119,53 @@ class TarefaServiceTest {
                 .build();
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
-        when(usuarioRepository.findByEmail("concluinte@fiap.com.br")).thenReturn(Optional.of(concluinte));
+
         when(statusService.findStatus(EnumStatus.CONCLUIDO)).thenReturn(statusConcluido);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Tarefa resultado = tarefaService.concluir(100L, "concluinte@fiap.com.br");
+        Tarefa resultado = tarefaService.concluir(100L);
 
         assertNotNull(resultado);
         assertEquals(EnumStatus.CONCLUIDO, resultado.getStatus().getNomeStatus());
-        assertEquals(2L, resultado.getUsuario().getId());
+        assertEquals(1L, resultado.getUsuario().getId());
         assertNotNull(resultado.getConclusao());
+    }
+
+    @Test
+    @DisplayName("Deve atualizar tarefa preservando criador original")
+    void deveAtualizarTarefaPreservandoCriadorOriginal() {
+        Pet petAntigo = Pet.builder().id(10L).build();
+        Pet petNovo = Pet.builder().id(20L).build();
+        Usuario criador = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+
+        Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
+
+        Tarefa tarefaExistente = Tarefa.builder()
+                .id(100L)
+                .titulo("Título Antigo")
+                .pontosTarefa(5)
+                .descricao("Desc Antiga")
+                .criacao(LocalDateTime.now().minusHours(2))
+                .prazo(LocalDateTime.now().plusHours(2))
+                .status(statusPendente)
+                .usuario(criador)
+                .pet(petAntigo)
+                .build();
+
+        var request = new TarefaRequest("Título Novo", 10, "Desc Nova", LocalDateTime.now().plusDays(1), 20L, "PENDENTE", null);
+
+        when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefaExistente));
+        when(petRepository.findById(20L)).thenReturn(Optional.of(petNovo));
+        when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
+        when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Tarefa resultado = tarefaService.update(100L, request);
+
+        assertNotNull(resultado);
+        assertEquals("Título Novo", resultado.getTitulo());
+        assertEquals(10, resultado.getPontosTarefa());
+        assertEquals(1L, resultado.getUsuario().getId());
+        assertEquals(20L, resultado.getPet().getId());
     }
 
     @Test
@@ -139,7 +176,7 @@ class TarefaServiceTest {
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
 
-        assertThrows(IllegalArgumentException.class, () -> tarefaService.concluir(100L, "cuidador@fiap.com.br"));
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.concluir(100L));
     }
 
     @Test
@@ -165,7 +202,7 @@ class TarefaServiceTest {
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        Tarefa resultado = tarefaService.desmarcar(100L, "cuidador@fiap.com.br");
+        Tarefa resultado = tarefaService.desmarcar(100L);
 
         assertNotNull(resultado);
         assertEquals(EnumStatus.PENDENTE, resultado.getStatus().getNomeStatus());
@@ -181,7 +218,7 @@ class TarefaServiceTest {
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefa));
 
-        assertThrows(IllegalArgumentException.class, () -> tarefaService.desmarcar(100L, "cuidador@fiap.com.br"));
+        assertThrows(IllegalArgumentException.class, () -> tarefaService.desmarcar(100L));
     }
 
     @Test

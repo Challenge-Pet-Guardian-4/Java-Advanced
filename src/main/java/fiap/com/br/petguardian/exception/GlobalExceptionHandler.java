@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.http.HttpStatus;
@@ -17,8 +18,11 @@ import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -162,6 +166,31 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNSUPPORTED_MEDIA_TYPE, mensagem, request);
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingParameter(
+            MissingServletRequestParameterException exception, HttpServletRequest request) {
+        log.warn("Parâmetro obrigatório ausente: {}", exception.getParameterName());
+        String mensagem = String.format("O parâmetro obrigatório '%s' não foi informado.", exception.getParameterName());
+        return error(HttpStatus.BAD_REQUEST, mensagem, request);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiErrorResponse> handleHandlerMethodValidation(
+            HandlerMethodValidationException exception, HttpServletRequest request) {
+        log.warn("Parâmetro de requisição inválido: {}", exception.getMessage());
+        String mensagem = String.join("; ", exception.getAllErrors().stream()
+                .map(MessageSourceResolvable::getDefaultMessage)
+                .toList());
+        return error(HttpStatus.BAD_REQUEST, mensagem, request);
+    }
+
+    @ExceptionHandler(RestClientException.class)
+    public ResponseEntity<ApiErrorResponse> handleRestClient(
+            RestClientException exception, HttpServletRequest request) {
+        log.error("Falha na integração com serviço externo (ViaCEP)", exception);
+        return error(HttpStatus.SERVICE_UNAVAILABLE,
+                "O serviço de consulta de CEP está indisponível no momento. Tente novamente mais tarde.", request);
+    }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiErrorResponse> handleDataIntegrityViolation(

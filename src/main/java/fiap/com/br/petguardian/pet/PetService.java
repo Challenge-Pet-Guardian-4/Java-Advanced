@@ -10,6 +10,8 @@ import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.pet.raca.RacaRepository;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
+import fiap.com.br.petguardian.trilha.aula.Aula;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
 import fiap.com.br.petguardian.usuario.UsuarioRepository;
 import fiap.com.br.petguardian.usuariopet.UsuarioPet;
@@ -34,6 +36,7 @@ public class PetService {
     private final RacaRepository racaRepository;
     private final TarefaRepository tarefaRepository;
     private final HistoricoRepository historicoRepository;
+    private final ConteudoAulaRepository conteudoRepository;
 
     // =========================================================================
     // 1. CONSULTAS GERAIS E POR USUÁRIO
@@ -82,8 +85,14 @@ public class PetService {
 
     @Transactional
     public void delete(Long id) {
-        findPetById(id);
-        petRepository.deleteById(id);
+        Pet pet = findPetById(id);
+        List<Long> aulaIds = pet.getTrilhas().stream()
+                .flatMap(t -> t.getModulos().stream())
+                .flatMap(m -> m.getAulas().stream())
+                .map(Aula::getId)
+                .toList();
+        petRepository.delete(pet);
+        conteudoRepository.deleteByAulaIdIn(aulaIds);
     }
 
     // =========================================================================

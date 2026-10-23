@@ -68,14 +68,12 @@ public class TarefaService {
     }
 
     @Transactional
-    public Tarefa update(Long id, TarefaRequest request, String authEmail) {
+    public Tarefa update(Long id, TarefaRequest request) {
         Tarefa tarefa = findTarefaById(id);
         Pet pet = findPetById(request.petId());
-        Usuario usuario = findUsuarioByEmail(authEmail);
         EnumStatus status = EnumStatus.valueOf(request.status().trim().toUpperCase());
 
-        LocalDateTime conclusao = definirConclusao(tarefa, status, request.conclusao(), LocalDateTime.now());
-        aplicarEm(tarefa, request, usuario, pet, statusService.findStatus(status), conclusao);
+        aplicarEm(tarefa, request, pet, status);
         return tarefaRepository.save(tarefa);
     }
 
@@ -86,18 +84,18 @@ public class TarefaService {
     }
 
     @Transactional
-    public Tarefa concluir(Long id, String authEmail) {
+    public Tarefa concluir(Long id) {
         expirarTarefasPendentesAtrasadas();
         Tarefa tarefa = findTarefaById(id);
         validarPendenteParaConclusao(tarefa);
-        Usuario usuario = findUsuarioByEmail(authEmail);
 
-        aplicarConclusao(tarefa, usuario, statusService.findStatus(EnumStatus.CONCLUIDO));
+        tarefa.setStatus(statusService.findStatus(EnumStatus.CONCLUIDO));
+        tarefa.setConclusao(LocalDateTime.now());
         return tarefaRepository.save(tarefa);
     }
 
     @Transactional
-    public Tarefa desmarcar(Long id, String authEmail) {
+    public Tarefa desmarcar(Long id) {
         Tarefa tarefa = findTarefaById(id);
         validarConcluidaParaDesmarcar(tarefa);
 
@@ -117,11 +115,6 @@ public class TarefaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tarefa com id " + id + " não encontrada."));
     }
 
-    private LocalDateTime definirConclusao(Tarefa tarefa, EnumStatus status, LocalDateTime conclusaoInformada, LocalDateTime agora) {
-        if (status != EnumStatus.CONCLUIDO) return null;
-        return conclusaoInformada != null ? conclusaoInformada : (tarefa.getConclusao() != null ? tarefa.getConclusao() : agora);
-    }
-
     private Pet findPetById(Long id) {
         return petRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
@@ -138,21 +131,16 @@ public class TarefaService {
         tarefaRepository.expirarTarefasPendentesAtrasadas(LocalDateTime.now(), pendente, expirado);
     }
 
-    private void aplicarEm(Tarefa tarefa, TarefaRequest request, Usuario usuario, Pet pet, Status statusObj, LocalDateTime conclusaoCalculada) {
+    private void aplicarEm(Tarefa tarefa, TarefaRequest request, Pet pet, EnumStatus statusEnum) {
         tarefa.setTitulo(request.titulo());
         tarefa.setPontosTarefa(request.pontosTarefa());
         tarefa.setDescricao(request.descricao());
         tarefa.setPrazo(request.prazo());
-        tarefa.setUsuario(usuario);
         tarefa.setPet(pet);
-        tarefa.setStatus(statusObj);
-        tarefa.setConclusao(conclusaoCalculada);
-    }
-
-    private void aplicarConclusao(Tarefa tarefa, Usuario usuario, Status statusConcluido) {
-        tarefa.setUsuario(usuario);
-        tarefa.setStatus(statusConcluido);
-        tarefa.setConclusao(LocalDateTime.now());
+        tarefa.setStatus(statusService.findStatus(statusEnum));
+        tarefa.setConclusao(statusEnum == EnumStatus.CONCLUIDO
+                ? (request.conclusao() != null ? request.conclusao() : LocalDateTime.now())
+                : null);
     }
 
     private void validarPendenteParaConclusao(Tarefa tarefa) {

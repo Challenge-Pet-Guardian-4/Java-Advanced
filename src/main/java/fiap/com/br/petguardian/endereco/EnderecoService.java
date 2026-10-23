@@ -67,13 +67,13 @@ public class EnderecoService {
     private Endereco buildEndereco(EnderecoRequest request) {
         ViaCepResponse dados = obterDadosCep(request.cep());
         Bairro bairro = obterOuCriarBairro(dados);
-        return request.toEntity(dados.logradouro(), bairro);
+        return request.toEntity(normalizarTexto(dados.logradouro()), bairro);
     }
 
     private Endereco aplicarEndereco(Endereco endereco, EnderecoRequest request) {
         ViaCepResponse dados = obterDadosCep(request.cep());
         Bairro bairro = obterOuCriarBairro(dados);
-        return aplicarEm(endereco, request, dados.logradouro(), bairro);
+        return aplicarEm(endereco, request, normalizarTexto(dados.logradouro()), bairro);
     }
 
     private ViaCepResponse obterDadosCep(String cep) {
@@ -85,14 +85,21 @@ public class EnderecoService {
     }
 
     private Bairro obterOuCriarBairro(ViaCepResponse dados) {
-        Estado estado = estadoRepository.findByNomeIgnoreCase(dados.estado())
-                .orElseGet(() -> estadoRepository.save(Estado.builder().nome(dados.estado()).build()));
+        String nomeEstado = normalizarTexto(dados.estado());
+        Estado estado = estadoRepository.findByNomeIgnoreCase(nomeEstado)
+                .orElseGet(() -> estadoRepository.save(Estado.builder().nome(nomeEstado).build()));
 
-        Cidade cidade = cidadeRepository.findByNomeIgnoreCaseAndEstadoId(dados.localidade(), estado.getId())
-                .orElseGet(() -> cidadeRepository.save(Cidade.builder().nome(dados.localidade()).estado(estado).build()));
+        String nomeCidade = normalizarTexto(dados.localidade());
+        Cidade cidade = cidadeRepository.findByNomeIgnoreCaseAndEstadoId(nomeCidade, estado.getId())
+                .orElseGet(() -> cidadeRepository.save(Cidade.builder().nome(nomeCidade).estado(estado).build()));
 
-        return bairroRepository.findByNomeIgnoreCaseAndCidadeId(dados.bairro(), cidade.getId())
-                .orElseGet(() -> bairroRepository.save(Bairro.builder().nome(dados.bairro()).cidade(cidade).build()));
+        String nomeBairro = normalizarTexto(dados.bairro());
+        return bairroRepository.findByNomeIgnoreCaseAndCidadeId(nomeBairro, cidade.getId())
+                .orElseGet(() -> bairroRepository.save(Bairro.builder().nome(nomeBairro).cidade(cidade).build()));
+    }
+
+    private String normalizarTexto(String valor) {
+        return (valor == null || valor.isBlank()) ? "Não Informado" : valor.trim();
     }
 
     private Endereco aplicarEm(Endereco endereco, EnderecoRequest request, String rua, Bairro bairro) {

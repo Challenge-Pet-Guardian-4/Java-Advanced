@@ -5,7 +5,7 @@ import fiap.com.br.petguardian.endereco.EnderecoService;
 import fiap.com.br.petguardian.endereco.dto.EnderecoRequest;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.telefone.Telefone;
 import fiap.com.br.petguardian.telefone.TelefoneRepository;
 import fiap.com.br.petguardian.usuario.dto.UsuarioRequest;
@@ -29,6 +29,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -49,7 +50,7 @@ class UsuarioServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private PetRepository petRepository;
+    private PetService petService;
 
     @InjectMocks
     private UsuarioService usuarioService;
@@ -236,7 +237,7 @@ class UsuarioServiceTest {
 
         usuarioService.delete(1L);
 
-        verify(petRepository).delete(pet);
+        verify(petService).delete(10L);
         verify(usuarioRepository).delete(usuario);
     }
 
@@ -259,13 +260,13 @@ class UsuarioServiceTest {
 
         usuarioService.delete(2L);
 
-        verify(petRepository, never()).delete(any(Pet.class));
+        verify(petService, never()).delete(anyLong());
         verify(usuarioRepository).delete(coCuidador);
     }
 
     @Test
-    @DisplayName("delete por email deve lancar IllegalArgumentException se usuario for ADMIN")
-    void deletePorEmailDeveLancarExcecaoParaAdmin() {
+    @DisplayName("delete por email deve lancar IllegalArgumentException se for o unico ADMIN")
+    void deletePorEmailDeveLancarExcecaoSeForUnicoAdmin() {
         Usuario admin = Usuario.builder()
                 .id(1L)
                 .email("admin@fiap.com.br")
@@ -274,12 +275,85 @@ class UsuarioServiceTest {
                 .build();
 
         when(usuarioRepository.findByEmail("admin@fiap.com.br")).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRole(UsuarioRole.ADMIN)).thenReturn(1L);
 
         IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                 () -> usuarioService.delete("admin@fiap.com.br"));
 
-        assertEquals("Administrador não pode se autoexcluir para evitar perda de acesso ao sistema.", ex.getMessage());
+        assertEquals("Não é possível excluir o único administrador do sistema.", ex.getMessage());
         verify(usuarioRepository, never()).delete(any(Usuario.class));
+    }
+
+    @Test
+    @DisplayName("delete por email deve permitir autoexclusao de ADMIN se houver outro ADMIN no sistema")
+    void deletePorEmailDevePermitirExclusaoDeAdminSeHouverOutro() {
+        Usuario admin = Usuario.builder()
+                .id(1L)
+                .email("admin@fiap.com.br")
+                .role(UsuarioRole.ADMIN)
+                .usuarioPets(Set.of())
+                .build();
+
+        when(usuarioRepository.findByEmail("admin@fiap.com.br")).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRole(UsuarioRole.ADMIN)).thenReturn(2L);
+
+        usuarioService.delete("admin@fiap.com.br");
+
+        verify(usuarioRepository).delete(admin);
+    }
+
+    @Test
+    @DisplayName("delete por ID deve lancar IllegalArgumentException se for o unico ADMIN")
+    void deletePorIdDeveLancarExcecaoSeForUnicoAdmin() {
+        Usuario admin = Usuario.builder().id(1L).email("admin@fiap.com.br").role(UsuarioRole.ADMIN).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRole(UsuarioRole.ADMIN)).thenReturn(1L);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> usuarioService.delete(1L));
+
+        assertEquals("Não é possível excluir o único administrador do sistema.", ex.getMessage());
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
+    }
+
+    @Test
+    @DisplayName("delete por ID deve permitir exclusao de ADMIN se houver outro ADMIN no sistema")
+    void deletePorIdDevePermitirExclusaoDeAdminSeHouverOutro() {
+        Usuario admin = Usuario.builder().id(1L).email("admin@fiap.com.br").role(UsuarioRole.ADMIN).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRole(UsuarioRole.ADMIN)).thenReturn(2L);
+
+        usuarioService.delete(1L);
+
+        verify(usuarioRepository).delete(admin);
+    }
+
+    @Test
+    @DisplayName("updateRole deve impedir o rebaixamento do unico ADMIN")
+    void updateRoleDeveImpedirRebaixarUnicoAdmin() {
+        Usuario admin = Usuario.builder().id(1L).role(UsuarioRole.ADMIN).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRole(UsuarioRole.ADMIN)).thenReturn(1L);
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> usuarioService.updateRole(1L, "COMUM"));
+
+        assertEquals("Não é possível rebaixar o único administrador do sistema.", ex.getMessage());
+        assertEquals(UsuarioRole.ADMIN, admin.getRole());
+        verify(usuarioRepository, never()).save(any(Usuario.class));
+    }
+
+    @Test
+    @DisplayName("updateRole deve permitir rebaixamento de ADMIN se houver outro ADMIN no sistema")
+    void updateRoleDevePermitirRebaixarAdminSeHouverOutro() {
+        Usuario admin = Usuario.builder().id(1L).role(UsuarioRole.ADMIN).build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(usuarioRepository.countByRole(UsuarioRole.ADMIN)).thenReturn(2L);
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Usuario resultado = usuarioService.updateRole(1L, "COMUM");
+
+        assertEquals(UsuarioRole.COMUM, resultado.getRole());
+        verify(usuarioRepository).save(admin);
     }
 
     @Test
