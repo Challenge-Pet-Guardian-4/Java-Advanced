@@ -54,7 +54,6 @@
     btnPingApi: document.getElementById('btn-ping-api'),
     apiStatusHint: document.getElementById('api-status-hint'),
     btnSubmitLogin: document.getElementById('btn-submit-login'),
-    btnFillAdmin: document.getElementById('btn-fill-admin'),
     btnEnvAzure: document.getElementById('btn-env-azure'),
     btnEnvLocalhost: document.getElementById('btn-env-localhost'),
     selectEnvTopbar: document.getElementById('select-env-topbar'),
@@ -287,6 +286,19 @@
     }
   }
 
+  function toLocalDateInputValue(date = new Date()) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function toLocalDateTimeInputValue(date = new Date()) {
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${toLocalDateInputValue(date)}T${h}:${min}`;
+  }
+
   function renderSimpleMarkdown(md) {
     if (!md) return '<p class="text-tertiary">Nenhum conteúdo em Markdown digitado.</p>';
     let html = escapeHtml(md);
@@ -435,7 +447,11 @@
       if (!response.ok) {
         let errorMsg = `Erro HTTP ${response.status}`;
         if (data && typeof data === 'object') {
-          errorMsg = data.message || data.error || (data.errors ? JSON.stringify(data.errors) : errorMsg);
+          if (Array.isArray(data.erros) && data.erros.length > 0) {
+            errorMsg = data.erros.map(e => e.campo ? `${e.campo}: ${e.mensagem}` : e.mensagem).join(' | ');
+          } else {
+            errorMsg = data.message || data.error || (data.errors ? JSON.stringify(data.errors) : errorMsg);
+          }
         } else if (typeof data === 'string' && data.trim()) {
           errorMsg = data;
         }
@@ -651,19 +667,32 @@
     dom.systemHealthText.textContent = text;
   }
 
+  function updateSelectPreservingValue(selectEl, defaultLabel, optionsHtml) {
+    if (!selectEl) return;
+    const prevValue = selectEl.value;
+    selectEl.innerHTML = `<option value="">${defaultLabel}</option>` + optionsHtml;
+    if (prevValue && Array.from(selectEl.options).some(opt => opt.value === String(prevValue))) {
+      selectEl.value = String(prevValue);
+    }
+  }
+
   function populateSelectOptions() {
     // 1. Dropdown de Pets nas Tarefas e Trilhas
     const petOptions = state.pets.map(p => `<option value="${p.id}">#${p.id} - ${escapeHtml(p.nome)} (${escapeHtml(p.raca || 'SRD')})</option>`).join('');
-    if (dom.taskPetId) dom.taskPetId.innerHTML = '<option value="">Selecione um pet...</option>' + petOptions;
-    if (dom.trilhaPetId) dom.trilhaPetId.innerHTML = '<option value="">Selecione um pet...</option>' + petOptions;
+    updateSelectPreservingValue(dom.taskPetId, 'Selecione um pet...', petOptions);
+    updateSelectPreservingValue(dom.trilhaPetId, 'Selecione o pet associado...', petOptions);
 
     // 2. Dropdown de Trilhas nos Módulos
     const trilhaOptions = state.trilhas.map(t => `<option value="${t.id}">#${t.id} - ${escapeHtml(t.nome)}</option>`).join('');
-    if (dom.moduloTrilhaId) dom.moduloTrilhaId.innerHTML = '<option value="">Selecione uma trilha...</option>' + trilhaOptions;
+    updateSelectPreservingValue(dom.moduloTrilhaId, 'Selecione uma trilha...', trilhaOptions);
 
     // 3. Dropdown de Módulos nas Aulas
     const moduloOptions = state.modulos.map(m => `<option value="${m.id}">#${m.id} - ${escapeHtml(m.nome)}</option>`).join('');
-    if (dom.aulaModuloId) dom.aulaModuloId.innerHTML = '<option value="">Selecione um módulo...</option>' + moduloOptions;
+    updateSelectPreservingValue(dom.aulaModuloId, 'Selecione o módulo...', moduloOptions);
+
+    // 4. Dropdown de Aulas no Editor de Conteúdo NoSQL
+    const aulaOptions = state.aulas.map(a => `<option value="${a.id}">#${a.id} - ${escapeHtml(a.nome)}</option>`).join('');
+    updateSelectPreservingValue(dom.conteudoAulaId, 'Selecione uma aula...', aulaOptions);
   }
 
   // =========================================================================
@@ -799,8 +828,7 @@
     const porteCount = {
       PEQUENO: 0,
       MEDIO: 0,
-      GRANDE: 0,
-      GIGANTE: 0
+      GRANDE: 0
     };
 
     state.pets.forEach(p => {
@@ -815,8 +843,7 @@
     const labels = {
       PEQUENO: 'Pequeno',
       MEDIO: 'Médio',
-      GRANDE: 'Grande',
-      GIGANTE: 'Gigante'
+      GRANDE: 'Grande'
     };
 
     dom.miniBarPorte.innerHTML = Object.entries(porteCount).map(([porte, count]) => {
@@ -863,9 +890,10 @@
 
       let localidade = '<span class="text-tertiary">Não informada</span>';
       if (u.endereco) {
+        const uf = u.endereco.estado || u.endereco.uf || '';
         localidade = `
           <div class="address-cell-wrap">
-            <strong>${escapeHtml(u.endereco.cidade || '')}/${escapeHtml(u.endereco.uf || '')}</strong>
+            <strong>${escapeHtml(u.endereco.cidade || '')}${uf ? '/' + escapeHtml(uf) : ''}</strong>
             <small>${escapeHtml(u.endereco.bairro || '')} • CEP ${escapeHtml(u.endereco.cep || '')}</small>
           </div>
         `;
@@ -948,9 +976,9 @@
       dom.userId.value = u.id;
       dom.userNome.value = u.nome || '';
       dom.userEmail.value = u.email || '';
-      dom.userSenha.value = '123mudar'; // Valor padrão para passar na validação NotBlank se não alterado
-      dom.userSenhaRequired.classList.add('hidden');
-      dom.userSenhaHint.textContent = 'Mantenha ou digite uma nova senha para atualizar';
+      dom.userSenha.value = '';
+      dom.userSenhaRequired.classList.remove('hidden');
+      dom.userSenhaHint.textContent = 'Informe a senha (mín. 6 caracteres) para confirmar a atualização';
       dom.userDdd.value = u.ddd || '';
       dom.userTelefone.value = u.numeroTelefone || '';
       dom.userRole.value = (u.role || 'COMUM').toUpperCase();
@@ -959,7 +987,7 @@
         dom.userNumero.value = u.endereco.numero || '';
         dom.userCidade.value = u.endereco.cidade || '';
         dom.userBairro.value = u.endereco.bairro || '';
-        dom.userUf.value = u.endereco.uf || '';
+        dom.userUf.value = u.endereco.estado || u.endereco.uf || '';
       }
     } else {
       dom.userModalTitle.textContent = 'Novo Usuário';
@@ -987,15 +1015,15 @@
       return;
     }
 
-    if (!id && (!senha || senha.length < 6)) {
-      showToast('A senha deve ter no mínimo 6 caracteres.', 'warning');
+    if (!senha || senha.length < 6 || senha.length > 72) {
+      showToast('A senha é obrigatória e deve ter no mínimo 6 caracteres.', 'warning');
       return;
     }
 
     const payload = {
       nome,
       email,
-      senha: senha || '123mudar',
+      senha,
       ddd,
       numeroTelefone,
       endereco: {
@@ -1332,11 +1360,15 @@
       const histEl = document.getElementById('prontuario-historico-list');
       const histCountEl = document.getElementById('prontuario-hist-count');
 
-      if (pointsEl && detail.pontosTotais !== undefined) {
-        pointsEl.textContent = `${detail.pontosTotais} pts`;
+      const totalPts = detail.pontos?.pontosTotais ?? detail.pontosTotais;
+      const ptsTarefas = detail.pontos?.pontosTarefas ?? 0;
+      const ptsAulas = detail.pontos?.pontosAulas ?? 0;
+      const concluidasCount = Array.isArray(detail.tarefasConcluidas) ? detail.tarefasConcluidas.length : (detail.tarefasConcluidas || 0);
+      if (pointsEl && totalPts !== undefined) {
+        pointsEl.textContent = `${totalPts} pts`;
       }
       if (pointsLbl) {
-        pointsLbl.textContent = `Procedimento Oracle 19c (Tarefas + Aulas Concluídas: ${detail.tarefasConcluidas || 0})`;
+        pointsLbl.textContent = `Oracle 19c (Tarefas: ${ptsTarefas} pts • Aulas: ${ptsAulas} pts • ${concluidasCount} concluídas)`;
       }
       if (syncTag) {
         syncTag.className = 'sync-status-badge sync-success';
@@ -1357,7 +1389,7 @@
       }
 
       if (histEl && histCountEl) {
-        const hist = detail.historicoClinico || [];
+        const hist = detail.historicos || detail.historicoClinico || [];
         histCountEl.textContent = `${hist.length} registro${hist.length !== 1 ? 's' : ''}`;
         if (hist.length === 0) {
           histEl.innerHTML = '<p style="color: var(--text-tertiary); font-size: 12px;">Nenhum registro clínico cadastrado para este pet.</p>';
@@ -1365,10 +1397,10 @@
           histEl.innerHTML = hist.map(h => `
             <div style="padding: 8px 0; border-bottom: 1px solid var(--border-subtle); font-size: 12.5px;">
               <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
-                <strong>${escapeHtml(h.titulo || 'Registro Clínico')}</strong>
+                <strong>${escapeHtml(h.tipoHist || h.titulo || 'Registro Clínico')}</strong>
                 <small style="color: var(--text-tertiary);">${formatDate(h.dataHist)}</small>
               </div>
-              <p style="color: var(--text-secondary); margin: 0;">${escapeHtml(h.descricao || '-')}</p>
+              <p style="color: var(--text-secondary); margin: 0;">Paciente: ${escapeHtml(h.nomePet || pet.nome)}</p>
             </div>
           `).join('');
         }
@@ -1394,13 +1426,22 @@
 
   function openPetModal(petId = null) {
     dom.formPet.reset();
+    const today = new Date();
+    const minDate = new Date(today.getFullYear() - 30, today.getMonth(), today.getDate());
+    const maxDateStr = toLocalDateInputValue(today);
+    const minDateStr = toLocalDateInputValue(minDate);
+    if (dom.petDataNasc) {
+      dom.petDataNasc.min = minDateStr;
+      dom.petDataNasc.max = maxDateStr;
+    }
+
     if (petId) {
       const p = state.pets.find(x => x.id === petId);
       if (!p) return;
       dom.petModalTitle.textContent = `Editar Pet #${p.id}`;
       dom.petId.value = p.id;
       dom.petNome.value = p.nome || '';
-      dom.petDataNasc.value = p.dataNasc || '';
+      dom.petDataNasc.value = p.dataNasc ? p.dataNasc.substring(0, 10) : '';
       dom.petRaca.value = p.raca || '';
       dom.petPorte.value = (p.porte || 'MEDIO').toUpperCase();
       dom.petSexo.value = p.sexo || 'M';
@@ -1408,7 +1449,7 @@
     } else {
       dom.petModalTitle.textContent = 'Novo Pet';
       dom.petId.value = '';
-      dom.petDataNasc.value = new Date().toISOString().split('T')[0];
+      dom.petDataNasc.value = maxDateStr;
     }
     dom.petModal.classList.add('active');
   }
@@ -1424,6 +1465,18 @@
 
     if (!nome || !dataNasc || !raca || !porte || !sexo) {
       showToast('Preencha todos os campos do pet.', 'warning');
+      return;
+    }
+
+    const today = new Date();
+    const maxDateStr = toLocalDateInputValue(today);
+    const minDateStr = toLocalDateInputValue(new Date(today.getFullYear() - 30, today.getMonth(), today.getDate()));
+    if (dataNasc > maxDateStr) {
+      showToast('A data de nascimento do pet não pode estar no futuro.', 'warning');
+      return;
+    }
+    if (dataNasc < minDateStr) {
+      showToast('A data de nascimento do pet não pode ultrapassar 30 anos.', 'warning');
       return;
     }
 
@@ -1588,9 +1641,9 @@
     } else {
       dom.taskModalTitle.textContent = 'Nova Tarefa';
       dom.taskId.value = '';
-      // Prazo padrão: amanhã no mesmo horário
+      // Prazo padrão: amanhã no mesmo horário (horário local)
       const tomorrow = new Date(Date.now() + 86400000);
-      dom.taskPrazo.value = tomorrow.toISOString().substring(0, 16);
+      dom.taskPrazo.value = toLocalDateTimeInputValue(tomorrow);
       dom.taskStatus.value = 'PENDENTE';
     }
     dom.taskModal.classList.add('active');
@@ -2118,20 +2171,18 @@
     });
   }
 
-  async function openConteudoModal(aulaId = null) {
-    dom.formConteudo.reset();
-    dom.conteudoPreview.innerHTML = '<p class="text-tertiary">Digite no editor à esquerda para visualizar a prévia formatada.</p>';
-
+  async function loadConteudoForAula(aulaId) {
     if (!aulaId) {
-      const selectedAulaId = prompt('Informe o ID da Aula à qual vincular o conteúdo NoSQL:');
-      if (!selectedAulaId) return;
-      aulaId = Number(selectedAulaId);
+      dom.conteudoModalSubtitle.textContent = 'Selecione uma aula para publicar ou editar no MongoDB Atlas';
+      dom.conteudoTipo.value = 'TEXTO_MARKDOWN';
+      dom.conteudoLinks.value = '';
+      dom.conteudoMarkdown.value = '';
+      dom.conteudoPreview.innerHTML = '<p class="text-tertiary">Selecione uma aula e digite no editor à esquerda para visualizar a prévia formatada.</p>';
+      dom.btnDeleteConteudo.classList.add('hidden');
+      return;
     }
 
-    dom.conteudoAulaId.value = aulaId;
     dom.conteudoModalSubtitle.textContent = `Vinculado à Aula #${aulaId} • Armazenado no MongoDB Atlas`;
-
-    // Tenta carregar conteúdo existente
     try {
       const existing = await apiFetch(`/aulas/${aulaId}/conteudo`);
       if (existing) {
@@ -2142,14 +2193,24 @@
         dom.btnDeleteConteudo.classList.remove('hidden');
       }
     } catch {
-      // Se 404, abre em modo de criação
       dom.conteudoTipo.value = 'TEXTO_MARKDOWN';
       dom.conteudoLinks.value = '';
       dom.conteudoMarkdown.value = `# Conteúdo Didático da Aula #${aulaId}\n\nEscreva as orientações práticas em Markdown aqui...\n\n### Passos de Adestramento:\n1. Primeiro passo com pet\n2. Segundo passo\n\n> Dica: utilize reforço positivo!`;
       dom.conteudoPreview.innerHTML = renderSimpleMarkdown(dom.conteudoMarkdown.value);
       dom.btnDeleteConteudo.classList.add('hidden');
     }
+  }
 
+  async function openConteudoModal(aulaId = null) {
+    dom.formConteudo.reset();
+    populateSelectOptions();
+
+    if (!aulaId && state.aulas.length > 0) {
+      aulaId = state.aulas[0].id;
+    }
+
+    dom.conteudoAulaId.value = aulaId ? String(aulaId) : '';
+    await loadConteudoForAula(aulaId ? Number(aulaId) : null);
     dom.conteudoModal.classList.add('active');
   }
 
@@ -2399,7 +2460,8 @@
     const intervalMs = Number(dom.selectRefresh.value);
     if (intervalMs > 0) {
       state.refreshIntervalId = setInterval(() => {
-        if (state.token) {
+        const hasOpenModal = Boolean(document.querySelector('.modal-overlay.active:not(#login-modal)'));
+        if (state.token && !hasOpenModal) {
           loadAllData();
         }
       }, intervalMs);
@@ -2499,13 +2561,6 @@
       });
     }
     if (dom.btnSubmitLogin) dom.btnSubmitLogin.addEventListener('click', handleLogin);
-    if (dom.btnFillAdmin) {
-      dom.btnFillAdmin.addEventListener('click', () => {
-        dom.loginEmail.value = 'enzo.admin@petguardian.com';
-        dom.loginPassword.value = '123mudar';
-        showToast('Credenciais preenchidas.', 'info');
-      });
-    }
     if (dom.btnPingApi) dom.btnPingApi.addEventListener('click', pingApi);
     if (dom.btnLogout) dom.btnLogout.addEventListener('click', handleLogout);
 
@@ -2569,7 +2624,12 @@
       });
     }
 
-    // Live Preview no Editor de Markdown
+    // Seleção de Aula e Live Preview no Editor de Markdown
+    if (dom.conteudoAulaId) {
+      dom.conteudoAulaId.addEventListener('change', (e) => {
+        loadConteudoForAula(Number(e.target.value));
+      });
+    }
     if (dom.conteudoMarkdown) {
       dom.conteudoMarkdown.addEventListener('input', (e) => {
         dom.conteudoPreview.innerHTML = renderSimpleMarkdown(e.target.value);

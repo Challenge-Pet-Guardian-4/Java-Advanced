@@ -56,24 +56,17 @@
       <form id="login-form" class="auth-form" onsubmit="return false;">
         <div class="form-field">
           <label for="login-email">E-mail corporativo</label>
-          <input type="email" id="login-email" required placeholder="admin@petguardian.com" value="enzo.admin@petguardian.com" autocomplete="username">
+          <input type="email" id="login-email" required placeholder="admin@petguardian.com" autocomplete="username">
         </div>
         <div class="form-field">
           <label for="login-password">Senha</label>
-          <input type="password" id="login-password" required placeholder="••••••••" value="123mudar" autocomplete="current-password">
+          <input type="password" id="login-password" required placeholder="••••••••" autocomplete="current-password">
         </div>
 
         <button type="submit" id="btn-submit-login" class="btn btn-primary btn-block">
           <span class="btn-text">Entrar no Console</span>
           <span class="btn-spinner hidden"></span>
         </button>
-
-        <div class="quick-auth-bar">
-          <span class="quick-auth-label">Credencial pré-configurada:</span>
-          <button type="button" class="quick-auth-chip" id="btn-fill-admin">
-            <code>enzo.admin@petguardian.com</code> (ADMIN)
-          </button>
-        </div>
       </form>
     </div>
   </div>
@@ -182,11 +175,11 @@
         <div class="form-grid-2">
           <div class="form-field">
             <label for="user-nome">Nome Completo <span class="required">*</span></label>
-            <input type="text" id="user-nome" required maxlength="100" placeholder="Ex: Enzo Silva">
+            <input type="text" id="user-nome" required maxlength="100" placeholder="Ex: Carlos Silva">
           </div>
           <div class="form-field">
             <label for="user-email">E-mail <span class="required">*</span></label>
-            <input type="email" id="user-email" required maxlength="50" placeholder="enzo@petguardian.com">
+            <input type="email" id="user-email" required maxlength="50" placeholder="nome@exemplo.com">
           </div>
         </div>
 
@@ -194,7 +187,7 @@
           <div class="form-field">
             <label for="user-senha">Senha <span class="required" id="user-senha-required">*</span></label>
             <div class="input-password-wrap">
-              <input type="password" id="user-senha" minlength="6" maxlength="72" placeholder="Mínimo 6 caracteres">
+              <input type="password" id="user-senha" required minlength="6" maxlength="72" placeholder="Mínimo 6 caracteres">
               <button type="button" id="btn-toggle-user-senha" class="btn-eye-toggle" title="Mostrar ou ocultar senha" aria-label="Mostrar ou ocultar senha">
                 <svg class="eye-icon-show" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
@@ -307,7 +300,6 @@
               <option value="PEQUENO">Pequeno</option>
               <option value="MEDIO" selected>Médio</option>
               <option value="GRANDE">Grande</option>
-              <option value="GIGANTE">Gigante</option>
             </select>
           </div>
         </div>
@@ -589,7 +581,12 @@
         </button>
       </div>
       <form id="form-conteudo" onsubmit="return false;" class="modal-body">
-        <input type="hidden" id="conteudo-aula-id">
+        <div class="form-field">
+          <label for="conteudo-aula-id">Aula Vinculada <span class="required">*</span></label>
+          <select id="conteudo-aula-id" required>
+            <option value="">Selecione uma aula...</option>
+          </select>
+        </div>
 
         <div class="form-grid-2">
           <div class="form-field">
