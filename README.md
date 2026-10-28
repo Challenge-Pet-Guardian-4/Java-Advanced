@@ -31,7 +31,8 @@
 | **Arquivo de Coleção Insomnia** | [/docs/Insomnia_2026-05-21.yaml](./docs/Insomnia_2026-05-21.yaml) |
 
 ## 🔗 Vídeo de Demonstração (Sprint 4)
-*Link do YouTube da Sprint 4 a ser anexado*
+
+[Video Java Advanced - Challenge Pet Guardian Sprint 4](https://youtu.be/eHh-34w2L-s?si=Lg97p8z72mJ5_P_U)
 
 ---
 
