@@ -57,6 +57,9 @@ class UsuarioSecurityIntegrationTest {
     @MockitoBean
     private TokenService tokenService;
 
+    @MockitoBean
+    private fiap.com.br.petguardian.usuariopet.UsuarioPetService usuarioPetService;
+
     private UsuarioRequest criarRequest(String email) {
         return new UsuarioRequest(
                 "Enzo",
@@ -390,4 +393,72 @@ class UsuarioSecurityIntegrationTest {
         mockMvc.perform(get("/admin"))
                 .andExpect(status().is3xxRedirection());
     }
+
+    @Test
+    @DisplayName("GET /usuarios/me/rede-cuidado deve retornar rede de cuidado do usuario logado")
+    void deveRetornarRedeCuidadoUsuarioLogado() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "comum@fiap.com.br", UsuarioRole.COMUM);
+        var rede = fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse.empty(usuario);
+        when(usuarioPetService.montarRedeCuidado("comum@fiap.com.br")).thenReturn(rede);
+
+        mockMvc.perform(get("/usuarios/me/rede-cuidado")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("comum@fiap.com.br").claim("role", "COMUM"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailUsuario").value("comum@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("GET /usuarios deve permitir ADMIN listar todos os usuarios paginados")
+    void devePermitirAdminListarTodosOsUsuarios() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.COMUM);
+        when(usuarioService.findAll(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(usuario), org.springframework.data.domain.PageRequest.of(0, 10), 1));
+
+        mockMvc.perform(get("/usuarios")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].email").value("user@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("GET /usuarios/by-email deve permitir ADMIN buscar usuario por email")
+    void devePermitirAdminBuscarPorEmail() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.COMUM);
+        when(usuarioService.findByEmail("user@fiap.com.br")).thenReturn(usuario);
+
+        mockMvc.perform(get("/usuarios/by-email?email=user@fiap.com.br")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("user@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("GET /usuarios/{id}/rede-cuidado deve permitir ADMIN visualizar rede de cuidado")
+    void devePermitirAdminVerRedeCuidadoPorId() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.COMUM);
+        var rede = fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse.empty(usuario);
+        when(usuarioPetService.montarRedeCuidado(1L)).thenReturn(rede);
+
+        mockMvc.perform(get("/usuarios/1/rede-cuidado")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailUsuario").value("user@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("PATCH /usuarios/{id}/upgrade-premium deve permitir ADMIN atualizar usuario para PREMIUM")
+    void devePermitirAdminUpgradePremiumPorId() throws Exception {
+        Usuario usuario = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.COMUM);
+        Usuario usuarioPremium = criarUsuarioMock(1L, "user@fiap.com.br", UsuarioRole.PREMIUM);
+
+        when(usuarioService.findById(1L)).thenReturn(usuario);
+        when(usuarioService.upgradePremium("user@fiap.com.br")).thenReturn(usuarioPremium);
+
+        mockMvc.perform(patch("/usuarios/1/upgrade-premium")
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_ADMIN")).jwt(jwt -> jwt.subject("admin@fiap.com.br").claim("role", "ADMIN"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PREMIUM"));
+    }
+
+
 }

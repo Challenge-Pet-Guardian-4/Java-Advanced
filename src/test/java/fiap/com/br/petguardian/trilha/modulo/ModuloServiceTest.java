@@ -1,5 +1,12 @@
 package fiap.com.br.petguardian.trilha.modulo;
 
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import fiap.com.br.petguardian.trilha.Trilha;
 import fiap.com.br.petguardian.trilha.TrilhaRepository;
 import fiap.com.br.petguardian.trilha.aula.Aula;
@@ -101,4 +108,45 @@ class ModuloServiceTest {
         assertEquals("Modulo Novo", resultado.getNome());
         assertEquals(moduloExistente.getAulas(), resultado.getAulas());
     }
+
+    @Test
+    @DisplayName("Deve listar todos os modulos paginados")
+    void deveListarTodosModulos() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
+        when(moduloRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(modulo)));
+
+        Page<Modulo> resultado = moduloService.findAll(pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Deve buscar modulo por ID com sucesso")
+    void deveBuscarModuloPorId() {
+        Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
+        when(moduloRepository.findById(10L)).thenReturn(Optional.of(modulo));
+
+        Modulo resultado = moduloService.findById(10L);
+
+        assertNotNull(resultado);
+        assertEquals(10L, resultado.getId());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar modulo por ID")
+    void deveLancarExceptionAoNaoEncontrarModuloPorId() {
+        when(moduloRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> moduloService.findById(99L));
+    }
+
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao criar modulo com trilha inexistente")
+    void deveLancarExceptionAoCriarModuloComTrilhaInexistente() {
+        when(trilhaRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> moduloService.create(new fiap.com.br.petguardian.trilha.modulo.dto.ModuloRequest("Módulo 1", "2h", "Desc", 99L)));
+    }
+
 }

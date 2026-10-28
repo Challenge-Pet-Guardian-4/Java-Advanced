@@ -1,5 +1,8 @@
 package fiap.com.br.petguardian.tarefa;
 
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
@@ -272,5 +275,98 @@ class TarefaServiceTest {
 
         assertNotNull(resultado);
         verify(tarefaRepository).findAllByPetUsuarioPetsUsuarioId(1L, pageable);
+    }
+
+    @Test
+    @DisplayName("Deve buscar tarefa por ID com sucesso")
+    void deveBuscarTarefaPorId() {
+        Tarefa tarefa = Tarefa.builder().id(50L).titulo("Passeio").build();
+        when(tarefaRepository.findById(50L)).thenReturn(Optional.of(tarefa));
+
+        Tarefa resultado = tarefaService.findById(50L);
+
+        assertNotNull(resultado);
+        assertEquals(50L, resultado.getId());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar tarefa por ID")
+    void deveLancarExceptionAoNaoEncontrarTarefaPorId() {
+        when(tarefaRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> tarefaService.findById(99L));
+    }
+
+    @Test
+    @DisplayName("Deve listar tarefas por Pet ID")
+    void deveListarTarefasPorPetId() {
+        Pet pet = Pet.builder().id(10L).build();
+        Pageable pageable = PageRequest.of(0, 10);
+        Tarefa tarefa = Tarefa.builder().id(50L).pet(pet).build();
+
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(tarefaRepository.findAllByPetId(10L, pageable)).thenReturn(new PageImpl<>(List.of(tarefa)));
+
+        Page<Tarefa> resultado = tarefaService.findAllByPetId(10L, pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao buscar tarefas de pet inexistente")
+    void deveLancarExceptionAoBuscarTarefasDePetInexistente() {
+        Pageable pageable = PageRequest.of(0, 10);
+        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> tarefaService.findAllByPetId(99L, pageable));
+    }
+
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao buscar tarefas por usuario inexistente")
+    void deveLancarExceptionAoBuscarTarefasPorUsuarioInexistente() {
+        when(usuarioRepository.findByEmail("inexistente@fiap.com.br")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> tarefaService.findAllByEmail("inexistente@fiap.com.br", "ALL", org.springframework.data.domain.PageRequest.of(0, 10)));
+    }
+
+    @Test
+    @DisplayName("Deve cobrir TarefaResponse com usuario nulo")
+    void deveCobrirTarefaResponseComUsuarioNulo() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Tarefa tarefa = Tarefa.builder()
+                .id(50L)
+                .titulo("Banho")
+                .pontosTarefa(10)
+                .descricao("Banho")
+                .criacao(java.time.LocalDateTime.now())
+                .prazo(java.time.LocalDateTime.now().plusDays(1))
+                .status(Status.builder().nomeStatus(EnumStatus.PENDENTE).build())
+                .pet(pet)
+                .usuario(null)
+                .build();
+        var resp = fiap.com.br.petguardian.tarefa.dto.TarefaResponse.fromEntity(tarefa);
+        assertNotNull(resp);
+        assertNull(resp.usuarioEmail());
+        assertNull(resp.usuarioNome());
+    }
+
+    @Test
+    @DisplayName("Deve aplicar status CONCLUIDO com conclusao informada e nula")
+    void deveAplicarStatusConcluidoComConclusaoInformadaENula() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Tarefa tarefaExistente = Tarefa.builder().id(50L).pet(pet).status(Status.builder().nomeStatus(EnumStatus.PENDENTE).build()).build();
+        when(tarefaRepository.findById(50L)).thenReturn(Optional.of(tarefaExistente));
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(statusService.findStatus(EnumStatus.CONCLUIDO))
+                .thenReturn(Status.builder().nomeStatus(EnumStatus.CONCLUIDO).build());
+        when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var reqComData = new fiap.com.br.petguardian.tarefa.dto.TarefaRequest("Vacina", 10, "Vacina anual", java.time.LocalDateTime.now().plusDays(1), 10L, "CONCLUIDO", java.time.LocalDateTime.now());
+        Tarefa t1 = tarefaService.update(50L, reqComData);
+        assertNotNull(t1.getConclusao());
+
+        var reqSemData = new fiap.com.br.petguardian.tarefa.dto.TarefaRequest("Vacina 2", 10, "Vacina anual", java.time.LocalDateTime.now().plusDays(1), 10L, "CONCLUIDO", null);
+        Tarefa t2 = tarefaService.update(50L, reqSemData);
+        assertNotNull(t2.getConclusao());
     }
 }

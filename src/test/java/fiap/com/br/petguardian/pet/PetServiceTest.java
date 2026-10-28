@@ -1,5 +1,8 @@
 package fiap.com.br.petguardian.pet;
 
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import fiap.com.br.petguardian.pet.dto.PetDetailResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse;
 import fiap.com.br.petguardian.pet.dto.PetPontuacaoResponse;
@@ -257,4 +260,100 @@ class PetServiceTest {
         assertEquals("Thor", resultado.getContent().get(0).getNome());
         verify(petRepository).findByUsuarioPetsUsuarioId(1L, pageable);
     }
+
+    @Test
+    @DisplayName("Deve buscar pet por ID com sucesso")
+    void deveBuscarPetPorId() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+
+        Pet resultado = petService.findById(10L);
+
+        assertNotNull(resultado);
+        assertEquals(10L, resultado.getId());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar pet por ID")
+    void deveLancarExceptionAoNaoEncontrarPetPorId() {
+        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> petService.findById(99L));
+    }
+
+    @Test
+    @DisplayName("Deve criar pet associado ao usuario autenticado e gerar vinculo titular")
+    void deveCriarPetComSucesso() {
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
+        var request = new PetRequest("Thor", LocalDate.now().minusYears(2), "Golden Retriever", "GRANDE", 'M', true);
+        Raca raca = Raca.builder().id(100L).nome("Golden Retriever").build();
+        Pet petSalvo = Pet.builder().id(10L).nome("Thor").raca(raca).porte(PetPorte.GRANDE).castrado(true).build();
+
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(racaRepository.findByNomeIgnoreCase("Golden Retriever")).thenReturn(Optional.of(raca));
+        when(petRepository.save(any(Pet.class))).thenReturn(petSalvo);
+
+        Pet resultado = petService.create(request, "enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        assertEquals(10L, resultado.getId());
+        verify(usuarioPetRepository).save(any());
+    }
+
+    @Test
+    @DisplayName("Deve criar pet criando nova raca quando nao existir")
+    void deveCriarPetComNovaRaca() {
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
+        var request = new PetRequest("Mel", LocalDate.now().minusYears(1), "Vira-lata", "MEDIO", 'F', false);
+        Raca racaNova = Raca.builder().id(101L).nome("Vira-lata").build();
+        Pet petSalvo = Pet.builder().id(11L).nome("Mel").raca(racaNova).porte(PetPorte.MEDIO).castrado(false).build();
+
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(racaRepository.findByNomeIgnoreCase("Vira-lata")).thenReturn(Optional.empty());
+        when(racaRepository.save(any(Raca.class))).thenReturn(racaNova);
+        when(petRepository.save(any(Pet.class))).thenReturn(petSalvo);
+
+        Pet resultado = petService.create(request, "enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        verify(racaRepository).save(any(Raca.class));
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao criar pet para usuario inexistente")
+    void deveLancarExceptionAoCriarPetParaUsuarioInexistente() {
+        var request = new PetRequest("Thor", LocalDate.now().minusYears(2), "Golden", "GRANDE", 'M', true);
+        when(usuarioRepository.findByEmail("naoexiste@fiap.com.br")).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> petService.create(request, "naoexiste@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve deletar pet com sucesso")
+    void deveDeletarPetComSucesso() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").trilhas(Set.of()).build();
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+
+        petService.delete(10L);
+
+        verify(petRepository).delete(pet);
+        verify(conteudoRepository).deleteByAulaIdIn(List.of());
+    }
+
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao buscar pets por usuario inexistente")
+    void deveLancarExceptionAoBuscarPetsPorUsuarioInexistente() {
+        when(usuarioRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> petService.findByUsuario(99L, org.springframework.data.domain.PageRequest.of(0, 10)));
+    }
+
+    @Test
+    @DisplayName("Deve testar PetPontuacaoAgregadaResponse com JSON nulo ou vazio")
+    void deveTestarPetPontuacaoAgregadaResponse() {
+        var resp1 = fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse.fromMap(Map.of(), null);
+        assertEquals("[]", resp1.detalhePets());
+        var resp2 = fiap.com.br.petguardian.pet.dto.PetPontuacaoAgregadaResponse.fromMap(Map.of(), "   ");
+        assertEquals("[]", resp2.detalhePets());
+    }
+
 }

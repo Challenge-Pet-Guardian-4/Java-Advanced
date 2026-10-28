@@ -1,5 +1,12 @@
 package fiap.com.br.petguardian.pet.historico;
 
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.pet.historico.dto.HistoricoRequest;
@@ -91,4 +98,74 @@ class HistoricoServiceTest {
 
         assertTrue(historicoService.isCuidadorDoHistorico(1L, "enzo@fiap.com.br"));
     }
+
+    @Test
+    @DisplayName("Deve listar todos os historicos paginados")
+    void deveListarHistoricosPaginados() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Historico hist = Historico.builder().id(1L).tipoHist("Vacina").build();
+        when(historicoRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(hist)));
+
+        Page<Historico> resultado = historicoService.findAll(pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Deve listar historico por email de usuario")
+    void deveListarHistoricoPorEmail() {
+        Historico hist = Historico.builder().id(1L).tipoHist("Vacina").build();
+        when(historicoRepository.findAllByUsuarioEmailOrderByDataHistDesc("enzo@fiap.com.br")).thenReturn(List.of(hist));
+
+        List<Historico> resultado = historicoService.findAllByUsuarioEmail("enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+    }
+
+    @Test
+    @DisplayName("Deve buscar historico por ID com sucesso")
+    void deveBuscarHistoricoPorId() {
+        Historico hist = Historico.builder().id(1L).tipoHist("Vacina").build();
+        when(historicoRepository.findById(1L)).thenReturn(Optional.of(hist));
+
+        Historico resultado = historicoService.findById(1L);
+
+        assertNotNull(resultado);
+        assertEquals(1L, resultado.getId());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar historico por ID")
+    void deveLancarExceptionAoNaoEncontrarHistoricoPorId() {
+        when(historicoRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> historicoService.findById(99L));
+    }
+
+    @Test
+    @DisplayName("Deve atualizar historico com sucesso")
+    void deveAtualizarHistorico() {
+        Pet pet = Pet.builder().id(10L).build();
+        Historico hist = Historico.builder().id(1L).tipoHist("Vacina Antiga").build();
+        var request = new HistoricoRequest("Vacina Nova", LocalDateTime.now(), 10L);
+
+        when(historicoRepository.findById(1L)).thenReturn(Optional.of(hist));
+        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(historicoRepository.save(any(Historico.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Historico resultado = historicoService.update(1L, request);
+
+        assertNotNull(resultado);
+        assertEquals("Vacina Nova", resultado.getTipoHist());
+    }
+
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao buscar historicos por pet inexistente")
+    void deveLancarExceptionAoBuscarHistoricosPorPetInexistente() {
+        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> historicoService.findAllByPetId(99L));
+    }
+
 }

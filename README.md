@@ -68,7 +68,7 @@ O **PetGuardian** é uma API REST corporativa desenvolvida em **Spring Boot** pa
 A API **PetGuardian** opera conectada diretamente a uma infraestrutura poliglota corporativa em nuvem:
 
 * **Microsserviço da Aplicação (`Java-Advanced`):** Hospedado no **Microsoft Azure App Service** (`app-petguardian-01bd2f0c`, Plano Linux B1 dedicado) com runtime nativo **Java 21 Java SE**, monitorado pelo Spring Boot Actuator e com reinicialização resiliente.
-* **Pipeline CI/CD Automatizada (`Azure DevOps`):** Esteira declarativa em YAML (`azure-pipelines.yml`) operando sobre agente Self-Hosted, executando a compilação Gradle, a suíte de 123 testes JUnit, a publicação do artefato (`drop/app.jar`) e o deploy contínuo (CD) automatizado a cada push nas branches `main` e `develop`.
+* **Pipeline CI/CD Automatizada (`Azure DevOps`):** Esteira declarativa em YAML (`azure-pipelines.yml`) operando sobre agente Self-Hosted, executando a compilação Gradle, a suíte de 292 testes automatizados JUnit 5 (99.53% de cobertura JaCoCo), a publicação do artefato (`drop/app.jar`) e o deploy contínuo (CD) automatizado a cada push nas branches `main` e `develop`.
 * **Banco de Dados Relacional Corporativo (`Oracle 19c`):** Instância gerenciada Oracle Database (`oracle.fiap.com.br:1521/orcl`), garantindo integridade transacional estrita, persistência das tabelas relacionais em 3FN e execução do pacote PL/SQL `PKG_PETGUARDIAN`.
 * **Banco de Dados NoSQL em Nuvem (`MongoDB Atlas`):** Cluster NoSQL em nuvem (`petguardian.agoderb.mongodb.net`), responsável pela coleção `conteudos_aula`, armazenando textos pedagógicos didáticos em Markdown, metadados de lições e links multimídia.
 * **Conectividade OJDBC11:** Pool de conexões otimizado HikariCP com o driver oficial Oracle (`ojdbc11`) e dialeto Hibernate autodetectado.
@@ -429,18 +429,27 @@ Com as variáveis configuradas no `.env`:
 
 ---
 
-## 🧪 Testes Automatizados e Auditoria de Segurança
+## 🧪 Testes Automatizados, Cobertura (JaCoCo) e Auditoria de Segurança
 
-### 1. Testes Unitários e de Integração (JUnit 5 + Mockito + Spring Security Test)
-Para executar a suíte completa de testes unitários:
+### 1. Testes Unitários, Camada Web (MockMvc) e Integração RBAC (JUnit 5 + Mockito + Spring Security Test)
+O projeto conta com **292 testes automatizados** distribuídos entre Services, Controllers (`MockMvc`), `GlobalExceptionHandler`, Validadores Customizados (`@DddValidation`, `@EnumValidation`, `@DataNascValidation`) e Integração de Segurança RBAC, atingindo **99.53% de cobertura de código** medida pelo JaCoCo.
+
+Para executar a suíte completa de testes e gerar o relatório de cobertura JaCoCo (HTML/XML/CSV):
 
 ```bash
-./gradlew test
+# Executar todos os 292 testes e gerar relatório de cobertura JaCoCo:
+./gradlew test jacocoTestReport
+
+# No Windows (PowerShell / CMD):
+.\gradlew.bat test jacocoTestReport
 ```
+
+- **Relatório Interativo de Testes (JUnit):** `build/reports/tests/test/index.html`
+- **Relatório de Cobertura de Código (JaCoCo):** `build/reports/jacoco/test/html/index.html`
 
 ### 2. Testes de Integração e Automação de QA
 Para validação de rotas, permissões de segurança RBAC e persistência com Stored Procedures:
-- **Suíte de Testes JUnit 5 / Spring Boot Test:** Testes automatizados executados via `./gradlew test` (100% de sucesso).
+- **Suíte de Testes JUnit 5 / Spring Boot Test:** 292 testes automatizados executados via `./gradlew test` (100% de aprovação e 99.53% de cobertura).
 - **Suíte de Automação Postman (QA):** Coleção oficial contendo asserções de status code, JSON Schema, autorização JWT e validação de Stored Procedures Oracle disponível no repositório de QA em [`Compliance-Quality-Assurance-Tests`](../Compliance-Quality-Assurance-Tests/).
 
 ---

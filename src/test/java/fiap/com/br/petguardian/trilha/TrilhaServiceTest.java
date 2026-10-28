@@ -1,5 +1,16 @@
 package fiap.com.br.petguardian.trilha;
 
+import fiap.com.br.petguardian.trilha.aula.DificuldadeAula;
+
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import fiap.com.br.petguardian.trilha.dto.TrilhaCompletaResponse;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAula;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
@@ -118,5 +129,90 @@ class TrilhaServiceTest {
         assertEquals(1, resultado.size());
         assertEquals("Truques", resultado.get(0).nome());
         assertEquals("Thor", resultado.get(0).nomePet());
+    }
+
+    @Test
+    @DisplayName("Deve listar todas as trilhas paginadas")
+    void deveListarTodasTrilhas() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Trilha trilha = Trilha.builder().id(1L).nome("Obediência").build();
+        when(trilhaRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(trilha)));
+
+        Page<Trilha> resultado = trilhaService.findAll(pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Deve buscar trilha por ID com sucesso")
+    void deveBuscarTrilhaPorId() {
+        Trilha trilha = Trilha.builder().id(1L).nome("Obediência").build();
+        when(trilhaRepository.findById(1L)).thenReturn(Optional.of(trilha));
+
+        Trilha resultado = trilhaService.findById(1L);
+
+        assertNotNull(resultado);
+        assertEquals(1L, resultado.getId());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar trilha por ID")
+    void deveLancarExceptionAoNaoEncontrarTrilhaPorId() {
+        when(trilhaRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> trilhaService.findById(99L));
+    }
+
+    @Test
+    @DisplayName("Deve buscar trilhas completas por usuario email com conteudos MongoDB")
+    void deveBuscarTrilhasCompletasComConteudos() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Aula aula = Aula.builder().id(101L).nome("Senta").dificuldade(DificuldadeAula.FACIL).concluida(false).build();
+        Modulo modulo = Modulo.builder().id(11L).nome("Módulo 1").aulas(java.util.Set.of(aula)).build();
+        Trilha trilha = Trilha.builder().id(1L).nome("Obediência").pet(pet).modulos(java.util.Set.of(modulo)).build();
+        ConteudoAula conteudo = ConteudoAula.builder().aulaId(101L).corpoMarkdown("# Markdown de teste").build();
+
+        when(trilhaRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of(trilha));
+        when(conteudoRepository.findByAulaIdIn(any())).thenReturn(List.of(conteudo));
+
+        List<TrilhaCompletaResponse> resultado = trilhaService.findTrilhasCompletasByUsuarioEmail("enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertEquals("Obediência", resultado.get(0).nome());
+    }
+
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao criar trilha com pet inexistente")
+    void deveLancarExceptionAoCriarTrilhaComPetInexistente() {
+        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> trilhaService.create(new fiap.com.br.petguardian.trilha.dto.TrilhaRequest("Trilha", "Desc", 99L)));
+    }
+
+    @Test
+    @DisplayName("Deve converter Trilha para TrilhaCompletaResponse usando fromEntity sem resolver")
+    void deveConverterTrilhaCompletaResponseSemResolver() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(1L).nome("Obediência").pet(pet).modulos(java.util.Set.of()).build();
+        var resp = fiap.com.br.petguardian.trilha.dto.TrilhaCompletaResponse.fromEntity(trilha);
+        assertNotNull(resp);
+        assertEquals("Obediência", resp.nome());
+    }
+
+    @Test
+    @DisplayName("Deve tratar falha no conteudo NoSQL ao buscar trilhas completas")
+    void deveTratarFalhaNoConteudoNoSqlAoBuscarTrilhasCompletas() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Aula aula = Aula.builder().id(101L).nome("Senta").dificuldade(DificuldadeAula.FACIL).concluida(false).build();
+        Modulo modulo = Modulo.builder().id(11L).nome("Módulo 1").aulas(java.util.Set.of(aula)).build();
+        Trilha trilha = Trilha.builder().id(1L).nome("Obediência").pet(pet).modulos(java.util.Set.of(modulo)).build();
+
+        when(trilhaRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of(trilha));
+        when(conteudoRepository.findByAulaIdIn(any())).thenThrow(new RuntimeException("Mongo down"));
+
+        var resultado = trilhaService.findTrilhasCompletasByUsuarioEmail("enzo@fiap.com.br");
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
     }
 }

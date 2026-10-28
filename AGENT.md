@@ -182,4 +182,4 @@ No Hibernate 7 / Spring Boot, procedures que retornam múltiplos parâmetros `OU
    - `V3__admin_inicial.sql`: Usuário administrador inicial (`enzo.admin@petguardian.com`) parametrizado via `${ADMIN_BCRYPT_HASH}`.
    - `V4__pkg_petguardian.sql`: Migração que compila a package e triggers de auditoria PL/SQL (`PKG_PETGUARDIAN`).
 9. **Auditoria Automatizada RBAC e Integração:**
-   - Suíte de validação formal automatizada no repositório `Compliance-Quality-Assurance-Tests` (Postman Collection) e 123 testes JUnit 5 com Spring Boot Test cobrindo CRUDs de Admin, procedures Oracle e barreiras negativas de HTTP 403.
+   - Suíte de validação formal automatizada no repositório `Compliance-Quality-Assurance-Tests` (Postman Collection) e 292 testes JUnit 5 (MockMvc, Services, GlobalExceptionHandler, Validadores e Spring Security Test) com 99.53% de cobertura JaCoCo, cobrindo CRUDs de Admin, procedures Oracle, resiliência NoSQL/ViaCEP e barreiras negativas de HTTP 403.

@@ -372,4 +372,33 @@ class UsuarioServiceTest {
 
         verify(usuarioRepository).delete(comum);
     }
+
+    @Test
+    @DisplayName("Deve atualizar usuario por email com sucesso")
+    void deveAtualizarUsuarioPorEmail() {
+        var enderecoReq = new EnderecoRequest("01310100", "100");
+        var request = new UsuarioRequest("Enzo Atualizado", "enzo@fiap.com.br", "novaSenha123", "11", "999998888", enderecoReq);
+
+        Endereco endereco = Endereco.builder().id(1L).cep("01310100").numero("100").build();
+        Telefone telefone = Telefone.builder().id(1L).ddd("11").numero("999998888").build();
+        Usuario usuarioExistente = Usuario.builder().id(1L).email("enzo@fiap.com.br").nome("Enzo Antigo").senha("hash").role(UsuarioRole.COMUM).telefone(telefone).endereco(endereco).build();
+
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuarioExistente));
+        when(passwordEncoder.encode("novaSenha123")).thenReturn("novaHash");
+        when(enderecoService.findOrCreateByCepAndNumero(enderecoReq)).thenReturn(endereco);
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Usuario resultado = usuarioService.update("enzo@fiap.com.br", request);
+
+        assertNotNull(resultado);
+        assertEquals("Enzo Atualizado", resultado.getNome());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao buscar usuario por email inexistente")
+    void deveLancarExceptionAoBuscarUsuarioPorEmailInexistente() {
+        when(usuarioRepository.findByEmail("naoexiste@fiap.com.br")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> usuarioService.findByEmail("naoexiste@fiap.com.br"));
+    }
+
 }

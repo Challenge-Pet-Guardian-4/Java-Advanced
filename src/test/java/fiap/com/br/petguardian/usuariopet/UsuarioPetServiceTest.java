@@ -1,5 +1,7 @@
 package fiap.com.br.petguardian.usuariopet;
 
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+
 import fiap.com.br.petguardian.pet.Pet;
 import fiap.com.br.petguardian.pet.PetRepository;
 import fiap.com.br.petguardian.pet.raca.Raca;
@@ -239,4 +241,100 @@ class UsuarioPetServiceTest {
         verify(usuarioPetRepository).obterResumoRedeCuidadoNoBanco(1L);
         verify(usuarioPetRepository).obterNivelUsuarioNoBanco(1L);
     }
+
+    @Test
+    @DisplayName("Deve verificar se usuario e responsavel principal")
+    void deveVerificarResponsavelPrincipal() {
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue("enzo@fiap.com.br", 10L)).thenReturn(true);
+        assertTrue(usuarioPetService.isResponsavelPrincipal(10L, "enzo@fiap.com.br"));
+
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetIdAndResponsavelPrincipalTrue("outro@fiap.com.br", 10L)).thenReturn(false);
+        assertFalse(usuarioPetService.isResponsavelPrincipal(10L, "outro@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve verificar se usuario e cuidador do pet")
+    void deveVerificarCuidadorDoPet() {
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("enzo@fiap.com.br", 10L)).thenReturn(true);
+        assertTrue(usuarioPetService.isCuidadorDoPet(10L, "enzo@fiap.com.br"));
+
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("outro@fiap.com.br", 10L)).thenReturn(false);
+        assertFalse(usuarioPetService.isCuidadorDoPet(10L, "outro@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve montar rede de cuidado por usuario ID")
+    void deveMontarRedeDeCuidadoPorUsuarioId() {
+        Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
+
+        RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado(1L);
+
+        assertNotNull(resultado);
+        assertEquals("enzo@fiap.com.br", resultado.emailUsuario());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar usuario por id")
+    void deveLancarExceptionAoNaoEncontrarUsuarioPorId() {
+        when(usuarioRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.montarRedeCuidado(99L));
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar pet por id")
+    void deveLancarExceptionAoNaoEncontrarPetPorId() {
+        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.listarCuidadoresDoPet(99L));
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao desvincular cuidador inexistente")
+    void deveLancarExceptionAoDesvincularCuidadorInexistente() {
+        when(usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId("naoexiste@fiap.com.br", 10L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.desvincularCuidador(10L, "naoexiste@fiap.com.br"));
+    }
+
+
+    @Test
+    @DisplayName("Deve montar rede de cuidado com multiplos co-cuidadores")
+    void deveMontarRedeCuidadoComMultiplosCoCuidadores() {
+        Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").nome("Enzo").build();
+        Usuario maria = Usuario.builder().id(2L).email("maria@fiap.com.br").nome("Maria").build();
+        Raca raca = Raca.builder().id(1L).nome("Golden Retriever").build();
+        Pet pet1 = Pet.builder().id(10L).nome("Thor").raca(raca).build();
+        Pet pet2 = Pet.builder().id(11L).nome("Mel").raca(raca).build();
+
+        UsuarioPet vEnzo = UsuarioPet.builder().id(new UsuarioPetId(1L, 10L)).usuario(usuario).pet(pet1).responsavelPrincipal(true).build();
+        UsuarioPet vMariaThor = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(maria).pet(pet1).responsavelPrincipal(false).build();
+        UsuarioPet vMariaMel = UsuarioPet.builder().id(new UsuarioPetId(2L, 11L)).usuario(maria).pet(pet2).responsavelPrincipal(true).build();
+
+        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vEnzo));
+        when(tarefaRepository.countTarefasByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 2L}));
+        when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vEnzo, vMariaThor, vMariaMel));
+        when(usuarioPetRepository.obterResumoRedeCuidadoNoBanco(1L)).thenReturn(Map.of("p_tarefas_pendentes", 1, "p_tarefas_concluidas", 4, "p_pontos_acumulados", 100));
+        when(usuarioPetRepository.obterNivelUsuarioNoBanco(1L)).thenReturn("OURO");
+
+        RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.coCuidadores().size());
+        var mariaResumo = resultado.coCuidadores().get(0);
+        assertEquals("Maria", mariaResumo.nome());
+        assertEquals("maria@fiap.com.br", mariaResumo.email());
+        assertTrue(mariaResumo.responsavelPrincipal());
+        assertEquals(2, mariaResumo.petIds().size());
+        assertEquals(List.of("Mel"), mariaResumo.petsPrincipalNomes());
+        assertEquals(List.of("Thor"), mariaResumo.petsAjudaNomes());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao montar rede de cuidado com email inexistente")
+    void deveLancarExceptionAoMontarRedeCuidadoQuandoEmailNaoExistir() {
+        when(usuarioRepository.findByEmail("inexistente@fiap.com.br")).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.montarRedeCuidado("inexistente@fiap.com.br"));
+    }
+
 }

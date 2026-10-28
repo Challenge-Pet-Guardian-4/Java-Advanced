@@ -2,6 +2,16 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.1'
     id 'io.spring.dependency-management' version '1.1.7'
+    id 'jacoco'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        html.required = true
+        xml.required = true
+        csv.required = true
+    }
 }
 
 group = 'fiap.com.br'
@@ -51,71 +61,48 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+def loadDotEnv = {
+    def envFile = file('.env')
+    if (!envFile.exists()) return [:]
+    envFile.readLines()
+        .findAll { it.trim() && !it.trim().startsWith('#') && it.contains('=') }
+        .collectEntries { def p = it.split('=', 2); [(p[0].trim()): p[1].trim()] }
+}
+def dotEnv = loadDotEnv()
+
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs "-javaagent:${configurations.testRuntimeClasspath.find { it.name.contains('mockito-core') }}"
-    if (file('.env').exists()) {
-        file('.env').eachLine { line ->
-            def trimmed = line.trim()
-            if (trimmed && !trimmed.startsWith('#') && trimmed.contains('=')) {
-                def parts = trimmed.split('=', 2)
-                environment parts[0].trim(), parts[1].trim()
-            }
-        }
-    }
+    environment dotEnv
+}
+
+tasks.named('bootRun') {
+    environment dotEnv
 }
 
 tasks.register('generateRsaKeys') {
     doLast {
-        def mainKeysDir = file('src/main/resources/keys')
-        def testKeysDir = file('src/test/resources/keys')
-        mainKeysDir.mkdirs()
-        testKeysDir.mkdirs()
-
         def privFile = file('src/main/resources/keys/private_key.pem')
         def pubFile = file('src/main/resources/keys/public_key.pem')
 
         if (!privFile.exists() || !pubFile.exists()) {
-            def keyGen = java.security.KeyPairGenerator.getInstance("RSA")
-            keyGen.initialize(2048)
-            def pair = keyGen.generateKeyPair()
-
-            def privEncoder = java.util.Base64.getMimeEncoder(64, "\r\n".getBytes())
-            def privPem = "-----BEGIN PRIVATE KEY-----\r\n" + privEncoder.encodeToString(pair.getPrivate().getEncoded()) + "\r\n-----END PRIVATE KEY-----\r\n"
-            def pubPem = "-----BEGIN PUBLIC KEY-----\r\n" + privEncoder.encodeToString(pair.getPublic().getEncoded()) + "\r\n-----END PUBLIC KEY-----\r\n"
-
-            privFile.text = privPem
-            pubFile.text = pubPem
-            println "Chaves RSA geradas com sucesso via Gradle!"
+            privFile.parentFile.mkdirs()
+            def pair = java.security.KeyPairGenerator.getInstance("RSA").with { initialize(2048); generateKeyPair() }
+            def enc = java.util.Base64.mimeEncoder
+            privFile.text = "-----BEGIN PRIVATE KEY-----\r\n" + enc.encodeToString(pair.private.encoded) + "\r\n-----END PRIVATE KEY-----\r\n"
+            pubFile.text = "-----BEGIN PUBLIC KEY-----\r\n" + enc.encodeToString(pair.public.encoded) + "\r\n-----END PUBLIC KEY-----\r\n"
         }
 
         copy {
-            from mainKeysDir
-            into testKeysDir
+            from 'src/main/resources/keys'
+            into 'src/test/resources/keys'
         }
     }
 }
 
-tasks.named('processResources') {
-    dependsOn 'generateRsaKeys'
-}
-
-tasks.named('processTestResources') {
-    dependsOn 'generateRsaKeys'
-}
+tasks.named('processResources') { dependsOn 'generateRsaKeys' }
+tasks.named('processTestResources') { dependsOn 'generateRsaKeys' }
 
 tasks.withType(JavaCompile).configureEach {
     options.compilerArgs.add('-parameters')
-}
-
-tasks.named('bootRun') {
-    if (file('.env').exists()) {
-        file('.env').eachLine { line ->
-            def trimmed = line.trim()
-            if (trimmed && !trimmed.startsWith('#') && trimmed.contains('=')) {
-                def parts = trimmed.split('=', 2)
-                environment parts[0].trim(), parts[1].trim()
-            }
-        }
-    }
 }

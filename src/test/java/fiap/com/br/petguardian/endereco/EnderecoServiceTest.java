@@ -1,5 +1,8 @@
 package fiap.com.br.petguardian.endereco;
 
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import fiap.com.br.petguardian.endereco.bairro.Bairro;
 import fiap.com.br.petguardian.endereco.bairro.BairroRepository;
 import fiap.com.br.petguardian.endereco.cidade.Cidade;
@@ -154,4 +157,23 @@ class EnderecoServiceTest {
         assertEquals("Não Informado", endereco.getRua());
         assertEquals("Não Informado", endereco.getBairro().getNome());
     }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar endereco por ID")
+    void deveLancarExceptionAoNaoEncontrarEnderecoPorId() {
+        when(enderecoRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> enderecoService.findById(99L));
+    }
+
+    
+
+
+    @Test
+    @DisplayName("Deve lancar IllegalArgumentException quando ViaCep retornar erro = true")
+    void deveLancarExceptionQuandoViaCepRetornarErroTrue() {
+        when(viaCepService.getEnderecoPorCep("00000000")).thenReturn(new fiap.com.br.petguardian.endereco.dto.ViaCepResponse(null, null, null, null, true));
+        var req = new fiap.com.br.petguardian.endereco.dto.EnderecoRequest("00000-000", "10");
+        assertThrows(IllegalArgumentException.class, () -> enderecoService.findOrCreateByCepAndNumero(req));
+    }
+
 }

@@ -1,5 +1,14 @@
 package fiap.com.br.petguardian.trilha.aula;
 
+import java.util.Map;
+
+import fiap.com.br.petguardian.exception.ResourceNotFoundException;
+import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAula;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
 import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.aula.dto.AulaRequest;
 import fiap.com.br.petguardian.trilha.aula.dto.AulaResponse;
@@ -177,5 +186,121 @@ class AulaServiceTest {
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("outro@petguardian.com", 10L)).thenReturn(false);
 
         assertFalse(aulaService.isCuidadorDaAula(100L, "outro@petguardian.com"));
+    }
+
+    @Test
+    @DisplayName("Deve listar todas as aulas paginadas")
+    void deveListarTodasAulas() {
+        Pageable pageable = PageRequest.of(0, 10);
+        Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
+        Aula aula = Aula.builder().id(100L).nome("Aula 1").modulo(modulo).dificuldade(DificuldadeAula.FACIL).concluida(false).build();
+        when(aulaRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(aula)));
+
+        Page<AulaResponse> resultado = aulaService.findAll(pageable);
+
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+    }
+
+    @Test
+    @DisplayName("Deve buscar aula por ID com sucesso")
+    void deveBuscarAulaPorId() {
+        Modulo modulo = Modulo.builder().id(10L).nome("Módulo 1").build();
+        Aula aula = Aula.builder().id(100L).nome("Aula 1").modulo(modulo).dificuldade(DificuldadeAula.FACIL).concluida(false).build();
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aula));
+
+        AulaResponse resultado = aulaService.findById(100L);
+
+        assertNotNull(resultado);
+        assertEquals(100L, resultado.id());
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar aula por ID")
+    void deveLancarExceptionAoNaoEncontrarAulaPorId() {
+        when(aulaRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(ResourceNotFoundException.class, () -> aulaService.findById(99L));
+    }
+
+    @Test
+    @DisplayName("Deve atualizar aula com sucesso")
+    void deveAtualizarAula() {
+        Modulo modulo = Modulo.builder().id(10L).build();
+        Aula aulaExistente = Aula.builder().id(100L).nome("Aula Antiga").modulo(modulo).build();
+        var request = new AulaRequest("Aula Nova", "Nova Desc", 20, "MEDIO", false, 10L);
+
+        when(aulaRepository.findById(100L)).thenReturn(Optional.of(aulaExistente));
+        when(moduloRepository.findById(10L)).thenReturn(Optional.of(modulo));
+        when(aulaRepository.save(any(Aula.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AulaResponse resultado = aulaService.update(100L, request);
+
+        assertNotNull(resultado);
+        assertEquals("Aula Nova", resultado.nome());
+        assertEquals(20, resultado.pontosAula());
+    }
+
+    @Test
+    @DisplayName("Deve buscar conteudo markdown da aula no MongoDB")
+    void deveBuscarConteudoMarkdownDaAula() {
+        ConteudoAula conteudo = ConteudoAula.builder().aulaId(100L).corpoMarkdown("# Dica").build();
+        when(conteudoRepository.findByAulaId(100L)).thenReturn(Optional.of(conteudo));
+
+        String markdown = aulaService.buscarConteudoMarkdown(100L);
+
+        assertNotNull(markdown);
+        assertEquals("# Dica", markdown);
+    }
+
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao criar aula com modulo inexistente")
+    void deveLancarExceptionAoCriarAulaComModuloInexistente() {
+        when(moduloRepository.findById(99L)).thenReturn(Optional.empty());
+        var req = new fiap.com.br.petguardian.trilha.aula.dto.AulaRequest("Aula 1", "Desc", 10, "FACIL", false, 99L);
+        assertThrows(ResourceNotFoundException.class, () -> aulaService.create(req));
+    }
+
+    @Test
+    @DisplayName("Deve lancar ResourceNotFoundException ao validar cuidador quando usuario nao existir")
+    void deveLancarExceptionAoValidarCuidadorQuandoUsuarioNaoExistir() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(1L).concluida(false).modulo(modulo).build();
+
+        when(aulaRepository.findById(1L)).thenReturn(Optional.of(aula));
+        when(usuarioRepository.findByEmail("inexistente@fiap.com.br")).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> aulaService.concluir(1L, "inexistente@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve lancar IllegalArgumentException ao validar cuidador quando usuario nao estiver vinculado ao pet")
+    void deveLancarExceptionQuandoUsuarioNaoVinculadoAoPet() {
+        Pet pet = Pet.builder().id(10L).nome("Thor").build();
+        Trilha trilha = Trilha.builder().id(5L).pet(pet).build();
+        Modulo modulo = Modulo.builder().id(20L).trilha(trilha).build();
+        Aula aula = Aula.builder().id(1L).concluida(false).modulo(modulo).build();
+        Usuario usuarioComum = Usuario.builder().id(2L).email("comum@fiap.com.br").role(UsuarioRole.COMUM).build();
+
+        when(aulaRepository.findById(1L)).thenReturn(Optional.of(aula));
+        when(usuarioRepository.findByEmail("comum@fiap.com.br")).thenReturn(Optional.of(usuarioComum));
+        when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("comum@fiap.com.br", 10L)).thenReturn(false);
+
+        assertThrows(IllegalArgumentException.class, () -> aulaService.concluir(1L, "comum@fiap.com.br"));
+    }
+
+    @Test
+    @DisplayName("Deve retornar null ou mapa vazio quando consulta NoSQL falhar")
+    void deveTratarFalhasNoSqlNaAula() {
+        when(conteudoRepository.findByAulaId(1L)).thenThrow(new RuntimeException("Mongo fora do ar"));
+        assertNull(aulaService.buscarConteudoMarkdown(1L));
+
+        assertEquals(Map.of(), aulaService.buscarConteudosEmLote(null));
+        assertEquals(Map.of(), aulaService.buscarConteudosEmLote(List.of()));
+
+        when(conteudoRepository.findByAulaIdIn(any())).thenThrow(new RuntimeException("Mongo fora do ar"));
+        assertEquals(Map.of(), aulaService.buscarConteudosEmLote(List.of(1L)));
     }
 }
