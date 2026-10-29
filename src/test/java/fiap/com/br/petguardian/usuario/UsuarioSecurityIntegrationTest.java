@@ -293,14 +293,16 @@ class UsuarioSecurityIntegrationTest {
     }
 
     @Test
-    @DisplayName("PATCH /usuarios/me/upgrade-premium deve permitir usuario autenticado realizar upgrade com 200")
+    @DisplayName("PATCH /usuarios/me/upgrade-premium deve permitir usuario autenticado realizar upgrade com 200 e X-Novo-Token")
     void devePermitirUsuarioAutenticadoUpgradePremium() throws Exception {
         Usuario usuarioSalvo = criarUsuarioMock(1L, "me@fiap.com.br", UsuarioRole.PREMIUM);
         when(usuarioService.upgradePremium("me@fiap.com.br")).thenReturn(usuarioSalvo);
+        when(tokenService.generateToken("me@fiap.com.br")).thenReturn("novo-token-premium");
 
         mockMvc.perform(patch("/usuarios/me/upgrade-premium")
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_COMUM")).jwt(jwt -> jwt.subject("me@fiap.com.br").claim("role", "COMUM"))))
                 .andExpect(status().isOk())
+                .andExpect(header().string("X-Novo-Token", "novo-token-premium"))
                 .andExpect(jsonPath("$.role").value("PREMIUM"));
     }
 
@@ -459,6 +461,4 @@ class UsuarioSecurityIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("PREMIUM"));
     }
-
-
 }

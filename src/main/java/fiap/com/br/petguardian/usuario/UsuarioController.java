@@ -65,10 +65,12 @@ public class UsuarioController {
     }
 
     @PatchMapping("/me/upgrade-premium")
-    @ResponseStatus(HttpStatus.OK)
     @Operation(summary = "[AUTENTICADO] Realizar upgrade do perfil do usuário autenticado para PREMIUM")
-    public UsuarioResponse upgradeMyPremium(Authentication authentication) {
-        return UsuarioResponse.fromEntity(usuarioService.upgradePremium(authentication.getName()));
+    public ResponseEntity<UsuarioResponse> upgradeMyPremium(Authentication authentication) {
+        Usuario usuario = usuarioService.upgradePremium(authentication.getName());
+        return ResponseEntity.ok()
+                .header("X-Novo-Token", tokenService.generateToken(usuario.getEmail()))
+                .body(UsuarioResponse.fromEntity(usuario));
     }
 
     // =========================================================================

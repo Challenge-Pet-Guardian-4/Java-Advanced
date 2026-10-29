@@ -28,7 +28,7 @@
 | **Actuator Health (Produção)** | https://app-petguardian-01bd2f0c.azurewebsites.net/actuator/health |
 | **Swagger UI (Local)** | http://localhost:8080/swagger-ui/index.html |
 | **Console Web Admin (Local)** | http://localhost:8080/admin |
-| **Arquivo de Coleção Insomnia** | [/docs/Insomnia_2026-05-21.yaml](./docs/Insomnia_2026-05-21.yaml) |
+| **Coleção Oficial de Automação (Postman QA)** | https://github.com/Challenge-Pet-Guardian-4/Compliance-Quality-Assurance-Tests |
 
 ## 🔗 Vídeo de Demonstração (Sprint 4)
 
@@ -407,7 +407,7 @@ cp .env.example .env
 Consulte o arquivo [`/.env.example`](./.env.example) para o template de variáveis de ambiente suportadas:
 
 - **`ORACLE_URL` / `ORACLE_USER` / `ORACLE_PASSWORD`**: Conexão com o Oracle Database 19c corporativo.
-- **`SPRING_FLYWAY_ENABLED` / `JPA_DDL_AUTO`**: Controle de migrações gerenciadas (`none` para DDL).
+- **`SPRING_FLYWAY_ENABLED`**: Controle de migrações versionadas Flyway (`true` por padrão).
 - **`ADMIN_BCRYPT_HASH`**: Hash BCrypt para o administrador inicial provisionado via Flyway V3.
 - **`MONGODB_URI`**: URI do cluster MongoDB Atlas para conteúdos didáticos NoSQL.
 - **`PORT`**: Porta HTTP da aplicação (padrão `8080`).
@@ -450,7 +450,7 @@ Para executar a suíte completa de testes e gerar o relatório de cobertura JaCo
 ### 2. Testes de Integração e Automação de QA
 Para validação de rotas, permissões de segurança RBAC e persistência com Stored Procedures:
 - **Suíte de Testes JUnit 5 / Spring Boot Test:** 292 testes automatizados executados via `./gradlew test` (100% de aprovação e 99.53% de cobertura).
-- **Suíte de Automação Postman (QA):** Coleção oficial contendo asserções de status code, JSON Schema, autorização JWT e validação de Stored Procedures Oracle disponível no repositório de QA em [`Compliance-Quality-Assurance-Tests`](../Compliance-Quality-Assurance-Tests/).
+- **Suíte de Automação Postman (QA):** Coleção oficial contendo asserções de status code, JSON Schema, autorização JWT e validação de Stored Procedures Oracle disponível no repositório de QA em [`Compliance-Quality-Assurance-Tests`](https://github.com/Challenge-Pet-Guardian-4/Compliance-Quality-Assurance-Tests).
 
 ---
 
