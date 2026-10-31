@@ -1,11 +1,13 @@
 package fiap.com.br.petguardian.exception;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import jakarta.persistence.OptimisticLockException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.orm.jpa.JpaSystemException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -224,6 +226,15 @@ public class GlobalExceptionHandler {
         }
         return error(HttpStatus.INTERNAL_SERVER_ERROR,
                 "Ocorreu um erro interno inesperado no servidor.", request);
+    }
+
+    @ExceptionHandler({ObjectOptimisticLockingFailureException.class, OptimisticLockException.class})
+    public ResponseEntity<ApiErrorResponse> handleOptimisticLocking(
+            Exception exception, HttpServletRequest request) {
+        log.warn("Conflito de concorrência detectado (bloqueio otimista): {}", exception.getMessage());
+        return error(HttpStatus.CONFLICT,
+                "Conflito de concorrência: o registro foi atualizado ou excluído por outra transação. Recarregue os dados e tente novamente.",
+                request);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)

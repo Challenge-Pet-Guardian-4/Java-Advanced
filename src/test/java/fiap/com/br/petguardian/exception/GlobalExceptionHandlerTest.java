@@ -276,4 +276,14 @@ class GlobalExceptionHandlerTest {
         var resp3 = handler.handleJpaSystem(ex3, request);
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, resp3.getStatusCode());
     }
+
+    @Test
+    @DisplayName("Deve tratar OptimisticLocking com status 409 Conflict")
+    void deveTratarOptimisticLocking() {
+        var ex = new org.springframework.orm.ObjectOptimisticLockingFailureException("Item", 1L);
+        var resp = handler.handleOptimisticLocking(ex, request);
+        assertEquals(HttpStatus.CONFLICT, resp.getStatusCode());
+        assertEquals(409, resp.getBody().status());
+        org.junit.jupiter.api.Assertions.assertTrue(resp.getBody().message().contains("Conflito de concorrência"));
+    }
 }
