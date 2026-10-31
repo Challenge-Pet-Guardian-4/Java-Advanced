@@ -1,8 +1,7 @@
 package fiap.com.br.petguardian.trilha.aula.conteudo;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
-import fiap.com.br.petguardian.trilha.aula.Aula;
-import fiap.com.br.petguardian.trilha.aula.AulaRepository;
+import fiap.com.br.petguardian.trilha.aula.AulaService;
 import fiap.com.br.petguardian.trilha.aula.conteudo.dto.ConteudoAulaRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -14,19 +13,19 @@ import org.springframework.stereotype.Service;
 public class ConteudoAulaService {
 
     private final ConteudoAulaRepository conteudoRepository;
-    private final AulaRepository aulaRepository;
+    private final AulaService aulaService;
 
     public Page<ConteudoAula> findAll(Pageable pageable) {
         return conteudoRepository.findAll(pageable);
     }
 
     public ConteudoAula findByAulaId(Long aulaId) {
-        findAulaById(aulaId);
+        aulaService.findAulaEntityById(aulaId);
         return findConteudoByAulaId(aulaId);
     }
 
     public ConteudoAula create(Long aulaId, ConteudoAulaRequest request) {
-        findAulaById(aulaId);
+        aulaService.findAulaEntityById(aulaId);
 
         if (conteudoRepository.findByAulaId(aulaId).isPresent()) {
             throw new IllegalArgumentException("Já existe conteúdo cadastrado para a aula com id " + aulaId + ".");
@@ -36,7 +35,7 @@ public class ConteudoAulaService {
     }
 
     public ConteudoAula update(Long aulaId, ConteudoAulaRequest request) {
-        findAulaById(aulaId);
+        aulaService.findAulaEntityById(aulaId);
         ConteudoAula existente = findConteudoByAulaId(aulaId);
 
         ConteudoAula entity = request.toEntity(aulaId);
@@ -46,14 +45,9 @@ public class ConteudoAulaService {
     }
 
     public void deleteByAulaId(Long aulaId) {
-        findAulaById(aulaId);
+        aulaService.findAulaEntityById(aulaId);
         findConteudoByAulaId(aulaId);
         conteudoRepository.deleteByAulaId(aulaId);
-    }
-
-    private Aula findAulaById(Long aulaId) {
-        return aulaRepository.findById(aulaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Aula com id " + aulaId + " não encontrada."));
     }
 
     private ConteudoAula findConteudoByAulaId(Long aulaId) {

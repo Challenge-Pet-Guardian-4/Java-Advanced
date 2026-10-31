@@ -2,13 +2,13 @@ package fiap.com.br.petguardian.tarefa;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.tarefa.status.StatusService;
 import fiap.com.br.petguardian.usuario.Usuario;
-import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuario.UsuarioService;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,8 +22,8 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class TarefaService {
     private final TarefaRepository tarefaRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final PetRepository petRepository;
+    private final UsuarioService usuarioService;
+    private final PetService petService;
     private final StatusService statusService;
     private final UsuarioPetRepository usuarioPetRepository;
 
@@ -41,13 +41,13 @@ public class TarefaService {
     }
 
     public Page<Tarefa> findAllByEmail(String email, String statusFiltro, Pageable pageable) {
-        Usuario usuario = findUsuarioByEmail(email);
+        Usuario usuario = usuarioService.findByEmail(email);
         return findAllByUsuario(usuario.getId(), statusFiltro, pageable);
     }
 
     public Page<Tarefa> findAllByPetId(Long petId, Pageable pageable) {
         expirarTarefasPendentesAtrasadas();
-        findPetById(petId);
+        petService.findById(petId);
         return tarefaRepository.findAllByPetId(petId, pageable);
     }
 
@@ -58,8 +58,8 @@ public class TarefaService {
 
     @Transactional
     public Tarefa create(TarefaRequest request, String authEmail) {
-        Pet pet = findPetById(request.petId());
-        Usuario usuario = findUsuarioByEmail(authEmail);
+        Pet pet = petService.findById(request.petId());
+        Usuario usuario = usuarioService.findByEmail(authEmail);
 
         Tarefa tarefa = request.toEntity(usuario, pet, LocalDateTime.now());
         tarefa.setStatus(statusService.findStatus(EnumStatus.PENDENTE));
@@ -70,7 +70,7 @@ public class TarefaService {
     @Transactional
     public Tarefa update(Long id, TarefaRequest request) {
         Tarefa tarefa = findTarefaById(id);
-        Pet pet = findPetById(request.petId());
+        Pet pet = petService.findById(request.petId());
         EnumStatus status = EnumStatus.valueOf(request.status().trim().toUpperCase());
 
         aplicarEm(tarefa, request, pet, status);
@@ -115,15 +115,6 @@ public class TarefaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Tarefa com id " + id + " não encontrada."));
     }
 
-    private Pet findPetById(Long id) {
-        return petRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
-    }
-
-    private Usuario findUsuarioByEmail(String email) {
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
-    }
 
     private void expirarTarefasPendentesAtrasadas() {
         Status pendente = statusService.findStatus(EnumStatus.PENDENTE);

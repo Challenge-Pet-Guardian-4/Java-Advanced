@@ -2,10 +2,10 @@ package fiap.com.br.petguardian.usuariopet;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
-import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuario.UsuarioService;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
 import fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse;
@@ -23,8 +23,8 @@ import java.util.stream.Collectors;
 public class UsuarioPetService {
 
     private final UsuarioPetRepository usuarioPetRepository;
-    private final UsuarioRepository usuarioRepository;
-    private final PetRepository petRepository;
+    private final UsuarioService usuarioService;
+    private final PetService petService;
     private final TarefaRepository tarefaRepository;
 
     // =========================================================================
@@ -47,7 +47,7 @@ public class UsuarioPetService {
 
     @Transactional(readOnly = true)
     public List<CoCuidadorResponse> listarCuidadoresDoPet(Long petId) {
-        findPetById(petId);
+        petService.findById(petId);
         return usuarioPetRepository.findAllByPetId(petId)
                 .stream()
                 .map(CoCuidadorResponse::fromEntity)
@@ -60,9 +60,9 @@ public class UsuarioPetService {
 
     @Transactional
     public CoCuidadorResponse convidarCoCuidador(Long petId, CoCuidadorRequest request) {
-        Pet pet = findPetById(petId);
+        Pet pet = petService.findById(petId);
         validarUsuarioNaoVinculadoPorEmail(request.email(), petId);
-        Usuario convidado = findUsuarioByEmail(request.email());
+        Usuario convidado = usuarioService.findByEmail(request.email());
 
         return CoCuidadorResponse.fromEntity(usuarioPetRepository.save(request.toEntity(convidado, pet)));
     }
@@ -91,12 +91,12 @@ public class UsuarioPetService {
 
     @Transactional(readOnly = true)
     public RedeCuidadoResponse montarRedeCuidado(String email) {
-        return processarRedeCuidado(findUsuarioByEmail(email));
+        return processarRedeCuidado(usuarioService.findByEmail(email));
     }
 
     @Transactional(readOnly = true)
     public RedeCuidadoResponse montarRedeCuidado(Long usuarioId) {
-        return processarRedeCuidado(findUsuarioById(usuarioId));
+        return processarRedeCuidado(usuarioService.findById(usuarioId));
     }
 
     private RedeCuidadoResponse processarRedeCuidado(Usuario usuario) {
@@ -122,21 +122,6 @@ public class UsuarioPetService {
     // =========================================================================
     // 5. HELPERS PRIVADOS DE VALIDAÇÃO E BUSCA
     // =========================================================================
-
-    private Pet findPetById(Long id) {
-        return petRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + id + " não encontrado."));
-    }
-
-    private Usuario findUsuarioById(Long id) {
-        return usuarioRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário com id " + id + " não encontrado."));
-    }
-
-    private Usuario findUsuarioByEmail(String email) {
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário com e-mail " + email + " não encontrado."));
-    }
 
     private UsuarioPet findVinculoPorEmail(String email, Long petId) {
         return usuarioPetRepository.findByUsuarioEmailIgnoreCaseAndPetId(email.trim(), petId)

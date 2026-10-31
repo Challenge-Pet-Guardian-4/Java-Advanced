@@ -2,7 +2,7 @@ package fiap.com.br.petguardian.pet.historico;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.pet.historico.dto.HistoricoRequest;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ import java.util.List;
 public class HistoricoService {
 
     private final HistoricoRepository historicoRepository;
-    private final PetRepository petRepository;
+    private final PetService petService;
     private final UsuarioPetRepository usuarioPetRepository;
 
     public boolean isCuidadorDoHistorico(Long historicoId, String email) {
@@ -31,7 +31,7 @@ public class HistoricoService {
     }
 
     public List<Historico> findAllByPetId(Long petId) {
-        findPetById(petId);
+        petService.findById(petId);
         return historicoRepository.findAllByPetIdOrderByDataHistDesc(petId);
     }
 
@@ -45,14 +45,14 @@ public class HistoricoService {
 
     @Transactional
     public Historico create(HistoricoRequest request) {
-        Pet pet = findPetById(request.petId());
+        Pet pet = petService.findById(request.petId());
         return historicoRepository.save(request.toEntity(pet));
     }
 
     @Transactional
     public Historico update(Long id, HistoricoRequest request) {
         Historico historico = findHistoricoById(id);
-        Pet pet = findPetById(request.petId());
+        Pet pet = petService.findById(request.petId());
         aplicarEm(historico, request, pet);
         return historicoRepository.save(historico);
     }
@@ -68,10 +68,6 @@ public class HistoricoService {
                 .orElseThrow(() -> new ResourceNotFoundException("Histórico com id " + id + " não encontrado."));
     }
 
-    private Pet findPetById(Long petId) {
-        return petRepository.findById(petId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pet com id " + petId + " não encontrado."));
-    }
 
     private void aplicarEm(Historico historico, HistoricoRequest request, Pet pet) {
         historico.setTipoHist(request.tipoHist());

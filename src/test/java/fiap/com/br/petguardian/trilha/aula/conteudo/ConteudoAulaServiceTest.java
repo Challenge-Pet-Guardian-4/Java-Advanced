@@ -2,7 +2,7 @@ package fiap.com.br.petguardian.trilha.aula.conteudo;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.trilha.aula.Aula;
-import fiap.com.br.petguardian.trilha.aula.AulaRepository;
+import fiap.com.br.petguardian.trilha.aula.AulaService;
 import fiap.com.br.petguardian.trilha.aula.conteudo.dto.ConteudoAulaRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,7 +31,7 @@ class ConteudoAulaServiceTest {
     private ConteudoAulaRepository conteudoRepository;
 
     @Mock
-    private AulaRepository aulaRepository;
+    private AulaService aulaService;
 
     @InjectMocks
     private ConteudoAulaService conteudoService;
@@ -52,7 +52,7 @@ class ConteudoAulaServiceTest {
                 .atualizadoEm(Instant.now())
                 .build();
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.of(aula));
+        when(aulaService.findAulaEntityById(aulaId)).thenReturn(aula);
         when(conteudoRepository.findByAulaId(aulaId)).thenReturn(Optional.empty());
         when(conteudoRepository.save(any(ConteudoAula.class))).thenReturn(salvo);
 
@@ -73,7 +73,7 @@ class ConteudoAulaServiceTest {
         var request = new ConteudoAulaRequest("MARKDOWN", "# Titulo da Aula", List.of());
         ConteudoAula existente = ConteudoAula.builder().id("mongo-existente").aulaId(aulaId).build();
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.of(aula));
+        when(aulaService.findAulaEntityById(aulaId)).thenReturn(aula);
         when(conteudoRepository.findByAulaId(aulaId)).thenReturn(Optional.of(existente));
 
         IllegalArgumentException ex = assertThrows(
@@ -91,7 +91,7 @@ class ConteudoAulaServiceTest {
         Long aulaId = 999L;
         var request = new ConteudoAulaRequest("MARKDOWN", "# Titulo", List.of());
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.empty());
+        when(aulaService.findAulaEntityById(aulaId)).thenThrow(new ResourceNotFoundException("Aula não encontrada"));
 
         assertThrows(
                 ResourceNotFoundException.class,
@@ -112,7 +112,7 @@ class ConteudoAulaServiceTest {
                 .corpoMarkdown("Conteudo da aula 2")
                 .build();
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.of(aula));
+        when(aulaService.findAulaEntityById(aulaId)).thenReturn(aula);
         when(conteudoRepository.findByAulaId(aulaId)).thenReturn(Optional.of(conteudo));
 
         ConteudoAula resultado = conteudoService.findByAulaId(aulaId);
@@ -126,7 +126,7 @@ class ConteudoAulaServiceTest {
     @DisplayName("Deve lancar ResourceNotFoundException ao buscar conteudo para aula inexistente")
     void deveLancarExcecaoAoBuscarConteudoParaAulaInexistente() {
         Long aulaId = 999L;
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.empty());
+        when(aulaService.findAulaEntityById(aulaId)).thenThrow(new ResourceNotFoundException("Aula não encontrada"));
 
         assertThrows(
                 ResourceNotFoundException.class,
@@ -140,7 +140,7 @@ class ConteudoAulaServiceTest {
         Long aulaId = 3L;
         Aula aula = Aula.builder().id(aulaId).build();
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.of(aula));
+        when(aulaService.findAulaEntityById(aulaId)).thenReturn(aula);
         when(conteudoRepository.findByAulaId(aulaId)).thenReturn(Optional.empty());
 
         assertThrows(
@@ -162,7 +162,7 @@ class ConteudoAulaServiceTest {
 
         var request = new ConteudoAulaRequest("MARKDOWN", "Markdown Atualizado", List.of("https://novo.link"));
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.of(aula));
+        when(aulaService.findAulaEntityById(aulaId)).thenReturn(aula);
         when(conteudoRepository.findByAulaId(aulaId)).thenReturn(Optional.of(existente));
         when(conteudoRepository.save(any(ConteudoAula.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -185,7 +185,7 @@ class ConteudoAulaServiceTest {
         Aula aula = Aula.builder().id(aulaId).build();
         ConteudoAula conteudo = ConteudoAula.builder().id("mongo-del").aulaId(aulaId).build();
 
-        when(aulaRepository.findById(aulaId)).thenReturn(Optional.of(aula));
+        when(aulaService.findAulaEntityById(aulaId)).thenReturn(aula);
         when(conteudoRepository.findByAulaId(aulaId)).thenReturn(Optional.of(conteudo));
 
         conteudoService.deleteByAulaId(aulaId);

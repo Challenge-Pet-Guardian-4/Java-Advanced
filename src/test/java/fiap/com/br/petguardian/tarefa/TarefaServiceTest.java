@@ -4,13 +4,13 @@ import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.tarefa.dto.TarefaRequest;
 import fiap.com.br.petguardian.tarefa.status.EnumStatus;
 import fiap.com.br.petguardian.tarefa.status.Status;
 import fiap.com.br.petguardian.tarefa.status.StatusService;
 import fiap.com.br.petguardian.usuario.Usuario;
-import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuario.UsuarioService;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,10 +41,10 @@ class TarefaServiceTest {
     private TarefaRepository tarefaRepository;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private UsuarioService usuarioService;
 
     @Mock
-    private PetRepository petRepository;
+    private PetService petService;
 
     @Mock
     private StatusService statusService;
@@ -85,8 +85,8 @@ class TarefaServiceTest {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         Status statusPendente = Status.builder().id(1L).nomeStatus(EnumStatus.PENDENTE).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(petService.findById(10L)).thenReturn(pet);
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -158,7 +158,7 @@ class TarefaServiceTest {
         var request = new TarefaRequest("Título Novo", 10, "Desc Nova", LocalDateTime.now().plusDays(1), 20L, "PENDENTE", null);
 
         when(tarefaRepository.findById(100L)).thenReturn(Optional.of(tarefaExistente));
-        when(petRepository.findById(20L)).thenReturn(Optional.of(petNovo));
+        when(petService.findById(20L)).thenReturn(petNovo);
         when(statusService.findStatus(EnumStatus.PENDENTE)).thenReturn(statusPendente);
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -241,7 +241,7 @@ class TarefaServiceTest {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
         when(tarefaRepository.findAllByPetUsuarioPetsUsuarioIdAndStatusNomeStatus(1L, EnumStatus.PENDENTE, pageable)).thenReturn(new PageImpl<>(List.of()));
 
         Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "PENDENTE", pageable);
@@ -268,7 +268,7 @@ class TarefaServiceTest {
         Usuario usuario = Usuario.builder().id(1L).email("enzo@fiap.com.br").build();
         Pageable pageable = PageRequest.of(0, 10);
 
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
         when(tarefaRepository.findAllByPetUsuarioPetsUsuarioId(1L, pageable)).thenReturn(new PageImpl<>(List.of()));
 
         Page<Tarefa> resultado = tarefaService.findAllByEmail("enzo@fiap.com.br", "ALL", pageable);
@@ -303,7 +303,7 @@ class TarefaServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         Tarefa tarefa = Tarefa.builder().id(50L).pet(pet).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(tarefaRepository.findAllByPetId(10L, pageable)).thenReturn(new PageImpl<>(List.of(tarefa)));
 
         Page<Tarefa> resultado = tarefaService.findAllByPetId(10L, pageable);
@@ -316,7 +316,7 @@ class TarefaServiceTest {
     @DisplayName("Deve lancar ResourceNotFoundException ao buscar tarefas de pet inexistente")
     void deveLancarExceptionAoBuscarTarefasDePetInexistente() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        when(petService.findById(99L)).thenThrow(new ResourceNotFoundException("Pet com id 99 não encontrado."));
 
         assertThrows(ResourceNotFoundException.class, () -> tarefaService.findAllByPetId(99L, pageable));
     }
@@ -325,7 +325,7 @@ class TarefaServiceTest {
     @Test
     @DisplayName("Deve lancar ResourceNotFoundException ao buscar tarefas por usuario inexistente")
     void deveLancarExceptionAoBuscarTarefasPorUsuarioInexistente() {
-        when(usuarioRepository.findByEmail("inexistente@fiap.com.br")).thenReturn(Optional.empty());
+        when(usuarioService.findByEmail("inexistente@fiap.com.br")).thenThrow(new ResourceNotFoundException("Usuário com e-mail inexistente@fiap.com.br não encontrado."));
         assertThrows(ResourceNotFoundException.class, () -> tarefaService.findAllByEmail("inexistente@fiap.com.br", "ALL", org.springframework.data.domain.PageRequest.of(0, 10)));
     }
 
@@ -356,7 +356,7 @@ class TarefaServiceTest {
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
         Tarefa tarefaExistente = Tarefa.builder().id(50L).pet(pet).status(Status.builder().nomeStatus(EnumStatus.PENDENTE).build()).build();
         when(tarefaRepository.findById(50L)).thenReturn(Optional.of(tarefaExistente));
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(statusService.findStatus(EnumStatus.CONCLUIDO))
                 .thenReturn(Status.builder().nomeStatus(EnumStatus.CONCLUIDO).build());
         when(tarefaRepository.save(any(Tarefa.class))).thenAnswer(invocation -> invocation.getArgument(0));

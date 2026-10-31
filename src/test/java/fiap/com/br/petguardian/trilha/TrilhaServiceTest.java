@@ -12,7 +12,9 @@ import org.springframework.data.domain.Pageable;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
+import fiap.com.br.petguardian.trilha.aula.AulaService;
+import java.util.Map;
 import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.aula.Aula;
 import fiap.com.br.petguardian.trilha.dto.TrilhaRequest;
@@ -41,7 +43,10 @@ class TrilhaServiceTest {
     private TrilhaRepository trilhaRepository;
 
     @Mock
-    private PetRepository petRepository;
+    private PetService petService;
+
+    @Mock
+    private AulaService aulaService;
 
     @Mock
     private ConteudoAulaRepository conteudoRepository;
@@ -56,7 +61,7 @@ class TrilhaServiceTest {
         var request = new TrilhaRequest("Obediência Básica", "Primeiros comandos", 10L);
         Trilha trilhaSalva = Trilha.builder().id(1L).nome("Obediência Básica").descricao("Primeiros comandos").pet(pet).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(trilhaRepository.save(any(Trilha.class))).thenReturn(trilhaSalva);
 
         Trilha resultado = trilhaService.create(request);
@@ -72,7 +77,7 @@ class TrilhaServiceTest {
         Pet pet = Pet.builder().id(10L).build();
         Trilha trilha = Trilha.builder().id(1L).nome("Truques").pet(pet).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(trilhaRepository.findAllByPetId(10L)).thenReturn(List.of(trilha));
 
         List<Trilha> resultado = trilhaService.findAllByPetId(10L);
@@ -106,7 +111,7 @@ class TrilhaServiceTest {
         var request = new TrilhaRequest("Trilha Nova", "Nova Desc", 10L);
 
         when(trilhaRepository.findById(1L)).thenReturn(Optional.of(trilhaExistente));
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(trilhaRepository.save(any(Trilha.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Trilha resultado = trilhaService.update(1L, request);
@@ -173,7 +178,7 @@ class TrilhaServiceTest {
         ConteudoAula conteudo = ConteudoAula.builder().aulaId(101L).corpoMarkdown("# Markdown de teste").build();
 
         when(trilhaRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of(trilha));
-        when(conteudoRepository.findByAulaIdIn(any())).thenReturn(List.of(conteudo));
+        when(aulaService.buscarConteudosEmLote(any())).thenReturn(Map.of(101L, "# Markdown de teste"));
 
         List<TrilhaCompletaResponse> resultado = trilhaService.findTrilhasCompletasByUsuarioEmail("enzo@fiap.com.br");
 
@@ -186,7 +191,7 @@ class TrilhaServiceTest {
     @Test
     @DisplayName("Deve lancar ResourceNotFoundException ao criar trilha com pet inexistente")
     void deveLancarExceptionAoCriarTrilhaComPetInexistente() {
-        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        when(petService.findById(99L)).thenThrow(new ResourceNotFoundException("Pet não encontrado"));
         assertThrows(ResourceNotFoundException.class, () -> trilhaService.create(new fiap.com.br.petguardian.trilha.dto.TrilhaRequest("Trilha", "Desc", 99L)));
     }
 
@@ -209,7 +214,7 @@ class TrilhaServiceTest {
         Trilha trilha = Trilha.builder().id(1L).nome("Obediência").pet(pet).modulos(java.util.Set.of(modulo)).build();
 
         when(trilhaRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of(trilha));
-        when(conteudoRepository.findByAulaIdIn(any())).thenThrow(new RuntimeException("Mongo down"));
+        when(aulaService.buscarConteudosEmLote(any())).thenReturn(Map.of());
 
         var resultado = trilhaService.findTrilhasCompletasByUsuarioEmail("enzo@fiap.com.br");
         assertNotNull(resultado);

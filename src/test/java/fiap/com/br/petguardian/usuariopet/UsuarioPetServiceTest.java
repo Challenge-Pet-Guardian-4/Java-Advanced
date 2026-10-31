@@ -3,11 +3,11 @@ package fiap.com.br.petguardian.usuariopet;
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.pet.raca.Raca;
 import fiap.com.br.petguardian.tarefa.TarefaRepository;
 import fiap.com.br.petguardian.usuario.Usuario;
-import fiap.com.br.petguardian.usuario.UsuarioRepository;
+import fiap.com.br.petguardian.usuario.UsuarioService;
 import fiap.com.br.petguardian.usuariopet.dto.RedeCuidadoResponse;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorRequest;
 import fiap.com.br.petguardian.usuariopet.dto.CoCuidadorResponse;
@@ -35,10 +35,10 @@ class UsuarioPetServiceTest {
     private UsuarioPetRepository usuarioPetRepository;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private UsuarioService usuarioService;
 
     @Mock
-    private PetRepository petRepository;
+    private PetService petService;
 
     @Mock
     private TarefaRepository tarefaRepository;
@@ -60,9 +60,9 @@ class UsuarioPetServiceTest {
 
         var request = new CoCuidadorRequest("familiar@fiap.com.br");
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("familiar@fiap.com.br", 10L)).thenReturn(false);
-        when(usuarioRepository.findByEmail("familiar@fiap.com.br")).thenReturn(Optional.of(convidado));
+        when(usuarioService.findByEmail("familiar@fiap.com.br")).thenReturn(convidado);
         when(usuarioPetRepository.save(any(UsuarioPet.class))).thenReturn(novoVinculo);
 
         CoCuidadorResponse response = usuarioPetService.convidarCoCuidador(10L, request);
@@ -80,7 +80,7 @@ class UsuarioPetServiceTest {
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
         var request = new CoCuidadorRequest("familiar@fiap.com.br");
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(usuarioPetRepository.existsByUsuarioEmailIgnoreCaseAndPetId("familiar@fiap.com.br", 10L)).thenReturn(true);
 
         assertThrows(IllegalArgumentException.class, () -> usuarioPetService.convidarCoCuidador(10L, request));
@@ -149,7 +149,7 @@ class UsuarioPetServiceTest {
         Usuario tutor = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
         UsuarioPet vinculo = UsuarioPet.builder().id(new UsuarioPetId(1L, 10L)).usuario(tutor).pet(pet).responsavelPrincipal(true).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(usuarioPetRepository.findAllByPetId(10L)).thenReturn(List.of(vinculo));
 
         List<CoCuidadorResponse> cuidadores = usuarioPetService.listarCuidadoresDoPet(10L);
@@ -165,7 +165,7 @@ class UsuarioPetServiceTest {
     void deveMontarRedeDeCuidadoVazia() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
 
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioService.findById(1L)).thenReturn(usuario);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado(1L);
@@ -186,7 +186,7 @@ class UsuarioPetServiceTest {
     void deveMontarRedeDeCuidadoPorEmail() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
 
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado("enzo@fiap.com.br");
@@ -215,7 +215,7 @@ class UsuarioPetServiceTest {
                 "p_pontos_acumulados", 150
         );
 
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vinculo));
         when(tarefaRepository.countTarefasByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 1L}));
         when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vinculo));
@@ -266,7 +266,7 @@ class UsuarioPetServiceTest {
     @DisplayName("Deve montar rede de cuidado por usuario ID")
     void deveMontarRedeDeCuidadoPorUsuarioId() {
         Usuario usuario = Usuario.builder().id(1L).nome("Enzo").email("enzo@fiap.com.br").build();
-        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioService.findById(1L)).thenReturn(usuario);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of());
 
         RedeCuidadoResponse resultado = usuarioPetService.montarRedeCuidado(1L);
@@ -278,14 +278,14 @@ class UsuarioPetServiceTest {
     @Test
     @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar usuario por id")
     void deveLancarExceptionAoNaoEncontrarUsuarioPorId() {
-        when(usuarioRepository.findById(99L)).thenReturn(Optional.empty());
+        when(usuarioService.findById(99L)).thenThrow(new ResourceNotFoundException("Usuário com id 99 não encontrado."));
         assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.montarRedeCuidado(99L));
     }
 
     @Test
     @DisplayName("Deve lancar ResourceNotFoundException ao nao encontrar pet por id")
     void deveLancarExceptionAoNaoEncontrarPetPorId() {
-        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        when(petService.findById(99L)).thenThrow(new ResourceNotFoundException("Pet com id 99 não encontrado."));
         assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.listarCuidadoresDoPet(99L));
     }
 
@@ -310,7 +310,7 @@ class UsuarioPetServiceTest {
         UsuarioPet vMariaThor = UsuarioPet.builder().id(new UsuarioPetId(2L, 10L)).usuario(maria).pet(pet1).responsavelPrincipal(false).build();
         UsuarioPet vMariaMel = UsuarioPet.builder().id(new UsuarioPetId(2L, 11L)).usuario(maria).pet(pet2).responsavelPrincipal(true).build();
 
-        when(usuarioRepository.findByEmail("enzo@fiap.com.br")).thenReturn(Optional.of(usuario));
+        when(usuarioService.findByEmail("enzo@fiap.com.br")).thenReturn(usuario);
         when(usuarioPetRepository.findAllByUsuarioEmailIgnoreCase("enzo@fiap.com.br")).thenReturn(List.of(vEnzo));
         when(tarefaRepository.countTarefasByPetIdIn(List.of(10L))).thenReturn(List.<Object[]>of(new Object[]{10L, 2L}));
         when(usuarioPetRepository.findAllByPetIdIn(List.of(10L))).thenReturn(List.of(vEnzo, vMariaThor, vMariaMel));
@@ -333,7 +333,7 @@ class UsuarioPetServiceTest {
     @Test
     @DisplayName("Deve lancar ResourceNotFoundException ao montar rede de cuidado com email inexistente")
     void deveLancarExceptionAoMontarRedeCuidadoQuandoEmailNaoExistir() {
-        when(usuarioRepository.findByEmail("inexistente@fiap.com.br")).thenReturn(Optional.empty());
+        when(usuarioService.findByEmail("inexistente@fiap.com.br")).thenThrow(new ResourceNotFoundException("Usuário com e-mail inexistente@fiap.com.br não encontrado."));
         assertThrows(ResourceNotFoundException.class, () -> usuarioPetService.montarRedeCuidado("inexistente@fiap.com.br"));
     }
 

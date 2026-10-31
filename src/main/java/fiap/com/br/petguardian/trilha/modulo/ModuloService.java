@@ -2,7 +2,7 @@ package fiap.com.br.petguardian.trilha.modulo;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.trilha.Trilha;
-import fiap.com.br.petguardian.trilha.TrilhaRepository;
+import fiap.com.br.petguardian.trilha.TrilhaService;
 import fiap.com.br.petguardian.trilha.aula.Aula;
 import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAulaRepository;
 import fiap.com.br.petguardian.trilha.modulo.dto.ModuloRequest;
@@ -19,7 +19,7 @@ import java.util.List;
 public class ModuloService {
 
     private final ModuloRepository moduloRepository;
-    private final TrilhaRepository trilhaRepository;
+    private final TrilhaService trilhaService;
     private final ConteudoAulaRepository conteudoRepository;
 
     @Transactional(readOnly = true)
@@ -29,7 +29,7 @@ public class ModuloService {
 
     @Transactional(readOnly = true)
     public List<Modulo> findAllByTrilhaId(Long trilhaId) {
-        findTrilhaById(trilhaId);
+        trilhaService.findById(trilhaId);
         return moduloRepository.findAllByTrilhaId(trilhaId);
     }
 
@@ -40,14 +40,14 @@ public class ModuloService {
 
     @Transactional
     public Modulo create(ModuloRequest request) {
-        Trilha trilha = findTrilhaById(request.trilhaId());
+        Trilha trilha = trilhaService.findById(request.trilhaId());
         return moduloRepository.save(request.toEntity(trilha));
     }
 
     @Transactional
     public Modulo update(Long id, ModuloRequest request) {
         Modulo modulo = findModuloById(id);
-        Trilha trilha = findTrilhaById(request.trilhaId());
+        Trilha trilha = trilhaService.findById(request.trilhaId());
         aplicarEm(modulo, request, trilha);
         return moduloRepository.save(modulo);
     }
@@ -65,10 +65,6 @@ public class ModuloService {
                 .orElseThrow(() -> new ResourceNotFoundException("Módulo com id " + id + " não encontrado."));
     }
 
-    private Trilha findTrilhaById(Long trilhaId) {
-        return trilhaRepository.findById(trilhaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Trilha com id " + trilhaId + " não encontrada."));
-    }
 
     private void aplicarEm(Modulo modulo, ModuloRequest request, Trilha trilha) {
         modulo.setNome(request.nome());

@@ -130,6 +130,10 @@ public class AulaService {
         }
     }
 
+    public Aula findAulaEntityById(Long id) {
+        return findAulaById(id);
+    }
+
     private Aula findAulaById(Long id) {
         return aulaRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Aula com id " + id + " não encontrada."));

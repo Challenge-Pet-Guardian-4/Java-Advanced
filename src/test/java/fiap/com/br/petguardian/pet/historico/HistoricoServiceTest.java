@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import fiap.com.br.petguardian.pet.Pet;
-import fiap.com.br.petguardian.pet.PetRepository;
+import fiap.com.br.petguardian.pet.PetService;
 import fiap.com.br.petguardian.pet.historico.dto.HistoricoRequest;
 import fiap.com.br.petguardian.usuariopet.UsuarioPetRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -36,7 +36,7 @@ class HistoricoServiceTest {
     private HistoricoRepository historicoRepository;
 
     @Mock
-    private PetRepository petRepository;
+    private PetService petService;
 
     @Mock
     private UsuarioPetRepository usuarioPetRepository;
@@ -51,7 +51,7 @@ class HistoricoServiceTest {
         var request = new HistoricoRequest("Vacina V10", LocalDateTime.now(), 10L);
         Historico historico = Historico.builder().id(1L).tipoHist("Vacina V10").dataHist(LocalDateTime.now()).pet(pet).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(historicoRepository.save(any(Historico.class))).thenReturn(historico);
 
         Historico resultado = historicoService.create(request);
@@ -67,7 +67,7 @@ class HistoricoServiceTest {
         Pet pet = Pet.builder().id(10L).nome("Thor").build();
         Historico hist = Historico.builder().id(1L).tipoHist("Consulta Geral").dataHist(LocalDateTime.now()).pet(pet).build();
 
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(historicoRepository.findAllByPetIdOrderByDataHistDesc(10L)).thenReturn(List.of(hist));
 
         List<Historico> resultado = historicoService.findAllByPetId(10L);
@@ -151,7 +151,7 @@ class HistoricoServiceTest {
         var request = new HistoricoRequest("Vacina Nova", LocalDateTime.now(), 10L);
 
         when(historicoRepository.findById(1L)).thenReturn(Optional.of(hist));
-        when(petRepository.findById(10L)).thenReturn(Optional.of(pet));
+        when(petService.findById(10L)).thenReturn(pet);
         when(historicoRepository.save(any(Historico.class))).thenAnswer(inv -> inv.getArgument(0));
 
         Historico resultado = historicoService.update(1L, request);
@@ -164,7 +164,7 @@ class HistoricoServiceTest {
     @Test
     @DisplayName("Deve lancar ResourceNotFoundException ao buscar historicos por pet inexistente")
     void deveLancarExceptionAoBuscarHistoricosPorPetInexistente() {
-        when(petRepository.findById(99L)).thenReturn(Optional.empty());
+        when(petService.findById(99L)).thenThrow(new ResourceNotFoundException("Pet não encontrado"));
         assertThrows(ResourceNotFoundException.class, () -> historicoService.findAllByPetId(99L));
     }
 
