@@ -4,7 +4,6 @@ import fiap.com.br.petguardian.trilha.aula.DificuldadeAula;
 
 import fiap.com.br.petguardian.exception.ResourceNotFoundException;
 import fiap.com.br.petguardian.trilha.dto.TrilhaCompletaResponse;
-import fiap.com.br.petguardian.trilha.aula.conteudo.ConteudoAula;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -175,7 +174,6 @@ class TrilhaServiceTest {
         Aula aula = Aula.builder().id(101L).nome("Senta").dificuldade(DificuldadeAula.FACIL).concluida(false).build();
         Modulo modulo = Modulo.builder().id(11L).nome("Módulo 1").aulas(java.util.Set.of(aula)).build();
         Trilha trilha = Trilha.builder().id(1L).nome("Obediência").pet(pet).modulos(java.util.Set.of(modulo)).build();
-        ConteudoAula conteudo = ConteudoAula.builder().aulaId(101L).corpoMarkdown("# Markdown de teste").build();
 
         when(trilhaRepository.findAllByUsuarioEmail("enzo@fiap.com.br")).thenReturn(List.of(trilha));
         when(aulaService.buscarConteudosEmLote(any())).thenReturn(Map.of(101L, "# Markdown de teste"));
