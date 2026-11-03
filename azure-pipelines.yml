@@ -1,5 +1,6 @@
 # Pipeline CI/CD - PetGuardian API
-# Stack: Java 21 | Spring Boot 4.1.1 | Gradle Wrapper | Self-Hosted Agent
+# Stack: Java 21 | Spring Boot 4.1.1 | Gradle Wrapper | Microsoft-hosted Agent (ubuntu-latest)
+# Backup do modelo Self-Hosted: azure-pipelines.selfhosted.yml
 
 trigger:
   branches:
@@ -10,7 +11,6 @@ trigger:
 variables:
   azureSubscription: 'PetGuardian-Connection'
   webAppName: 'app-petguardian-01bd2f0c'
-  poolName: 'Default'
 
 stages:
 # ------------------------------------------------------------------------------
@@ -22,14 +22,22 @@ stages:
   - job: BuildAndTest
     displayName: 'Compilação Gradle e Testes'
     pool:
-      name: $(poolName)
+      vmImage: 'ubuntu-latest'
     steps:
-    # 1. Executar Gradle Wrapper com JDK local
+    # 1. Instalar JDK 21
+    - task: JavaToolInstaller@0
+      displayName: 'Instalar JDK 21'
+      inputs:
+        versionSpec: '21'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+
+    # 2. Executar Gradle Wrapper
     - script: |
-        call gradlew.bat clean test bootJar --no-daemon
+        chmod +x gradlew
+        ./gradlew clean test bootJar --no-daemon
       displayName: 'Executar Gradle (clean test bootJar)'
       env:
-        JAVA_HOME: 'C:\Program Files\Java\jdk-21.0.12'
         ORACLE_URL: $(ORACLE_URL)
         ORACLE_USER: $(ORACLE_USER)
         ORACLE_PASSWORD: $(ORACLE_PASSWORD)
@@ -37,7 +45,7 @@ stages:
         ADMIN_BCRYPT_HASH: $(ADMIN_BCRYPT_HASH)
         PORT: '8080'
 
-    # 2. Publicar resultados dos Testes JUnit
+    # 3. Publicar resultados dos Testes JUnit
     - task: PublishTestResults@2
       displayName: 'Publicar Relatório de Testes JUnit'
       condition: succeededOrFailed()
@@ -46,13 +54,13 @@ stages:
         testResultsFiles: '**/build/test-results/test/TEST-*.xml'
         failTaskOnFailedTests: true
 
-    # 3. Copiar o arquivo JAR compilado para a pasta de staging como app.jar
-    - powershell: |
-        Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\app.jar" -Force
-        Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\pet-guardian-0.0.1-SNAPSHOT.jar" -Force
+    # 4. Copiar o JAR compilado para a pasta de staging como app.jar
+    - bash: |
+        cp build/libs/*.jar "$(Build.ArtifactStagingDirectory)/app.jar"
+        cp build/libs/*.jar "$(Build.ArtifactStagingDirectory)/pet-guardian-0.0.1-SNAPSHOT.jar"
       displayName: 'Copiar e renomear JAR para app.jar no Artifact Staging'
 
-    # 4. Publicar o Artefato no Azure DevOps
+    # 5. Publicar o Artefato no Azure DevOps
     - task: PublishBuildArtifacts@1
       displayName: 'Publicar Artefato da Build (drop)'
       inputs:
@@ -72,7 +80,7 @@ stages:
     displayName: 'Deploy para Azure Web App'
     environment: 'production'
     pool:
-      name: $(poolName)
+      vmImage: 'ubuntu-latest'
     strategy:
       runOnce:
         deploy:

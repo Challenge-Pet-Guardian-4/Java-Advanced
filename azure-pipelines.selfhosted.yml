@@ -1,0 +1,91 @@
+# Pipeline CI/CD - PetGuardian API
+# Stack: Java 21 | Spring Boot 4.1.1 | Gradle Wrapper | Self-Hosted Agent
+
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+variables:
+  azureSubscription: 'PetGuardian-Connection'
+  webAppName: 'app-petguardian-01bd2f0c'
+  poolName: 'Default'
+
+stages:
+# ------------------------------------------------------------------------------
+# ETAPA 1: CI - Build, Testes e Publicação
+# ------------------------------------------------------------------------------
+- stage: Build
+  displayName: 'CI - Build e Testes Automatizados'
+  jobs:
+  - job: BuildAndTest
+    displayName: 'Compilação Gradle e Testes'
+    pool:
+      name: $(poolName)
+    steps:
+    # 1. Executar Gradle Wrapper com JDK local
+    - script: |
+        call gradlew.bat clean test bootJar --no-daemon
+      displayName: 'Executar Gradle (clean test bootJar)'
+      env:
+        JAVA_HOME: 'C:\Program Files\Java\jdk-21.0.12'
+        ORACLE_URL: $(ORACLE_URL)
+        ORACLE_USER: $(ORACLE_USER)
+        ORACLE_PASSWORD: $(ORACLE_PASSWORD)
+        MONGODB_URI: $(MONGODB_URI)
+        ADMIN_BCRYPT_HASH: $(ADMIN_BCRYPT_HASH)
+        PORT: '8080'
+
+    # 2. Publicar resultados dos Testes JUnit
+    - task: PublishTestResults@2
+      displayName: 'Publicar Relatório de Testes JUnit'
+      condition: succeededOrFailed()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '**/build/test-results/test/TEST-*.xml'
+        failTaskOnFailedTests: true
+
+    # 3. Copiar o arquivo JAR compilado para a pasta de staging como app.jar
+    - powershell: |
+        Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\app.jar" -Force
+        Copy-Item -Path "$(System.DefaultWorkingDirectory)\build\libs\*.jar" -Destination "$(Build.ArtifactStagingDirectory)\pet-guardian-0.0.1-SNAPSHOT.jar" -Force
+      displayName: 'Copiar e renomear JAR para app.jar no Artifact Staging'
+
+    # 4. Publicar o Artefato no Azure DevOps
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publicar Artefato da Build (drop)'
+      inputs:
+        PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+# ------------------------------------------------------------------------------
+# ETAPA 2: CD - Deploy Automático no Azure Web App
+# ------------------------------------------------------------------------------
+- stage: Deploy
+  displayName: 'CD - Deploy Automático no Azure Web App'
+  dependsOn: Build
+  condition: and(succeeded(), in(variables['Build.SourceBranch'], 'refs/heads/main', 'refs/heads/develop'))
+  jobs:
+  - deployment: DeployAppService
+    displayName: 'Deploy para Azure Web App'
+    environment: 'production'
+    pool:
+      name: $(poolName)
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Baixar o artefato (.jar) publicado pelo CI
+          - download: current
+            artifact: drop
+
+          # Fazer deploy do JAR no Azure Web App
+          - task: AzureWebApp@1
+            displayName: 'Deploy do Pacote JAR no Azure App Service'
+            inputs:
+              azureSubscription: '$(azureSubscription)'
+              appType: 'webAppLinux'
+              appName: '$(webAppName)'
+              package: '$(Pipeline.Workspace)/drop/app.jar'
